@@ -75,7 +75,10 @@ pub fn get_record_tags(storage_handle: i32, record_handle: i32, tags_json_p: *mu
 }
 
 pub fn free_record(storage_handle: i32, record_handle: i32) -> ErrorCode {
-    ErrorCode::Success
+    match STORAGES.get(storage_handle) {
+        None => ErrorCode::InvalidStorageHandle,
+        Some(storage) => storage.free_record(record_handle)
+    }
 }
 
 pub fn search_records(storage_handle: i32, type_: *const c_char, query_json: *const c_char, options_json: *const c_char, search_handle_p: *mut i32) -> ErrorCode {
@@ -95,5 +98,8 @@ pub fn fetch_search_next_record(storage_handle: i32, search_handle: i32, record_
 }
 
 pub fn free_search(storage_handle: i32, search_handle: i32) -> ErrorCode {
-    ErrorCode::Success
+    match STORAGES.get(storage_handle) {
+        None => ErrorCode::InvalidStorageHandle,
+        Some(storage) => storage.free_search(search_handle)
+    }
 }
