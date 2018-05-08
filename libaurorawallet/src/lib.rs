@@ -1,5 +1,7 @@
-extern crate serde_json;
 extern crate libc;
+
+#[macro_use]
+extern crate serde_json;
 
 #[macro_use]
 extern crate mysql;
@@ -13,7 +15,11 @@ extern crate lazy_static;
 #[macro_use]
 mod utils;
 
+#[macro_use]
+mod errors;
+
 pub mod api;
+
 mod aurora_storage;
 
 #[cfg(test)]

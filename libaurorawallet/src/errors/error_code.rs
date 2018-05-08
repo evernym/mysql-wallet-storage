@@ -1,5 +1,3 @@
-
-
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[repr(i32)]
 pub enum ErrorCode {
@@ -12,18 +10,20 @@ pub enum ErrorCode {
     ConnectionError = 6,
     DatabaseError = 7,
     UnknownWalletName = 8,
-    UnknownItem = 9,
+    UnknownRecord = 9,
     TypeNotFetched = 10,
     ValueNotFetched = 11,
     TagsNotFetched = 12,
-    NoRecord = 13,
     RecordAlreadExists = 14,
+    UnknownTag = 15,
+    TagAlreadyExists =16,
+    TagDataTooLong = 17,
 }
 
 macro_rules! check_result {
     ($r: expr, $e: expr) => {
         match $r {
-            Err(err) => {println!("error: {}", err); return $e},
+            Err(err) => { println!("{}", err); return $e },
             Ok(x) => x
         }
     }
