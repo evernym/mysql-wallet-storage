@@ -35,7 +35,7 @@ lazy_static! {
     static ref CONNECTIONS: MultiPool = MultiPool::new();
 }
 
-pub fn create(name: *const c_char, config: *const c_char, credentials: *const c_char) -> ErrorCode {
+pub extern "C" fn create(name: *const c_char, config: *const c_char, credentials: *const c_char) -> ErrorCode {
     let name = c_char_to_str!(name);
     let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidJSON);
     let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidJSON);
@@ -49,7 +49,7 @@ pub fn create(name: *const c_char, config: *const c_char, credentials: *const c_
     ErrorCode::Success
 }
 
-pub fn delete(name: *const c_char, config: *const c_char, credentials: *const c_char) -> ErrorCode {
+pub extern "C" fn delete(name: *const c_char, config: *const c_char, credentials: *const c_char) -> ErrorCode {
     let name = c_char_to_str!(name);
     let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidJSON);
     let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidJSON);
@@ -67,7 +67,7 @@ pub fn delete(name: *const c_char, config: *const c_char, credentials: *const c_
     ErrorCode::Success
 }
 
-pub fn open(name: *const c_char, config: *const c_char, _runtime_config: *const c_char, credentials: *const c_char, handle_p: *mut i32) -> ErrorCode {
+pub extern "C" fn open(name: *const c_char, config: *const c_char, _runtime_config: *const c_char, credentials: *const c_char, handle_p: *mut i32) -> ErrorCode {
     let name = c_char_to_str!(name);
     let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidJSON);
     let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidJSON);
@@ -263,8 +263,13 @@ mod tests {
     use super::*;
     use std::ptr;
     use self::rand::{thread_rng, Rng};
+    use utils::test_utils::{ConfigType, Config};
 
     /** Helper Functions */
+
+    lazy_static! {
+        static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
+    }
 
     fn random_string(char_num: usize) -> String {
         thread_rng().gen_ascii_chars().take(char_num).collect()
@@ -276,9 +281,9 @@ mod tests {
 
     fn open_storage() -> i32 {
         let name = CString::new("test-wallet").unwrap();
-        let config = CString::new(r##"{"read_host":"localhost", "write_host":"localhost", "port": 3306}"##).unwrap();
-        let runtime_config = CString::new("").unwrap();
-        let credentials = CString::new(r##"{"user": "root", "pass": "Gs)Sj00uuSK;"}"##).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
         let mut handle: i32 = -1;
 
         let err = open(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
@@ -298,10 +303,11 @@ mod tests {
 
     #[test]
     fn test_create_and_delete() {
+
         let name = CString::new(random_name()).unwrap();
-        let config = CString::new(r##"{"read_host":"localhost", "write_host":"localhost", "port": 3306}"##).unwrap();
-        let runtime_config = CString::new("").unwrap();
-        let credentials = CString::new(r##"{"user": "root", "pass": "Gs)Sj00uuSK;"}"##).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
 
         let err = create(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);
