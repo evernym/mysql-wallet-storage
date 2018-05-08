@@ -1,6 +1,5 @@
 use std::sync::{RwLock, Arc};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering, ATOMIC_USIZE_INIT};
 use mysql::Pool;
 
 pub struct MultiPool {
