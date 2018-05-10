@@ -16,7 +16,7 @@ extern crate lazy_static;
 mod utils;
 
 #[macro_use]
-mod errors;
+pub mod errors;
 
 pub mod api;
 

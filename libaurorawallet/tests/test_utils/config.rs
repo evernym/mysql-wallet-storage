@@ -1,5 +1,3 @@
-use serde_json;
-
 #[allow(dead_code)]
 pub struct Config {
     config: String,
