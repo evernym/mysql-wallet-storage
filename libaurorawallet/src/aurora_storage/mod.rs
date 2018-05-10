@@ -122,7 +122,7 @@ impl AuroraStorage {
     ///  * `RecordAlreadExists` - Record with the provided type and id already exist in the DB
     ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
     ///
-    pub fn add_record(&self, type_: &str, id: &str, value: &Vec<u8>, tags: &HashMap<String, String>) -> ErrorCode {
+    pub fn add_record(&self, type_: &str, id: &str, value: &Vec<u8>, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
         // start an transaction
         let mut transaction = check_result!(
             self.write_pool.start_transaction(true, None, Some(false)),
@@ -150,34 +150,56 @@ impl AuroraStorage {
 
         for (tag_name, tag_value) in tags {
             let first_char = tag_name.chars().next().unwrap_or('\0');
-            if first_char == '~' { // plain text
+
+            let result = if first_char == '~' { // plain text
                 let mut tag_name = tag_name.clone();
                 tag_name.remove(0);
-                check_result!(
-                    transaction.prep_exec(
-                        Statement::InsertPlaintextTag.as_str(),
-                        params!{
-                            "name" => tag_name,
-                            "value" => tag_value,
-                            "item_id" => item_id
-                        }
-                    ),
-                    ErrorCode::DatabaseError
-                );
+
+                match tag_value {
+                    &serde_json::Value::String(ref tag_value) => {
+                        transaction.prep_exec(
+                            Statement::InsertPlaintextTag.as_str(),
+                            params!{
+                                "name" => tag_name,
+                                "value" => tag_value,
+                                "item_id" => item_id
+                            }
+                        )
+                    },
+                    _ => {
+                        // TODO: Non String Tag Handling
+                        transaction.prep_exec(
+                            Statement::InsertPlaintextTag.as_str(),
+                            params!{
+                                "name" => tag_name,
+                                "value" => tag_value.to_string(),
+                                "item_id" => item_id
+                            }
+                        )
+                    }
+                }
             }
             else {
-                check_result!(
-                    transaction.prep_exec(
-                        Statement::InsertEncryptedTag.as_str(),
-                        params!{
-                            "name" => tag_name,
-                            "value" => tag_value,
-                            "item_id" => item_id
-                        }
-                    ),
-                    ErrorCode::DatabaseError
-                );
-            }
+                transaction.prep_exec(
+                    Statement::InsertEncryptedTag.as_str(),
+                    params!{
+                        "name" => tag_name,
+                        "value" => tag_value.as_str(),
+                        "item_id" => item_id
+                    }
+                )
+            };
+
+            match result {
+                Err(Error::MySqlError(err)) => {
+                    match err.state.as_ref() {
+                        "22001" => {return ErrorCode::TagDataTooLong},
+                        _ => {return ErrorCode::DatabaseError},
+                    };
+                },
+                Err(_) => return ErrorCode::DatabaseError,
+                Ok(result) => result,
+            };
         }
 
         check_result!(transaction.commit(), ErrorCode::DatabaseError);
@@ -215,25 +237,19 @@ impl AuroraStorage {
                 WHERE wallet_id = :wallet_id \
                     AND type = :type \
                     AND name = :name",
-            if options.fetch_value { "value" } else {"''"},
+            if options.fetch_value { "value" }
+                else {"''"},
             if options.fetch_tags {
-                "CONCAT( \
+                "CONCAT(\
                     '{', \
-                    IFNULL( \
-                        concat(\
-                            (select group_concat(concat(json_quote(concat('~', name)), ':', json_quote(value))) from tags_plaintext WHERE item_id = i.id), \
-                            ','\
-                        ), \
-                        ''\
-                    ), \
-                    IFNULL(\
+                    CONCAT_WS(\
+                        ',', \
                         (select group_concat(concat(json_quote(name), ':', json_quote(value))) from tags_encrypted WHERE item_id = i.id), \
-                        ''\
+                        (select group_concat(concat(json_quote(concat('~', name)), ':', json_quote(value))) from tags_plaintext WHERE item_id = i.id)\
                     ), \
-                    '}' \
-                ) tags"
+                '}') tags"
             }
-            else {"''"}
+                else {"''"}
         );
 
         let mut result: QueryResult = check_result!(
@@ -401,7 +417,7 @@ impl AuroraStorage {
     ///  * `TagDataTooLong` - Provided tag_name or tag_value exceed the size limit
     ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
     ///
-    pub fn add_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, String>) -> ErrorCode {
+    pub fn add_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
         // Start a transaction
         let mut transaction = check_result!(
             self.write_pool.start_transaction(true, None, Some(false)),
@@ -434,21 +450,36 @@ impl AuroraStorage {
                     let mut tag_name = tag_name.clone();
                     tag_name.remove(0);
 
-                    transaction.prep_exec(
-                        Statement::InsertPlaintextTag.as_str(),
-                        params!{
-                            "name" => tag_name,
-                            "value" => tag_value,
-                            item_id
+                    match tag_value {
+                        &serde_json::Value::String(ref tag_value) => {
+                            transaction.prep_exec(
+                                Statement::InsertPlaintextTag.as_str(),
+                                params!{
+                                    "name" => tag_name,
+                                    "value" => tag_value,
+                                    item_id
+                                }
+                            )
+                        },
+                        _ => {
+                            // TODO: Non String Tag Handling
+                            transaction.prep_exec(
+                                Statement::InsertPlaintextTag.as_str(),
+                                params!{
+                                    "name" => tag_name,
+                                    "value" => tag_value.to_string(),
+                                    item_id
+                                }
+                            )
                         }
-                    )
+                    }
                 },
                 _ => {
                     transaction.prep_exec(
                         Statement::InsertEncryptedTag.as_str(),
                         params!{
                             "name" => tag_name,
-                            "value" => tag_value,
+                            "value" => tag_value.as_str(),
                             item_id
                         }
                     )
@@ -493,7 +524,7 @@ impl AuroraStorage {
     ///  * `UnknownTag` - Tag name specified in the map does not exist in the DB
     ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
     ///
-    pub fn update_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, String>) -> ErrorCode {
+    pub fn update_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
         // Start a transaction
         let mut transaction = check_result!(
             self.write_pool.start_transaction(true, None, Some(false)),
@@ -525,21 +556,35 @@ impl AuroraStorage {
                         let mut tag_name = tag_name.clone();
                         tag_name.remove(0);
 
-                        transaction.prep_exec(
-                            Statement::UpdatePlaintextTag.as_str(),
-                            params!{
-                                "value" => tag_value,
-                                "name" => tag_name,
-                                item_id
+                        match tag_value {
+                            &serde_json::Value::String(ref tag_value) => {
+                                transaction.prep_exec(
+                                    Statement::UpdatePlaintextTag.as_str(),
+                                    params!{
+                                        "value" => tag_value,
+                                        "name" => tag_name,
+                                        item_id
+                                    }
+                                )
+                            },
+                            _ => {
+                                // TODO Non String Tag Handling
+                                transaction.prep_exec(
+                                    Statement::UpdatePlaintextTag.as_str(),
+                                    params!{
+                                        "value" => tag_value.to_string(),
+                                        "name" => tag_name,
+                                        item_id
+                                    }
+                                )
                             }
-                        )
-
+                        }
                     },
                     _ => {
                         transaction.prep_exec(
                             Statement::UpdateEncryptedTag.as_str(),
                             params!{
-                                "value" => tag_value,
+                                "value" => tag_value.as_str(),
                                 "name" => tag_name,
                                 item_id
                             }

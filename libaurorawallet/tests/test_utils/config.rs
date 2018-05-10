@@ -1,16 +1,15 @@
 #[allow(dead_code)]
-pub struct Config {
-    config: String,
-    runtime_config: String,
-    credentials: String,
-}
-
-#[allow(dead_code)]
 pub enum ConfigType {
     DEV,
     QA,
     STG,
     PROD
+}
+
+pub struct Config {
+    config: String,
+    runtime_config: String,
+    credentials: String,
 }
 
 impl Config {
