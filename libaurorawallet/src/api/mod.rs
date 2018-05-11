@@ -3,15 +3,13 @@ use utils::multi_pool::MultiPool;
 use errors::error_code::ErrorCode;
 use aurora_storage::{AuroraStorage};
 use libc::c_char;
-use std::ffi::{CStr, CString};
+use std::ffi::CStr;
 use std::slice;
 use serde_json;
 use std::collections::HashMap;
 
 // TODO
-//  - Modify tag parsing to support non string values
 //  - Move create/open/delete logic from api file into aurora_storage file
-//  - Modify add tags method to differentiate between DB error and TagDataTooLong record
 //  - Modify tests to use prepare/cleanup
 //  - Search function
 
@@ -110,7 +108,7 @@ pub extern "C" fn add_record(storage_handle: i32, type_p: *const c_char, id_p: *
 
     let type_ = c_char_to_str!(type_p);
     let id = c_char_to_str!(id_p);
-    let tags: HashMap<String, String> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidJSON);
+    let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidJSON);
 
     let mut value: Vec<u8> = Vec::new();
     unsafe { value.extend_from_slice(slice::from_raw_parts(value_p, value_len)); }
@@ -154,7 +152,7 @@ pub extern "C" fn add_record_tags(storage_handle: i32, type_p: *const c_char, id
 
     let type_ = c_char_to_str!(type_p);
     let id = c_char_to_str!(id_p);
-    let tags: HashMap<String, String> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidJSON);
+    let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidJSON);
 
     storage.add_record_tags(&type_, &id, &tags)
 }
@@ -164,7 +162,7 @@ pub extern "C" fn update_record_tags(storage_handle: i32, type_p: *const c_char,
 
     let type_ = c_char_to_str!(type_p);
     let id = c_char_to_str!(id_p);
-    let tags: HashMap<String, String> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidJSON);
+    let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidJSON);
 
     storage.update_record_tags(&type_, &id, &tags)
 }

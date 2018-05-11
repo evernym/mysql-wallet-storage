@@ -45,12 +45,14 @@ mod high_casees {
     }
 
     /** Storage OPEN Tests */
+
     #[test]
     fn test_open() {
         open_storage();
     }
 
     /** Storage CREATE and DELETE Tests */
+
     #[test]
     fn test_create_and_delete() {
         let name = CString::new(random_name()).unwrap();
@@ -73,8 +75,9 @@ mod high_casees {
     }
 
     /** Storage ADD_RECORD, GET_RECORD, DELETE_RECORD Tests */
+
     #[test]
-    fn test_insert_item_with_tags_then_fetch_all() {
+    fn test_add_record_with_tags_then_fetch_all() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -105,8 +108,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -114,7 +117,48 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_with_tags_then_fetch_only_value() {
+    fn test_add_record_with_non_string_tags_then_fetch_all() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"~tag1": null, "~tag2": true, "~tag3": 1, "~tag4": -1, "~tag5": 9.876}"##).unwrap();
+        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let mut record_handle = -1;
+        let mut id_p: *const c_char = ptr::null_mut();
+        let mut value_p: *const u8 = ptr::null_mut();
+        let mut value_len_p = 0;
+        let mut tags_json_p: *const c_char = ptr::null_mut();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::get_record_id(handle, record_handle, &mut id_p);
+        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id);
+
+        let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
+        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(unsafe { slice::from_raw_parts(value_p, value_len_p) }, value.as_slice());
+
+        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+        assert_eq!(err, ErrorCode::Success);
+
+        let expected_tags = CString::new(r##"{"~tag1": "null", "~tag2": "true", "~tag3": "1", "~tag4": "-1", "~tag5": "9.876"}"##).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(expected_tags.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        assert_eq!(tags_map, expected_tags_map);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_add_record_with_tags_then_fetch_only_value() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -150,7 +194,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_with_tags_then_fetch_only_tags() {
+    fn test_add_record_with_tags_then_fetch_only_tags() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -180,8 +224,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -189,7 +233,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_with_tags_then_fetch_none() {
+    fn test_add_record_with_tags_then_fetch_none() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -224,7 +268,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_with_tags_then_fetch_default() {
+    fn test_add_record_with_tags_then_fetch_default() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -255,8 +299,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -264,7 +308,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_without_tags_then_fetch_all() {
+    fn test_add_record_without_tags_then_fetch_all() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -295,8 +339,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -304,7 +348,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_without_tags_then_fetch_only_value() {
+    fn test_add_record_without_tags_then_fetch_only_value() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -340,7 +384,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_without_tags_then_fetch_only_tags() {
+    fn test_add_record_without_tags_then_fetch_only_tags() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -370,8 +414,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -379,7 +423,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_without_tags_then_fetch_none() {
+    fn test_add_record_without_tags_then_fetch_none() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -414,7 +458,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_insert_item_without_tags_then_fetch_default() {
+    fn test_add_record_without_tags_then_fetch_default() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -445,8 +489,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -454,7 +498,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_duplicate_insert_item_without_tags_then_fetch_default() {
+    fn test_duplicate_add_record_without_tags_then_fetch_default() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -485,8 +529,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
@@ -494,6 +538,71 @@ mod high_casees {
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_add_record_encrypted_tag_name_too_long() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+
+        let long_tag_name = random_string(257);
+        let tags_json = json!({long_tag_name: "tag_value"}).to_string();
+        let tags_json = CString::new(tags_json).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::TagDataTooLong);
+    }
+
+    #[test]
+    fn test_add_record_plaintext_tag_name_too_long() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+
+        let mut long_tag_name = random_string(257);
+        long_tag_name.insert_str(0, "~");
+        let tags_json = json!({long_tag_name: "tag_value"}).to_string();
+        let tags_json = CString::new(tags_json).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::TagDataTooLong);
+    }
+
+    #[test]
+    fn test_add_record_encrypted_tag_value_too_long() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+
+        let long_tag_value = random_string(2817);
+        let tags_json = json!({"tag_name": long_tag_value}).to_string();
+        let tags_json = CString::new(tags_json).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::TagDataTooLong);
+    }
+
+    #[test]
+    fn test_add_record_plaintext_tag_value_too_long() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+
+        let long_tag_value = random_string(2817);
+        let tags_json = json!({"~tag_name": long_tag_value}).to_string();
+        let tags_json = CString::new(tags_json).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::TagDataTooLong);
     }
 
     #[test]
@@ -508,6 +617,7 @@ mod high_casees {
     }
 
     /** Storage UPDATE_RECORD_VALUE Tests */
+
     #[test]
     fn test_update_record_value() {
         let handle = open_storage();
@@ -595,6 +705,7 @@ mod high_casees {
     }
 
     /** Storage ADD_RECORD_TAGS Tests */
+
     #[test]
     fn test_add_record_tags() {
         let handle = open_storage();
@@ -620,8 +731,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -656,8 +767,8 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -782,8 +893,9 @@ mod high_casees {
     }
 
     /** Storage UPDATE_RECORD_TAGS Tests */
+
     #[test]
-    fn test_update_record_tags() {
+    fn test_update_record_tags_string_values() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -807,8 +919,109 @@ mod high_casees {
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
 
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(new_tags_json.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(new_tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        assert_eq!(tags_map, expected_tags_map);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_update_record_encrypted_tags_string_values() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let new_tags_json = CString::new(r##"{"tag1": "value1_new", "tag2": "value2_new"}"##).unwrap();
+        let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut record_handle = -1;
+        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut tags_json_p: *const c_char = ptr::null_mut();
+        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+        assert_eq!(err, ErrorCode::Success);
+
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(new_tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        assert_eq!(tags_map, expected_tags_map);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_update_record_plaintext_tags_string_values() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"~tag1": "value1", "~tag2": "value2"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let new_tags_json = CString::new(r##"{"~tag1": "value1_new", "~tag2": "value2_new"}"##).unwrap();
+        let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut record_handle = -1;
+        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut tags_json_p: *const c_char = ptr::null_mut();
+        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+        assert_eq!(err, ErrorCode::Success);
+
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(new_tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        assert_eq!(tags_map, expected_tags_map);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_update_record_tags_non_string_values() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"~tag1": "value1", "~tag2": "value2", "~tag3": "value3", "~tag4": "value5", "~tag5": "value5"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let new_tags_json = CString::new(r##"{"~tag1": 1, "~tag2": -1, "~tag3": 0.987, "~tag4": true, "~tag5": null}"##).unwrap();
+        let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut record_handle = -1;
+        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut tags_json_p: *const c_char = ptr::null_mut();
+        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+        assert_eq!(err, ErrorCode::Success);
+
+        let expected_tags = CString::new(r##"{"~tag1": "1", "~tag2": "-1", "~tag3": "0.987", "~tag4": "true", "~tag5": "null"}"##).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(expected_tags.as_bytes()).unwrap();
+
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -876,6 +1089,26 @@ mod high_casees {
     }
 
     #[test]
+    fn test_update_unknown_plaintext_record_tag() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"~tag1": "value1"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let new_tags_json = CString::new(r##"{"~tag11": "value1"}"##).unwrap();
+        let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::UnknownTag);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
     fn test_update_encrypted_record_tag_value_too_long() {
         let handle = open_storage();
 
@@ -922,26 +1155,6 @@ mod high_casees {
     }
 
     #[test]
-    fn test_update_unknown_plaintext_record_tag() {
-        let handle = open_storage();
-
-        let type_ = CString::new("type1").unwrap();
-        let id = CString::new(random_name()).unwrap();
-        let value = vec![1, 2, 3, 4];
-        let tags_json = CString::new(r##"{"~tag1": "value1"}"##).unwrap();
-
-        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
-
-        let new_tags_json = CString::new(r##"{"~tag11": "value1"}"##).unwrap();
-        let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownTag);
-
-        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    #[test]
     fn test_update_record_tag_unknown_record() {
         let handle = open_storage();
 
@@ -966,6 +1179,7 @@ mod high_casees {
     }
 
     /** Storage DELETE_RECORD_TAGS Tests */
+
     #[test]
     fn test_delete_record_tags() {
         let handle = open_storage();
@@ -992,8 +1206,8 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let tags_json_empty = CString::new(r##"{}"##).unwrap();
-        let expected_tags_map: HashMap<String, String> = serde_json::from_slice(tags_json_empty.as_bytes()).unwrap();
-        let tags_map: HashMap<String, String> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json_empty.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
