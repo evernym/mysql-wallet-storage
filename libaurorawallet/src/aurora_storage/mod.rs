@@ -363,7 +363,8 @@ impl AuroraStorage {
                     params!{
                         "value" => value,
                         "type" => type_,
-                        "name" => id
+                        "name" => id,
+                        "wallet_id" => self.wallet_id
                     }
             ),
             ErrorCode::DatabaseError
@@ -379,7 +380,8 @@ impl AuroraStorage {
                    Statement::CheckRecordExists.as_str(),
                      params!{
                         "type" => type_,
-                        "name" => id
+                        "name" => id,
+                        "wallet_id" => self.wallet_id
                      }
                 ),
                 ErrorCode::DatabaseError
@@ -430,7 +432,8 @@ impl AuroraStorage {
                     Statement::GetRecordID.as_str(),
                     params!{
                         "type" => type_,
-                        "name" => id
+                        "name" => id,
+                        "wallet_id" => self.wallet_id
                     }
                 ),
                 ErrorCode::DatabaseError
@@ -535,7 +538,8 @@ impl AuroraStorage {
                 transaction.prep_exec(Statement::GetRecordID.as_str(),
                     params!{
                         "type" => type_,
-                        "name" => id
+                        "name" => id,
+                        "wallet_id" => self.wallet_id
                     }
                 ),
                 ErrorCode::DatabaseError
@@ -685,7 +689,8 @@ impl AuroraStorage {
                 transaction.prep_exec(Statement::GetRecordID.as_str(),
                     params!{
                         "type" => type_,
-                        "name" => id
+                        "name" => id,
+                        "wallet_id" => self.wallet_id
                     }
                 ),
                 ErrorCode::DatabaseError
