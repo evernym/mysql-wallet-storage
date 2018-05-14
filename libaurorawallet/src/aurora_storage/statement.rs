@@ -12,6 +12,8 @@ pub enum Statement {
     CheckEncryptedTagExists,
     DeletePlaintextTag,
     DeleteEncryptedTag,
+    GetMetadata,
+    SetMetadata,
 }
 
 impl Statement {
@@ -30,6 +32,8 @@ impl Statement {
             &Statement::CheckEncryptedTagExists => "SELECT COUNT(item_id) FROM tags_encrypted WHERE name = :name AND item_id = :item_id",
             &Statement::DeletePlaintextTag => "DELETE FROM tags_plaintext WHERE name = :name AND item_id = :item_id",
             &Statement::DeleteEncryptedTag => "DELETE FROM tags_encrypted WHERE name = :name AND item_id = :item_id",
+            &Statement::GetMetadata => "SELECT metadata FROM wallets WHERE id = :wallet_id",
+            &Statement::SetMetadata => "UPDATE wallets SET metadata = :metadata WHERE id = :wallet_id"
         }
     }
 }

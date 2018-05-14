@@ -59,8 +59,9 @@ mod high_casees {
         let config = CString::new(TEST_CONFIG.get_config()).unwrap();
         let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let metadata = CString::new(random_string(512)).unwrap();
 
-        let err = api::create(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
+        let err = api::create(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
         let mut handle: i32 = -1;
@@ -1256,5 +1257,29 @@ mod high_casees {
         let tag_names = CString::new(r##"["tag11", "tag22", "~tag33"]"##).unwrap();
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
         assert_eq!(err, ErrorCode::InvalidStorageHandle);
+    }
+
+    #[test]
+    fn test_set_get_metadata() {
+        let handle = open_storage();
+
+        let mut metadata_handle = -1;
+        let mut metadata_ptr: *const c_char = ptr::null_mut();
+
+        let new_metadata = random_string(512);
+        let new_metadata_cstring = CString::new(new_metadata.clone()).unwrap();
+
+        let err = api::set_metadata(handle, new_metadata_cstring.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::get_metadata(handle, &mut metadata_ptr, &mut metadata_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let metadata = unsafe { CStr::from_ptr(metadata_ptr).to_str().unwrap() };
+
+        assert_eq!(new_metadata, metadata);
+
+        let err = api::free_metadata(handle, metadata_handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 }

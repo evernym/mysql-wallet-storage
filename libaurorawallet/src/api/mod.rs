@@ -40,16 +40,17 @@ lazy_static! {
     static ref CONNECTIONS: MultiPool = MultiPool::new();
 }
 
-pub extern "C" fn create(name: *const c_char, config: *const c_char, credentials: *const c_char) -> ErrorCode {
+pub extern "C" fn create(name: *const c_char, config: *const c_char, credentials: *const c_char, metadata: *const c_char) -> ErrorCode {
     let name = c_char_to_str!(name);
     let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidJSON);
     let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidJSON);
+    let metadata = c_char_to_str!(metadata);
 
     let write_connection_string = format!("mysql://{}:{}@{}:{}/wallet", credentials.user, credentials.pass, config.write_host, config.port);
 
     let write_pool = check_option!(CONNECTIONS.get(&write_connection_string), ErrorCode::ConnectionError);
 
-    check_result!(write_pool.prep_exec(r"INSERT INTO wallets(name) VALUES (:name)", params!{name}), ErrorCode::DatabaseError);
+    check_result!(write_pool.prep_exec(r"INSERT INTO wallets(name, metadata) VALUES (:name, :metadata)", params!{name, metadata}), ErrorCode::DatabaseError);
 
     ErrorCode::Success
 }
@@ -228,10 +229,35 @@ pub extern "C" fn get_record_tags(storage_handle: i32, record_handle: i32, tags_
 }
 
 pub extern "C" fn free_record(storage_handle: i32, record_handle: i32) -> ErrorCode {
-    match STORAGES.get(storage_handle) {
-        None => ErrorCode::InvalidStorageHandle,
-        Some(storage) => storage.free_record(record_handle)
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidStorageHandle);
+    storage.free_record(record_handle)
+}
+
+pub extern "C" fn get_metadata(storage_handle: i32, metadata_ptr: *mut *const c_char, metadata_handle_ptr: *mut i32) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidStorageHandle);
+    let metadata = storage.get_metadata();
+
+    match metadata {
+        Err(e) => e,
+        Ok((metadata, handle)) => {
+            unsafe {
+                *metadata_ptr = metadata.as_ptr();
+                *metadata_handle_ptr = handle;
+            }
+            ErrorCode::Success
+        }
     }
+}
+
+pub extern "C" fn set_metadata(storage_handle: i32, metadata_ptr: *const c_char) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidStorageHandle);
+    let metadata = c_char_to_str!(metadata_ptr);
+    storage.set_metadata(metadata)
+}
+
+pub extern "C" fn free_metadata(storage_handle: i32, metadata_handle: i32) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidStorageHandle);
+    storage.free_metadata(metadata_handle)
 }
 
 #[allow(unused_variables)]
