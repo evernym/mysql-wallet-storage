@@ -2,22 +2,11 @@
 #[repr(i32)]
 pub enum ErrorCode {
     Success = 0,
-    InvalidStorageHandle = 1,
-    InvalidSearchHandle = 2,
-    InvalidRecordHandle = 3,
-    InvalidEncoding = 4,
-    InvalidJSON = 5,
-    ConnectionError = 6,
-    DatabaseError = 7,
-    UnknownWalletName = 8,
-    UnknownRecord = 9,
-    TypeNotFetched = 10,
-    ValueNotFetched = 11,
-    TagsNotFetched = 12,
-    RecordAlreadExists = 14,
-    UnknownTag = 15,
-    TagAlreadyExists =16,
-    TagDataTooLong = 17,
+    InvalidState = 112,
+    InvalidStructure = 113,
+    IOError = 114,
+    WalletNotFoundError = 204,
+    RecordAlreadyExists = 208,
 }
 
 macro_rules! check_result {

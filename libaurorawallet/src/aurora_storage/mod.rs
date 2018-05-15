@@ -74,7 +74,7 @@ impl AuroraStorage {
             ErrorCode::Success
         }
         else {
-            ErrorCode::InvalidRecordHandle
+            ErrorCode::InvalidState
         }
     }
 
@@ -99,7 +99,7 @@ impl AuroraStorage {
             ErrorCode::Success
         }
         else {
-            ErrorCode::InvalidSearchHandle
+            ErrorCode::InvalidState
         }
     }
 
@@ -121,13 +121,13 @@ impl AuroraStorage {
     ///
     ///  * `Success` - Execution successful
     ///  * `RecordAlreadExists` - Record with the provided type and id already exist in the DB
-    ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn add_record(&self, type_: &str, id: &str, value: &Vec<u8>, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
         // start an transaction
         let mut transaction = check_result!(
             self.write_pool.start_transaction(true, None, Some(false)),
-            ErrorCode::DatabaseError);
+            ErrorCode::IOError);
 
         let item_id = {
             let result: Result<QueryResult, Error> = transaction.prep_exec(
@@ -141,8 +141,8 @@ impl AuroraStorage {
             );
 
             let result: QueryResult = match result {
-                Err(Error::MySqlError(_)) => return ErrorCode::RecordAlreadExists,
-                Err(_) => return ErrorCode::DatabaseError,
+                Err(Error::MySqlError(_)) => return ErrorCode::RecordAlreadyExists,
+                Err(_) => return ErrorCode::IOError,
                 Ok(result) => result,
             };
 
@@ -159,7 +159,7 @@ impl AuroraStorage {
                 match tag_value {
                     &serde_json::Value::String(ref tag_value) => {
                         transaction.prep_exec(
-                            Statement::InsertPlaintextTag.as_str(),
+                            Statement::UpsertPlaintextTag.as_str(),
                             params!{
                                 "name" => tag_name,
                                 "value" => tag_value,
@@ -169,20 +169,13 @@ impl AuroraStorage {
                     },
                     _ => {
                         // TODO: Non String Tag Handling
-                        transaction.prep_exec(
-                            Statement::InsertPlaintextTag.as_str(),
-                            params!{
-                                "name" => tag_name,
-                                "value" => tag_value.to_string(),
-                                "item_id" => item_id
-                            }
-                        )
+                        return ErrorCode::InvalidStructure;
                     }
                 }
             }
             else {
                 transaction.prep_exec(
-                    Statement::InsertEncryptedTag.as_str(),
+                    Statement::UpsertEncryptedTag.as_str(),
                     params!{
                         "name" => tag_name,
                         "value" => tag_value.as_str(),
@@ -194,16 +187,16 @@ impl AuroraStorage {
             match result {
                 Err(Error::MySqlError(err)) => {
                     match err.state.as_ref() {
-                        "22001" => {return ErrorCode::TagDataTooLong},
-                        _ => {return ErrorCode::DatabaseError},
+                        "22001" => {return ErrorCode::InvalidStructure },
+                        _ => {return ErrorCode::IOError },
                     };
                 },
-                Err(_) => return ErrorCode::DatabaseError,
+                Err(_) => return ErrorCode::IOError,
                 Ok(result) => result,
             };
         }
 
-        check_result!(transaction.commit(), ErrorCode::DatabaseError);
+        check_result!(transaction.commit(), ErrorCode::IOError);
 
         ErrorCode::Success
     }
@@ -226,11 +219,11 @@ impl AuroraStorage {
     ///
     ///  * `Success` - Execution successful
     ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
-    ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///  * `InvalidEncoding` - Invalid encoding of a provided/fetched string
     ///
     pub fn fetch_record(&self, type_: &str, id: &str, options: &str, record_handle_p: *mut i32) -> ErrorCode {
-        let options: FetchOptions = check_result!(serde_json::from_str(options), ErrorCode::InvalidJSON);
+        let options: FetchOptions = check_result!(serde_json::from_str(options), ErrorCode::InvalidStructure);
 
         let query = format!(
             "SELECT {}, {} \
@@ -262,19 +255,19 @@ impl AuroraStorage {
                     "name" => id
                 }
             ),
-            ErrorCode::DatabaseError
+            ErrorCode::IOError
         );
 
-        let row = check_result!(check_option!(result.next(), ErrorCode::UnknownRecord), ErrorCode::DatabaseError);
+        let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
 
         // These 2 value cannot be NULL.
-        let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::DatabaseError);
-        let tags: String = check_option!(row.get(1), ErrorCode::DatabaseError);
+        let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::IOError);
+        let tags: String = check_option!(row.get(1), ErrorCode::IOError);
 
         let record = Record::new(
-            check_result!(CString::new(id), ErrorCode::InvalidEncoding),
+            check_result!(CString::new(id), ErrorCode::InvalidState),
             if options.fetch_value {Some(db_value)} else {None},
-            if options.fetch_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidEncoding))} else {None},
+            if options.fetch_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
             None
         );
 
@@ -316,7 +309,7 @@ impl AuroraStorage {
     ///
     ///  * `Success` - Execution successful
     ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
-    ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn delete_record(&self, type_: &str, id: &str) -> ErrorCode {
         let result: QueryResult = check_result!(
@@ -328,11 +321,11 @@ impl AuroraStorage {
                     "name" => id
                 }
             ),
-            ErrorCode::DatabaseError
+            ErrorCode::IOError
         );
 
         if result.affected_rows() != 1 {
-            return ErrorCode::UnknownRecord;
+            return ErrorCode::WalletNotFoundError;
         }
 
         ErrorCode::Success
@@ -355,7 +348,7 @@ impl AuroraStorage {
     ///
     ///  * `Success` - Execution successful
     ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
-    ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn update_record_value(&self, type_: &str, id: &str, value: &Vec<u8>) -> ErrorCode {
         let result: QueryResult = check_result!(
@@ -368,7 +361,7 @@ impl AuroraStorage {
                         "wallet_id" => self.wallet_id
                     }
             ),
-            ErrorCode::DatabaseError
+            ErrorCode::IOError
         );
 
         // When performing updates MySQL return only the rows it has changed as affected_rows.
@@ -385,14 +378,14 @@ impl AuroraStorage {
                         "wallet_id" => self.wallet_id
                      }
                 ),
-                ErrorCode::DatabaseError
+                ErrorCode::IOError
             );
 
-            let row = check_result!(check_option!(result.next(), ErrorCode::UnknownRecord), ErrorCode::DatabaseError);
-            let found_rows: u64 = check_option!(row.get(0), ErrorCode::UnknownRecord);
+            let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
+            let found_rows: u64 = check_option!(row.get(0), ErrorCode::WalletNotFoundError);
 
             if found_rows != 1 {
-                return ErrorCode::UnknownRecord;
+                return ErrorCode::WalletNotFoundError;
             }
         }
 
@@ -401,6 +394,7 @@ impl AuroraStorage {
 
     ///
     /// Adds tags for a record identified by type and id.
+    /// If tag with that name exists it will be updated.
     ///
     /// # Arguments
     ///
@@ -418,13 +412,13 @@ impl AuroraStorage {
     ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
     ///  * `TagAlreadyExists` - Provided tag already exists in the DB
     ///  * `TagDataTooLong` - Provided tag_name or tag_value exceed the size limit
-    ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn add_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
         // Start a transaction
         let mut transaction = check_result!(
             self.write_pool.start_transaction(true, None, Some(false)),
-            ErrorCode::DatabaseError
+            ErrorCode::IOError
         );
 
         let item_id = {
@@ -437,11 +431,11 @@ impl AuroraStorage {
                         "wallet_id" => self.wallet_id
                     }
                 ),
-                ErrorCode::DatabaseError
+                ErrorCode::IOError
             );
 
-            let row = check_result!(check_option!(result.next(), ErrorCode::UnknownRecord), ErrorCode::DatabaseError);
-            let item_id: u64 = check_option!(row.get(0), ErrorCode::UnknownRecord);
+            let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
+            let item_id: u64 = check_option!(row.get(0), ErrorCode::WalletNotFoundError);
 
             item_id
         };
@@ -457,7 +451,7 @@ impl AuroraStorage {
                     match tag_value {
                         &serde_json::Value::String(ref tag_value) => {
                             transaction.prep_exec(
-                                Statement::InsertPlaintextTag.as_str(),
+                                Statement::UpsertPlaintextTag.as_str(),
                                 params!{
                                     "name" => tag_name,
                                     "value" => tag_value,
@@ -467,20 +461,13 @@ impl AuroraStorage {
                         },
                         _ => {
                             // TODO: Non String Tag Handling
-                            transaction.prep_exec(
-                                Statement::InsertPlaintextTag.as_str(),
-                                params!{
-                                    "name" => tag_name,
-                                    "value" => tag_value.to_string(),
-                                    item_id
-                                }
-                            )
+                            return ErrorCode::InvalidStructure;
                         }
                     }
                 },
                 _ => {
                     transaction.prep_exec(
-                        Statement::InsertEncryptedTag.as_str(),
+                        Statement::UpsertEncryptedTag.as_str(),
                         params!{
                             "name" => tag_name,
                             "value" => tag_value.as_str(),
@@ -493,23 +480,23 @@ impl AuroraStorage {
             match result {
                 Err(Error::MySqlError(err)) => {
                     match err.state.as_ref() {
-                        "22001" => {return ErrorCode::TagDataTooLong},
-                        "23000" => {return ErrorCode::TagAlreadyExists}
-                        _ => {return ErrorCode::DatabaseError},
+                        "22001" => {return ErrorCode::InvalidStructure },
+                        _ => {return ErrorCode::IOError },
                     };
                 },
-                Err(_) => return ErrorCode::DatabaseError,
+                Err(_) => return ErrorCode::IOError,
                 Ok(result) => result,
             };
         }
 
-        check_result!(transaction.commit(), ErrorCode::DatabaseError);
+        check_result!(transaction.commit(), ErrorCode::IOError);
 
         ErrorCode::Success
     }
 
     ///
     /// Updates tags of a record identified by type and id.
+    /// This function will replace all tags with new.
     ///
     /// # Arguments
     ///
@@ -526,13 +513,13 @@ impl AuroraStorage {
     ///  * `Success` - Execution successful
     ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
     ///  * `UnknownTag` - Tag name specified in the map does not exist in the DB
-    ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn update_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
         // Start a transaction
         let mut transaction = check_result!(
             self.write_pool.start_transaction(true, None, Some(false)),
-            ErrorCode::DatabaseError);
+            ErrorCode::IOError);
 
         let item_id = {
             let mut result: QueryResult = check_result!(
@@ -543,14 +530,20 @@ impl AuroraStorage {
                         "wallet_id" => self.wallet_id
                     }
                 ),
-                ErrorCode::DatabaseError
+                ErrorCode::IOError
             );
 
-            let row = check_result!(check_option!(result.next(), ErrorCode::UnknownRecord), ErrorCode::DatabaseError);
-            let item_id: u64 = check_option!(row.get(0), ErrorCode::UnknownRecord);
+            let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
+            let item_id: u64 = check_option!(row.get(0), ErrorCode::WalletNotFoundError);
 
             item_id
         };
+
+        // Delete all existing tags.
+        {
+            check_result!(transaction.prep_exec(Statement::DeleteAllPlaintextTags.as_str(), params!{item_id}), ErrorCode::IOError);
+            check_result!(transaction.prep_exec(Statement::DeleteAllEncryptedTags.as_str(), params!{item_id}), ErrorCode::IOError);
+        }
 
         for (tag_name, tag_value) in tags {
             let first_char = tag_name.chars().next().unwrap_or('\0');
@@ -564,7 +557,7 @@ impl AuroraStorage {
                         match tag_value {
                             &serde_json::Value::String(ref tag_value) => {
                                 transaction.prep_exec(
-                                    Statement::UpdatePlaintextTag.as_str(),
+                                    Statement::UpsertPlaintextTag.as_str(),
                                     params!{
                                         "value" => tag_value,
                                         "name" => tag_name,
@@ -574,20 +567,13 @@ impl AuroraStorage {
                             },
                             _ => {
                                 // TODO Non String Tag Handling
-                                transaction.prep_exec(
-                                    Statement::UpdatePlaintextTag.as_str(),
-                                    params!{
-                                        "value" => tag_value.to_string(),
-                                        "name" => tag_name,
-                                        item_id
-                                    }
-                                )
+                                return ErrorCode::InvalidStructure;
                             }
                         }
                     },
                     _ => {
                         transaction.prep_exec(
-                            Statement::UpdateEncryptedTag.as_str(),
+                            Statement::UpsertEncryptedTag.as_str(),
                             params!{
                                 "value" => tag_value.as_str(),
                                 "name" => tag_name,
@@ -600,61 +586,20 @@ impl AuroraStorage {
                 let result = match result {
                     Err(Error::MySqlError(err)) => {
                         match err.state.as_ref() {
-                            "22001" => {return ErrorCode::TagDataTooLong},
-                            _ => {return ErrorCode::DatabaseError},
+                            "22001" => {return ErrorCode::InvalidStructure },
+                            _ => {return ErrorCode::IOError },
                         };
                     },
-                    Err(_) => return ErrorCode::DatabaseError,
+                    Err(_) => return ErrorCode::IOError,
                     Ok(result) => result,
                 };
 
                 result.affected_rows()
 
             };
-
-            // When performing updates MySQL return only the rows it has changed as affected_rows.
-            // If the value provided for the UPDATE is the same as the one already in the DB MySQL will ignore that row.
-            // Code below is checking if the user provided the same value as the one that is in the DB,
-            // or if the tag that is provided doesn't exist.
-            if affected_rows != 1 {
-                let mut result = match first_char {
-                    '~' => {
-                        let mut tag_name = tag_name.clone();
-                        tag_name.remove(0);
-
-                        check_result!(
-                            transaction.prep_exec(Statement::CheckPlaintextTagExists.as_str(),
-                                params!{
-                                    "name" => tag_name,
-                                    item_id
-                                }
-                            ),
-                            ErrorCode::DatabaseError
-                        )
-                    },
-                    _ => {
-                        check_result!(
-                            transaction.prep_exec(Statement::CheckEncryptedTagExists.as_str(),
-                                params!{
-                                    "name" => tag_name,
-                                    item_id
-                                }
-                            ),
-                            ErrorCode::DatabaseError
-                        )
-                    }
-                };
-
-                let row = check_result!(check_option!(result.next(), ErrorCode::UnknownTag), ErrorCode::DatabaseError);
-                let found_rows: u64 = check_option!(row.get(0), ErrorCode::UnknownTag);
-
-                if found_rows != 1 {
-                    return ErrorCode::UnknownTag;
-                }
-            }
         }
 
-        check_result!(transaction.commit(), ErrorCode::DatabaseError);
+        check_result!(transaction.commit(), ErrorCode::IOError);
 
         ErrorCode::Success
     }
@@ -677,13 +622,13 @@ impl AuroraStorage {
     ///  * `Success` - Execution successful
     ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
     ///  * `UnknownTag` - Tag name specified in the list does not exist in the DB
-    ///  * `DatabaseError` - Unexpected error occurred while communicating with the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn delete_record_tags(&self, type_: &str, id: &str, tag_names: &Vec<String>) -> ErrorCode {
 
         let mut transaction = check_result!(
             self.write_pool.start_transaction(true, None, Some(false)),
-            ErrorCode::DatabaseError);
+            ErrorCode::IOError);
 
         let item_id = {
             let mut result: QueryResult = check_result!(
@@ -694,11 +639,11 @@ impl AuroraStorage {
                         "wallet_id" => self.wallet_id
                     }
                 ),
-                ErrorCode::DatabaseError
+                ErrorCode::IOError
             );
 
-            let row = check_result!(check_option!(result.next(), ErrorCode::UnknownRecord), ErrorCode::DatabaseError);
-            let item_id: u64 = check_option!(row.get(0), ErrorCode::UnknownRecord);
+            let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
+            let item_id: u64 = check_option!(row.get(0), ErrorCode::WalletNotFoundError);
 
             item_id
         };
@@ -717,7 +662,7 @@ impl AuroraStorage {
                                 item_id
                             }
                         ),
-                        ErrorCode::DatabaseError
+                        ErrorCode::IOError
                     )
                 },
                 _ => {
@@ -728,17 +673,13 @@ impl AuroraStorage {
                                 item_id
                             }
                         ),
-                        ErrorCode::DatabaseError
+                        ErrorCode::IOError
                     )
                 }
             };
-
-            if result.affected_rows() != 1 {
-                return ErrorCode::UnknownTag;
-            }
         }
 
-        check_result!(transaction.commit(), ErrorCode::DatabaseError);
+        check_result!(transaction.commit(), ErrorCode::IOError);
 
         ErrorCode::Success
     }
@@ -751,15 +692,15 @@ impl AuroraStorage {
                     "wallet_id" => self.wallet_id,
                 }
             ),
-            Err(ErrorCode::DatabaseError)
+            Err(ErrorCode::IOError)
         );
 
-        let row = check_result!(check_option!(result.next(), Err(ErrorCode::UnknownRecord)), Err(ErrorCode::DatabaseError));
-        let metadata: String = check_option!(row.get(0), Err(ErrorCode::DatabaseError));
-        let metadata = check_result!(CString::new(metadata), Err(ErrorCode::InvalidEncoding));
+        let row = check_result!(check_option!(result.next(), Err(ErrorCode::WalletNotFoundError)), Err(ErrorCode::IOError));
+        let metadata: String = check_option!(row.get(0), Err(ErrorCode::IOError));
+        let metadata = check_result!(CString::new(metadata), Err(ErrorCode::InvalidState));
 
         let handle = self.metadata.insert(metadata);
-        let metadata = check_option!(self.metadata.get(handle), Err(ErrorCode::UnknownRecord));
+        let metadata = check_option!(self.metadata.get(handle), Err(ErrorCode::WalletNotFoundError));
 
         Ok((metadata, handle))
     }
@@ -773,7 +714,7 @@ impl AuroraStorage {
                     "metadata" => metadata,
                 }
             ),
-            ErrorCode::DatabaseError
+            ErrorCode::IOError
         );
 
         ErrorCode::Success
@@ -784,7 +725,7 @@ impl AuroraStorage {
             ErrorCode::Success
         }
         else {
-            ErrorCode::InvalidRecordHandle
+            ErrorCode::InvalidState
         }
     }
 }

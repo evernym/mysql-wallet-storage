@@ -133,29 +133,30 @@ mod high_casees {
         let mut tags_json_p: *const c_char = ptr::null_mut();
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
-        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
-        assert_eq!(err, ErrorCode::Success);
-
-        let err = api::get_record_id(handle, record_handle, &mut id_p);
-        assert_eq!(err, ErrorCode::Success);
-        assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id);
-
-        let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
-        assert_eq!(err, ErrorCode::Success);
-        assert_eq!(unsafe { slice::from_raw_parts(value_p, value_len_p) }, value.as_slice());
-
-        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-        assert_eq!(err, ErrorCode::Success);
-
-        let expected_tags = CString::new(r##"{"~tag1": "null", "~tag2": "true", "~tag3": "1", "~tag4": "-1", "~tag5": "9.876"}"##).unwrap();
-        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(expected_tags.as_bytes()).unwrap();
-        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
-        assert_eq!(tags_map, expected_tags_map);
-
-        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
+        // TODO: when implemented support for non-string tag values
+//        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
+//        assert_eq!(err, ErrorCode::Success);
+//
+//        let err = api::get_record_id(handle, record_handle, &mut id_p);
+//        assert_eq!(err, ErrorCode::Success);
+//        assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id);
+//
+//        let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
+//        assert_eq!(err, ErrorCode::Success);
+//        assert_eq!(unsafe { slice::from_raw_parts(value_p, value_len_p) }, value.as_slice());
+//
+//        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+//        assert_eq!(err, ErrorCode::Success);
+//
+//        let expected_tags = CString::new(r##"{"~tag1": "null", "~tag2": "true", "~tag3": "1", "~tag4": "-1", "~tag5": "9.876"}"##).unwrap();
+//        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(expected_tags.as_bytes()).unwrap();
+//        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+//        assert_eq!(tags_map, expected_tags_map);
+//
+//        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+//        assert_eq!(err, ErrorCode::Success);
     }
 
     #[test]
@@ -188,7 +189,7 @@ mod high_casees {
         assert_eq!(unsafe { slice::from_raw_parts(value_p, value_len_p) }, value.as_slice());
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-        assert_eq!(err, ErrorCode::TagsNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -220,7 +221,7 @@ mod high_casees {
         assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id);
 
         let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
-        assert_eq!(err, ErrorCode::ValueNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
@@ -259,10 +260,10 @@ mod high_casees {
         assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id);
 
         let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
-        assert_eq!(err, ErrorCode::ValueNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-        assert_eq!(err, ErrorCode::TagsNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -378,7 +379,7 @@ mod high_casees {
         assert_eq!(unsafe { slice::from_raw_parts(value_p, value_len_p) }, value.as_slice());
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-        assert_eq!(err, ErrorCode::TagsNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -410,7 +411,7 @@ mod high_casees {
         assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id);
 
         let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
-        assert_eq!(err, ErrorCode::ValueNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
@@ -449,10 +450,10 @@ mod high_casees {
         assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id);
 
         let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
-        assert_eq!(err, ErrorCode::ValueNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-        assert_eq!(err, ErrorCode::TagsNotFetched);
+        assert_eq!(err, ErrorCode::InvalidState);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -535,7 +536,7 @@ mod high_casees {
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::RecordAlreadExists);
+        assert_eq!(err, ErrorCode::RecordAlreadyExists);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -554,7 +555,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
     #[test]
@@ -571,7 +572,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
     #[test]
@@ -587,7 +588,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
     #[test]
@@ -603,7 +604,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
     #[test]
@@ -614,7 +615,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownRecord);
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
     }
 
     /** Storage UPDATE_RECORD_VALUE Tests */
@@ -690,7 +691,7 @@ mod high_casees {
         let new_value = vec![1, 2, 3, 4];
 
         let err = api::update_record_value(handle, type_.as_ptr(), id.as_ptr(), new_value.as_ptr(), new_value.len());
-        assert_eq!(err, ErrorCode::InvalidStorageHandle);
+        assert_eq!(err, ErrorCode::InvalidState);
     }
 
     #[test]
@@ -702,7 +703,7 @@ mod high_casees {
         let new_value = vec![1, 2, 3, 4];
 
         let err = api::update_record_value(handle, type_.as_ptr(), id.as_ptr(), new_value.as_ptr(), new_value.len());
-        assert_eq!(err, ErrorCode::UnknownRecord);
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
     }
 
     /** Storage ADD_RECORD_TAGS Tests */
@@ -757,7 +758,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagAlreadyExists);
+        assert_eq!(err, ErrorCode::Success);
 
         let mut record_handle = -1;
         let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
@@ -793,7 +794,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -817,7 +818,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -840,7 +841,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -863,7 +864,7 @@ mod high_casees {
         let tags_json = CString::new(tags_json).unwrap();
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -878,7 +879,7 @@ mod high_casees {
         let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::InvalidStorageHandle);
+        assert_eq!(err, ErrorCode::InvalidState);
     }
 
     #[test]
@@ -890,7 +891,7 @@ mod high_casees {
         let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownRecord);
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
     }
 
     /** Storage UPDATE_RECORD_TAGS Tests */
@@ -1008,22 +1009,23 @@ mod high_casees {
 
         let new_tags_json = CString::new(r##"{"~tag1": 1, "~tag2": -1, "~tag3": 0.987, "~tag4": true, "~tag5": null}"##).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
-        let mut record_handle = -1;
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
-        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
-        assert_eq!(err, ErrorCode::Success);
-
-        let mut tags_json_p: *const c_char = ptr::null_mut();
-        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-        assert_eq!(err, ErrorCode::Success);
-
-        let expected_tags = CString::new(r##"{"~tag1": "1", "~tag2": "-1", "~tag3": "0.987", "~tag4": "true", "~tag5": "null"}"##).unwrap();
-        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(expected_tags.as_bytes()).unwrap();
-
-        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
-        assert_eq!(tags_map, expected_tags_map);
+        // TODO: when added support for non-string tag values.
+//        let mut record_handle = -1;
+//        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+//        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
+//        assert_eq!(err, ErrorCode::Success);
+//
+//        let mut tags_json_p: *const c_char = ptr::null_mut();
+//        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+//        assert_eq!(err, ErrorCode::Success);
+//
+//        let expected_tags = CString::new(r##"{"~tag1": "1", "~tag2": "-1", "~tag3": "0.987", "~tag4": "true", "~tag5": "null"}"##).unwrap();
+//        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(expected_tags.as_bytes()).unwrap();
+//
+//        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+//        assert_eq!(tags_map, expected_tags_map);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1083,7 +1085,9 @@ mod high_casees {
 
         let new_tags_json = CString::new(r##"{"tag11": "value1"}"##).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownTag);
+        assert_eq!(err, ErrorCode::Success);
+
+        // TODO: add get check.
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1103,7 +1107,9 @@ mod high_casees {
 
         let new_tags_json = CString::new(r##"{"~tag11": "value1"}"##).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownTag);
+        assert_eq!(err, ErrorCode::Success);
+
+        // TODO: add get check.
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1126,7 +1132,7 @@ mod high_casees {
         let new_tags_json = CString::new(new_tags_json).unwrap();
 
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1149,7 +1155,7 @@ mod high_casees {
         let new_tags_json = CString::new(new_tags_json).unwrap();
 
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::TagDataTooLong);
+        assert_eq!(err, ErrorCode::InvalidStructure);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1164,7 +1170,7 @@ mod high_casees {
 
         let tags_json = CString::new(r##"{"~tag1": "value1"}"##).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownRecord);
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
     }
 
     #[test]
@@ -1176,7 +1182,7 @@ mod high_casees {
 
         let tags_json = CString::new(r##"{"~tag11": "value1"}"##).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::InvalidStorageHandle);
+        assert_eq!(err, ErrorCode::InvalidState);
     }
 
     /** Storage DELETE_RECORD_TAGS Tests */
@@ -1229,7 +1235,7 @@ mod high_casees {
 
         let tag_names = CString::new(r##"["tag11", "tag22", "~tag33"]"##).unwrap();
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownTag);
+        assert_eq!(err, ErrorCode::Success);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1244,7 +1250,7 @@ mod high_casees {
         let tag_names = CString::new(r##"["tag1", "tag2", "~tag3"]"##).unwrap();
 
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-        assert_eq!(err, ErrorCode::UnknownRecord);
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
     }
 
     #[test]
@@ -1256,7 +1262,7 @@ mod high_casees {
 
         let tag_names = CString::new(r##"["tag11", "tag22", "~tag33"]"##).unwrap();
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-        assert_eq!(err, ErrorCode::InvalidStorageHandle);
+        assert_eq!(err, ErrorCode::InvalidState);
     }
 
     #[test]
