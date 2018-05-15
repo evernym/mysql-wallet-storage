@@ -32,8 +32,8 @@ impl Config {
                     ).to_string(),
                     credentials: json!(
                         {
-                            "user": "root",
-                            "pass": "Gs)Sj00uuSK;"
+                            "user": "wallet",
+                            "pass": "wallet"
                         }
                     ).to_string()
                 }
@@ -54,8 +54,8 @@ impl Config {
                     ).to_string(),
                     credentials: json!(
                         {
-                            "user": "root",
-                            "pass": "Gs)Sj00uuSK;"
+                            "user": "wallet",
+                            "pass": "wallet"
                         }
                     ).to_string()
                 }
@@ -76,8 +76,8 @@ impl Config {
                     ).to_string(),
                     credentials: json!(
                         {
-                            "user": "root",
-                            "pass": "Gs)Sj00uuSK;"
+                            "user": "wallet",
+                            "pass": "wallet"
                         }
                     ).to_string()
                 }
@@ -98,8 +98,8 @@ impl Config {
                     ).to_string(),
                     credentials: json!(
                         {
-                            "user": "root",
-                            "pass": "Gs)Sj00uuSK;"
+                            "user": "wallet",
+                            "pass": "wallet"
                         }
                     ).to_string()
                 }

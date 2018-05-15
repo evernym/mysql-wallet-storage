@@ -11,6 +11,7 @@ USE `wallet`;
 CREATE TABLE IF NOT EXISTS `wallets` (
     `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(1024) NOT NULL,
+    `metadata` VARCHAR(10240) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `wallet_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;

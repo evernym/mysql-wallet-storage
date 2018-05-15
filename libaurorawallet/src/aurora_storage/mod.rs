@@ -43,13 +43,14 @@ pub struct AuroraStorage {
     wallet_id: u64,
     records: HandleStore<Record>,
     searches: HandleStore<SearchRecord>,
+    metadata: HandleStore<CString>,
     read_pool: Arc<Pool>, // cached reference to the pool
     write_pool: Arc<Pool>,
 }
 
 impl AuroraStorage {
     pub fn new(wallet_id: u64, read_pool: Arc<Pool>, write_pool: Arc<Pool>) -> Self {
-        Self{wallet_id, records: HandleStore::new(), searches: HandleStore::new(), read_pool, write_pool}
+        Self{wallet_id, records: HandleStore::new(), searches: HandleStore::new(), metadata: HandleStore::new(), read_pool, write_pool}
     }
 
     ///
@@ -740,5 +741,50 @@ impl AuroraStorage {
         check_result!(transaction.commit(), ErrorCode::DatabaseError);
 
         ErrorCode::Success
+    }
+
+    pub fn get_metadata(&self) -> Result<(Arc<CString>, i32), ErrorCode> {
+        let mut result: QueryResult = check_result!(
+            self.read_pool.prep_exec(
+                Statement::GetMetadata.as_str(),
+                params! {
+                    "wallet_id" => self.wallet_id,
+                }
+            ),
+            Err(ErrorCode::DatabaseError)
+        );
+
+        let row = check_result!(check_option!(result.next(), Err(ErrorCode::UnknownRecord)), Err(ErrorCode::DatabaseError));
+        let metadata: String = check_option!(row.get(0), Err(ErrorCode::DatabaseError));
+        let metadata = check_result!(CString::new(metadata), Err(ErrorCode::InvalidEncoding));
+
+        let handle = self.metadata.insert(metadata);
+        let metadata = check_option!(self.metadata.get(handle), Err(ErrorCode::UnknownRecord));
+
+        Ok((metadata, handle))
+    }
+
+    pub fn set_metadata(&self, metadata: &str) -> ErrorCode {
+        let result: QueryResult = check_result!(
+            self.write_pool.prep_exec(
+                Statement::SetMetadata.as_str(),
+                params! {
+                    "wallet_id" => self.wallet_id,
+                    "metadata" => metadata,
+                }
+            ),
+            ErrorCode::DatabaseError
+        );
+
+        ErrorCode::Success
+    }
+
+    pub fn free_metadata(&self, metadata_handle: i32) -> ErrorCode {
+        if self.metadata.remove(metadata_handle) {
+            ErrorCode::Success
+        }
+        else {
+            ErrorCode::InvalidRecordHandle
+        }
     }
 }
