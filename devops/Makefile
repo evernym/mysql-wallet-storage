@@ -16,7 +16,7 @@ PROJECT_DIR := $(shell git rev-parse --show-toplevel)
 endif
 
 # project variables
-SRC_DIR_NAME := libgwallet
+SRC_DIR_NAME := libaurorawallet
 SRC_DIR := $(PROJECT_DIR)/$(SRC_DIR_NAME)
 SRC_VERSION := $(shell grep -oP '^version = "\K.*(?=")' $(SRC_DIR)/Cargo.toml)
 
