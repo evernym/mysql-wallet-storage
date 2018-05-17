@@ -3,6 +3,7 @@ name = "libaurorawallet"
 version = "0.1.0"
 authors = ["Darko Kulic <darko.kulic@evernym.com>"]
 
+
 [lib]
 name = "libaurorawallet"
 path = "src/lib.rs"
