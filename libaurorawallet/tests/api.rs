@@ -1,8 +1,8 @@
 // Local dependencies
-extern crate libaurorawallet;
+extern crate aurorawallet;
 
-use libaurorawallet::api as api;
-use libaurorawallet::errors::error_code::ErrorCode;
+use aurorawallet::api as api;
+use aurorawallet::errors::error_code::ErrorCode;
 
 mod test_utils;
 use test_utils::config::{ConfigType, Config};
