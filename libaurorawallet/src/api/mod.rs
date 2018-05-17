@@ -2,6 +2,7 @@ use utils::handle_store::HandleStore;
 use utils::multi_pool::MultiPool;
 use errors::error_code::ErrorCode;
 use aurora_storage::{AuroraStorage};
+use aurora_storage::statement::Statement;
 use libc::c_char;
 use std::ffi::CStr;
 use std::slice;
@@ -36,7 +37,7 @@ struct StorageCredentials {
 }
 
 lazy_static! {
-    static ref STORAGES: HandleStore<AuroraStorage> = HandleStore::new();
+    static ref STORAGES: HandleStore<AuroraStorage<'static>> = HandleStore::new();
     static ref CONNECTIONS: MultiPool = MultiPool::new();
 }
 
@@ -50,7 +51,7 @@ pub extern "C" fn create(name: *const c_char, config: *const c_char, credentials
 
     let write_pool = check_option!(CONNECTIONS.get(&write_connection_string), ErrorCode::IOError);
 
-    check_result!(write_pool.prep_exec(r"INSERT INTO wallets(name, metadata) VALUES (:name, :metadata)", params!{name, metadata}), ErrorCode::IOError);
+    check_result!(write_pool.prep_exec(Statement::InsertWallet.as_str(), params!{name, metadata}), ErrorCode::IOError);
 
     ErrorCode::Success
 }
@@ -64,7 +65,7 @@ pub extern "C" fn delete(name: *const c_char, config: *const c_char, credentials
 
     let write_pool = check_option!(CONNECTIONS.get(&write_connection_string), ErrorCode::IOError);
 
-    let result = check_result!(write_pool.prep_exec(r"DELETE FROM wallets WHERE name = :name", params!{name}), ErrorCode::IOError);
+    let result = check_result!(write_pool.prep_exec(Statement::DeleteWallet.as_str(), params!{name}), ErrorCode::IOError);
 
     if result.affected_rows() != 1 {
         return ErrorCode::InvalidState;
@@ -84,7 +85,7 @@ pub extern "C" fn open(name: *const c_char, config: *const c_char, _runtime_conf
     let read_pool = check_option!(CONNECTIONS.get(&read_connection_string), ErrorCode::IOError);
     let write_pool = check_option!(CONNECTIONS.get(&write_connection_string), ErrorCode::IOError);
 
-    let mut result = check_result!(read_pool.prep_exec(r"SELECT id FROM wallets WHERE name = :name", params!{name}), ErrorCode::IOError);
+    let mut result = check_result!(read_pool.prep_exec(Statement::GetWalletID.as_str(), params!{name}), ErrorCode::IOError);
     let wallet_id: u64 = check_option!(check_result!(check_option!(result.next(), ErrorCode::InvalidState), ErrorCode::IOError).get(0), ErrorCode::InvalidState);
 
     let storage = AuroraStorage::new(wallet_id, read_pool, write_pool);
@@ -260,24 +261,30 @@ pub extern "C" fn free_metadata(storage_handle: i32, metadata_handle: i32) -> Er
     storage.free_metadata(metadata_handle)
 }
 
-#[allow(unused_variables)]
-pub extern "C" fn search_records(storage_handle: i32, type_: *const c_char, query_json: *const c_char, options_json: *const c_char, search_handle_p: *mut i32) -> ErrorCode {
-    ErrorCode::Success
+pub extern "C" fn search_records(storage_handle: i32, type_p: *const c_char, query_json_p: *const c_char, options_json_p: *const c_char, search_handle_p: *mut i32) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    let query_json = c_char_to_str!(query_json_p);
+    let options_json = c_char_to_str!(options_json_p);
+    let type_ = c_char_to_str!(type_p);
+
+    storage.search_records(type_, query_json, options_json, search_handle_p)
 }
 
-#[allow(unused_variables)]
 pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut i32) -> ErrorCode {
-    ErrorCode::Success
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    storage.search_all_records(search_handle_p)
 }
 
 #[allow(unused_variables)]
 pub extern "C" fn get_search_total_count(storage_handle: i32, search_handle: i32, total_count_p: *mut usize) -> ErrorCode {
-    ErrorCode::Success
+    ErrorCode::InvalidState
 }
 
-#[allow(unused_variables)]
 pub extern "C" fn fetch_search_next_record(storage_handle: i32, search_handle: i32, record_handle_p: *mut i32) -> ErrorCode {
-    ErrorCode::Success
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+    storage.fetch_search_next_record(search_handle, record_handle_p)
 }
 
 pub extern "C" fn free_search(storage_handle: i32, search_handle: i32) -> ErrorCode {

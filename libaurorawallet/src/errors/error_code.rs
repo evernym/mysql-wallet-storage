@@ -7,12 +7,13 @@ pub enum ErrorCode {
     IOError = 114,
     WalletNotFoundError = 204,
     RecordAlreadyExists = 208,
+    WalletItemNotFound = 212
 }
 
 macro_rules! check_result {
     ($r: expr, $e: expr) => {
         match $r {
-            Err(err) => { println!("{}", err); return $e },
+            Err(_) => { return $e },
             Ok(x) => x
         }
     }
