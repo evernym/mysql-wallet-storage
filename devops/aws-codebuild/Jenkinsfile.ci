@@ -14,82 +14,79 @@ awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
 
 logger.setGlobalLevel('TRACE')
 
+def buildF(String osname, List goals, Map buildCtx) {
+    def ciImageTag
+    def artifactName = "build-${BUILD_NUMBER}.${osname}.zip"
 
+    stage("$osname: Resolve image tag") {
+        def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
+        ciImageTag = "${_imgVersion}-${osname}-ci"
+        logger.info("CI docker image tag: $ciImageTag")
+    }
+
+    stage("$osname: Prepare CI project") {
+        awsCBHelper.prepareCIProject(buildCtx) {
+            cbProjectNameSuffix = "-$osname"
+            buildspec = 'devops/aws-codebuild/buildspec.yml'
+            environmentVariables = [
+                [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"]
+            ]
+            envBuildCtxPath = ['devops'] // TODO make more accurate
+            ecrImageTag = ciImageTag
+        }
+        logger.info("Prepared AWS infrastructure info: PROJECT $buildCtx.ciCBProject, ECR REPO $buildCtx.ciECRRepo")
+    }
+
+    stage("$osname: Build Env") {
+        awsCBHelper.buildEnvCBProject(buildCtx) {
+            environmentVariables = [
+                [name: 'OSNAME', value: "$osname"],
+                [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
+                [name: 'AWS_ECR_REPO_NAME', value: "$buildCtx.ciECRRepo.name"],
+                [name: 'DOCKER_NAME', value: "$this.projectName"],
+                [name: 'DOCKER_TAG', value: "$ciImageTag"],
+                [name: 'MAKE_GOAL', value: "image_ci"],
+            ]
+        }
+    }
+
+    try {
+        stage("$osname: Test") {
+            awsCBHelper.buildCICBProject(buildCtx) {
+                artifactNameOverride = artifactName
+                environmentVariables = [
+                    [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
+                    [name: 'OSNAME', value: "$osname"],
+                ]
+            }
+        }
+    } finally {
+        dir("./_artifacts") {
+            stage("$osname: Download/Remove S3 Artifacts") {
+                s3Wrapper.download(unzip: true, removeAfter: true) {
+                    path = "${buildCtx.ciCBProject.artifacts.path}/${artifactName}"
+                    file = './artifacts.zip'
+                    force = true
+                }
+            }
+
+            stage("$osname: Archive artifacts") {
+                goals.each {
+                    def _fname = "${osname}.${it}.out"
+                    sh "mv '${it}.out' '$_fname'"
+                    utils.truncateFile(_fname, "${_fname}.tail")
+                }
+                archiveArtifacts artifacts: "${osname}.*.out*"
+            }
+        }
+    }
+}
 
 nodeWrapper {
     List osnames = ['xenial', 'centos7']
     Map builds = [:]
     def goals = ['test_dry', 'test']
     Map buildCtx = [projectName: projectName]
-
-    def buildF = { String _osname, Map _buildCtx ->
-        def ciImageTag
-        def artifactName = "build-${BUILD_NUMBER}.${_osname}.zip"
-
-        stage("$_osname: Resolve image tag") {
-            def _imgVersion = utils.shStdout("OSNAME=$_osname make -C devops image_ci_version -s")
-            ciImageTag = "${_imgVersion}-${_osname}-ci"
-            logger.info("CI docker image tag: $ciImageTag")
-        }
-
-        stage("$_osname: Prepare CI project") {
-            awsCBHelper.prepareCIProject(_buildCtx) {
-                cbProjectNameSuffix = "-$_osname"
-                buildspec = 'devops/aws-codebuild/buildspec.yml'
-                environmentVariables = [
-                    [type: 'PLAINTEXT', name: 'OSNAME', value: "$_osname"],
-                    [type: 'PLAINTEXT', name: 'GOALS', value: goals.join(' ')]
-                ]
-                envBuildCtxPath = ['devops'] // TODO make more accurate
-                ecrImageTag = ciImageTag
-            }
-            logger.info("Prepared AWS infrastructure info: PROJECT $_buildCtx.ciCBProject, ECR REPO $_buildCtx.ciECRRepo")
-        }
-
-        stage("$_osname: Build Env") {
-            awsCBHelper.buildEnvCBProject(_buildCtx) {
-                environmentVariables = [
-                    [name: 'OSNAME', value: "$_osname"],
-                    [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
-                    [name: 'AWS_ECR_REPO_NAME', value: "$_buildCtx.ciECRRepo.name"],
-                    [name: 'DOCKER_NAME', value: "$projectName"],
-                    [name: 'DOCKER_TAG', value: "$ciImageTag"],
-                    [name: 'MAKE_GOAL', value: "image_ci"],
-                ]
-            }
-        }
-
-        try {
-            stage("$_osname: Test") {
-                awsCBHelper.buildCICBProject(_buildCtx) {
-                    artifactNameOverride = artifactName
-                    environmentVariables = [
-                        [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-                        [name: 'OSNAME', value: "$_osname"],
-                    ]
-                }
-            }
-        } finally {
-            dir("./_artifacts") {
-                stage("$_osname: Download/Remove S3 Artifacts") {
-                    s3Wrapper.download(unzip: true, removeAfter: true) {
-                        path = "${_buildCtx.ciCBProject.artifacts.path}/${artifactName}"
-                        file = './artifacts.zip'
-                        force = true
-                    }
-                }
-
-                stage("$_osname: Archive artifacts") {
-                    goals.each {
-                        def _fname = "${_osname}.${it}.out"
-                        sh "mv '${it}.out' '$_fname'"
-                        utils.truncateFile(_fname, "${_fname}.tail")
-                    }
-                    archiveArtifacts artifacts: "${_osname}.*.out*"
-                }
-            }
-        }
-    }
 
     stage('Checkout from SCM') {
         checkout scm
@@ -108,24 +105,24 @@ nodeWrapper {
     }
 
     osnames.each { osname ->
-        if (!builds.size()) {
+        if (builds.size()) {
             builds[osname] = {
                 nodeWrapper {
                     stage("$osname: Checkout from SCM") {
                         checkout scm
                     }
 
-                    buildF(osname, buildCtx.clone())
+                    buildF(osname, goals, buildCtx.clone())
                 }
             }
         } else { // build on current node
             builds[osname] = {
-                buildF(osname, buildCtx.clone())
+                buildF(osname, goals, buildCtx.clone())
             }
         }
     }
 
-    stage("Buils and test") {
+    stage("Build and test") {
         builds.failFast = false
         parallel builds
     }
