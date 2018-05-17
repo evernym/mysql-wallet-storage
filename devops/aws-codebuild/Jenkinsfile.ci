@@ -43,7 +43,7 @@ def buildF(String osname, List goals, Map buildCtx) {
                 [name: 'OSNAME', value: "$osname"],
                 [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
                 [name: 'AWS_ECR_REPO_NAME', value: "$buildCtx.ciECRRepo.name"],
-                [name: 'DOCKER_NAME', value: "$this.projectName"],
+                [name: 'DOCKER_NAME', value: "$projectName"],
                 [name: 'DOCKER_TAG', value: "$ciImageTag"],
                 [name: 'MAKE_GOAL', value: "image_ci"],
             ]
