@@ -97,6 +97,7 @@ nodeWrapper {
         logger.info("Uploaded current HEAD to S3 ,  metadata:  $buildCtx.s3Src")
     }
 
+    // TODO do not create project for PR if no env chages are proposed
     stage('Prepare CI Env project') {
         awsCBHelper.prepareBuildEnvProject(buildCtx) {
             buildspec = 'devops/aws-codebuild/aws-ecr/buildspec.yml'
