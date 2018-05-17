@@ -49,7 +49,9 @@ FPM = fpm
 
 # list of conditionally (using '?=') defined variables that
 # should be passed to in-docker re-run
-DOCKER_ENV += OSNAME PROJECT_NAME SRC_VERSION
+EXPORT_ENV += OSNAME PROJECT_NAME SRC_VERSION
+
+export $(EXPORT_ENV)
 
 # PACKAGING ROUTINE
 check_fpm_args:
@@ -77,7 +79,7 @@ image_rust: image_base
 		-v $(PROJECT_DIR):/tmp/$(PROJECT_NAME) \
 		$(DOCKER_NAME):$(DOCKER_TAG) \
 		/bin/bash -c \
-			'MAKEFLAGS="$(MAKEFLAGS)" $(foreach var,$(DOCKER_ENV),$(var)="$($(var))") \
+			'MAKEFLAGS="$(MAKEFLAGS)" $(foreach var,$(EXPORT_ENV),$(var)="$($(var))") \
 			$(MAKE) -C /tmp/$(PROJECT_NAME)/$(ROOT_MK_REL_DIR) -f $(ROOT_MK_REL_PATH) $*'
 
 # CLEAN ROUTINE

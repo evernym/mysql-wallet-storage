@@ -46,7 +46,7 @@ FPM_ARGS = $(LIB_DYNAMIC)=/usr/lib/
 # docker related variables
 DOCKER_NAME ?= evernym/aurora-wallet
 DOCKER_TAG ?=
-DOCKER_ENV += OSNAME RELEASE CARGO_TARGET_DIR CRATE_P_VERSION CARGO_LOGIN_TOKEN
+EXPORT_ENV += OSNAME RELEASE CARGO_TARGET_DIR CRATE_P_VERSION CARGO_LOGIN_TOKEN
 
 .PHONY: all test_dry test build pre_package clean
 
@@ -59,6 +59,7 @@ export OSNAME
 docker_img_version = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
 
 image_ci_version:
+	env
 	echo $(call docker_img_version,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)
 
 image_ci: image_rust
@@ -71,7 +72,7 @@ endif
 	CI_DOCKER_TAG=$(DOCKER_TAG) \
 		docker-compose -f docker/docker-compose.yml build ci
 
-CI_IMAGE_BASED_TARGETS = test_dry test build $(LIBS) package publish_crate
+CI_IMAGE_BASED_TARGETS = test_dry test build $(LIBS) package publish_crate clean
 
 $(patsubst %,image_%, $(CI_IMAGE_BASED_TARGETS)): image_ci
 
@@ -101,5 +102,5 @@ endif
 	cd $< && cargo package --allow-dirty
 	cd $< && cargo publish --allow-dirty
 
-clean:
-	rm -rf $(SRC_DIR)/$(CARGO_TARGET_DIR)
+clean: $(SRC_DIR)
+	cd $< && cargo clean
