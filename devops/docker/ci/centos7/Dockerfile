@@ -4,7 +4,7 @@ FROM evernym/rust:centos7
 ARG u_id=1000
 ARG u_name=user
 
-ENV CI_ENV_VERSION=0.3.0
+ENV CI_ENV_VERSION=0.1.0
 
 # project's specific dependencies
 #RUN yum install -y \
