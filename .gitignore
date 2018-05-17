@@ -1,3 +1,4 @@
 libaurorawallet/Cargo.lock
 libaurorawallet/target
 libaurorawallet/.idea
+*.swp

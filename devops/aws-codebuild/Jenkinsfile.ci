@@ -1,0 +1,123 @@
+#!groovy
+
+def projectName = 'aurora-wallet'
+
+def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retriever: modernSCM(
+    github(credentialsId: 'evernym-github-machine-user', repoOwner: 'evernym', repository: 'jenkins-shared')
+)).com.evernym.pipeline
+
+utils = evLibrary.Utils.new(this)
+logger = evLibrary.Logger.new(this)
+gitHelper = evLibrary.Git.new(this)
+awsCliECR = evLibrary.AwsCliECR.new(this)
+awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
+
+logger.setGlobalLevel('TRACE')
+
+nodeWrapper {
+    List osnames = ['xenial', 'centos7']
+    Map builds = [:]
+    def goals = ['test_dry', 'test']
+    Map buildCtx = [projectName: projectName]
+
+    stage('Checkout from SCM') {
+        checkout scm
+    }
+
+    stage('Upload source to S3') {
+        awsCBHelper.uploadSourceToS3(buildCtx)
+        logger.info("Uploaded current HEAD to S3 ,  metadata:  $buildCtx.s3Src")
+    }
+
+    stage('Prepare CI Env project') {
+        awsCBHelper.prepareBuildEnvProject(buildCtx) {
+            buildspec = 'devops/aws-codebuild/aws-ecr/buildspec.yml'
+        }
+        logger.info("Prepared AWS infrastructure info: $buildCtx.envCBProject")
+    }
+
+    osnames.each { osname ->
+
+        builds[osname] = {
+            Map _buildCtx = buildCtx.clone()
+
+            def ciImageTag
+            def artifactName = "build-${BUILD_NUMBER}.${osname}.zip"
+
+            nodeWrapper {
+                stage("$osname: Checkout from SCM") {
+                    checkout scm
+                }
+
+                stage("$osname: Resolve image tag") {
+                    def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
+                    ciImageTag = "${_imgVersion}-${osname}-ci"
+                    logger.info("CI docker image tag: $ciImageTag")
+                }
+
+                stage("$osname: Prepare CI project") {
+                    awsCBHelper.prepareCIProject(_buildCtx) {
+                        cbProjectNameSuffix = "-$osname"
+                        buildspec = 'devops/aws-codebuild/buildspec.yml'
+                        environmentVariables = [
+                            [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"],
+                            [type: 'PLAINTEXT', name: 'GOALS', value: goals.join(' ')]
+                        ]
+                        envBuildCtxPath = ['devops'] // TODO make more accurate
+                        ecrImageTag = ciImageTag
+                    }
+                    logger.info("Prepared AWS infrastructure info: PROJECT $_buildCtx.ciCBProject, ECR REPO $_buildCtx.ciECRRepo")
+                }
+
+                stage("$osname: Build Env") {
+                    awsCBHelper.buildEnvCBProject(_buildCtx) {
+                        environmentVariables = [
+                            [name: 'OSNAME', value: "$osname"],
+                            [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
+                            [name: 'AWS_ECR_REPO_NAME', value: "$_buildCtx.ciECRRepo.name"],
+                            [name: 'DOCKER_NAME', value: "$projectName"],
+                            [name: 'DOCKER_TAG', value: "$ciImageTag"],
+                            [name: 'MAKE_GOAL', value: "image_ci"],
+                        ]
+                    }
+                }
+
+                try {
+                    stage("$osname: Test") {
+                        awsCBHelper.buildCICBProject(_buildCtx) {
+                            artifactNameOverride = artifactName
+                            environmentVariables = [
+                                [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
+                                [name: 'OSNAME', value: "$osname"],
+                            ]
+                        }
+                    }
+                } finally {
+                    dir("./_artifacts") {
+                        stage("$osname: Download/Remove S3 Artifacts") {
+                            s3Wrapper.download(unzip: true, removeAfter: true) {
+                                path = "${_buildCtx.ciCBProject.artifacts.path}/${artifactName}"
+                                file = './artifacts.zip'
+                                force = true
+                            }
+                        }
+
+                        stage("$osname: Archive artifacts") {
+                            goals.each {
+                                def _fname = "${osname}.${it}.out"
+                                sh "mv '${it}.out' '$_fname'"
+                                utils.truncateFile(_fname, "${_fname}.tail")
+                            }
+                            archiveArtifacts artifacts: "${osname}.*.out*"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    stage("Buils and test") {
+        builds.failFast = false
+        parallel builds
+    }
+}

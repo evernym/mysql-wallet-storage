@@ -1,0 +1,134 @@
+#!groovy
+
+// TODO
+// - add branch name or use BUILD_TAG (but need to replace %2f) to artifactName
+//   https://issues.jenkins-ci.org/browse/JENKINS-44360
+
+projectName = 'aurora-wallet'
+
+def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retriever: modernSCM(
+    github(credentialsId: 'evernym-github-machine-user', repoOwner: 'evernym', repository: 'jenkins-shared')
+)).com.evernym.pipeline
+
+utils = evLibrary.Utils.new(this)
+logger = evLibrary.Logger.new(this)
+gitHelper = evLibrary.Git.new(this)
+
+logger.setGlobalLevel('TRACE')
+
+node {
+    try {
+        def sha1
+        def packageName = 'libaurorawallet'
+        def srcVersion
+        def lastRevision
+        def debPVersion
+        def cratePVersion
+        def artifactPath = projectName
+        def artifactName
+        def goals = ['package']
+        def s3path
+
+        stage('Checkout sources from SCM') {
+            checkout scm
+            sha1 = gitHelper.sha1()
+        }
+
+        stage('Resolve current source version') {
+            srcVersion = utils.srcVersion(projectType: 'rust')
+            logger.info("Current source version: $srcVersion")
+        }
+
+        stage('Resolve last revision') {
+            lastRevision = evernymRepo.getLastRevision {
+                delegate.packageName = packageName
+                packageSrcVersion = srcVersion
+                repoDistr = 'agency-dev'
+            }
+
+            if (lastRevision) {
+                logger.info("Found last revision number: $lastRevision")
+            } else {
+                logger.info("No previous revision was found")
+            }
+        }
+
+        stage('Set release parameters') {
+            def releaseVersion = "${lastRevision ? lastRevision[0] + 1: 1}.$BUILD_NUMBER"
+
+            debPVersion = utils.packageVersion('deb-kraken', srcVersion, releaseVersion)
+            logger.info("Package version for evernym repo: $debPVersion")
+
+            cratePVersion = utils.packageVersion('crate', srcVersion, releaseVersion)
+            logger.info("Package version for rust registry: $cratePVersion")
+
+            def sha1Short = gitHelper.sha1(rev: sha1, shortN: true)
+            artifactName = "build-$srcVersion-$releaseVersion-${sha1Short}.zip"
+
+            // awsCodeBuild and s3 plugins use different arguments
+            // for specifying path to artifacts in S3
+            s3path = "${artifactPath}/${artifactName}"
+
+            logger.info("Artifact name in S3: $artifactName, S3 path: $s3path")
+        }
+
+        stage('Prepare ECR Image') {
+            awsCodeBuildWrapper {
+                projectName = 'aurora-wallet-docker-image'
+                sourceVersion = sha1
+            }
+        }
+
+        def tmpArtsDir = './_artifacts'
+        try {
+            stage('Package and publish') {
+                awsCodeBuildWrapper {
+                    projectName = 'aurora-wallet'
+                    sourceVersion = sha1
+                    artifactPathOverride = artifactPath
+                    artifactNameOverride = artifactName
+                    envVariables = "[{GOALS,${goals.join(' ')}},{FPM_P_VERSION,$debPVersion},{CRATE_P_VERSION,$cratePVersion}]"
+                }
+            }
+        } finally {
+            dir(tmpArtsDir) {
+                stage('Download/Remove Artifacts S3') {
+                    s3Wrapper.download(unzip: true, removeAfter: true) {
+                        path = s3path
+                        file = './artifacts.zip'
+                        force = true
+                    }
+                }
+
+                stage('Archiving console output artifacts') {
+                    goals.each {
+                        archiveArtifacts artifacts: "${it}.out"
+                    }
+                }
+
+            }
+        }
+
+        stage('Upload deb to Evernym repo') {
+            evernymRepo.upload {
+                repoDistr = 'agency_dev'
+                delegate.packagePath = "$tmpArtsDir/*$packageName*$debPVersion*.deb"
+            }
+        }
+
+        ['agency_dev', 'agency_qa'].each { distr ->
+            stage("Promote deb from $distr") {
+                evernymRepo.promote {
+                    repoDistr = distr
+                    delegate.packageName = packageName
+                    delegate.packageVersion = debPVersion
+                }
+            }
+        }
+
+    } finally {
+        stage('Workspace Cleanup') {
+            cleanWs()
+        }
+    }
+}

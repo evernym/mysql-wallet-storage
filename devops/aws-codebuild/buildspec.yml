@@ -1,0 +1,40 @@
+version: 0.2
+
+# TODO
+#   - is it ok that artifacts phase is executed even if the BUILD phase fails
+#       https://docs.aws.amazon.com/codebuild/latest/userguide/view-build-details.html#view-build-details-phases
+#   - publish to crates.io
+
+env:
+  variables:
+    # expected
+    OSNAME: ""
+    MAKE_GOALS: ""
+    CARGO_TARGET_DIR: "target"
+#  parameter-store:
+#    CARGO_LOGIN_TOKEN: "cargoLoginToken"
+
+phases:
+
+  pre_build:
+    commands:
+      - echo Pre-Build started on `date`
+      - mkdir /tmp/artifacts
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Build base directory $CODEBUILD_SRC_DIR
+      - export PROJECT_DIR=$CODEBUILD_SRC_DIR
+      - printenv
+      - for goal in $MAKE_GOALS; do /bin/bash -c "set -o pipefail; echo Making '$goal'; make -C devops $goal 2>&1 | tee /tmp/artifacts/${goal}.out"; done
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      # (CodeBuild doesn't allow to use env variables in artifacts phase)
+      # https://forums.aws.amazon.com/thread.jspa?threadID=250742
+      - cp -t /tmp/artifacts libaurorawallet/$CARGO_TARGET_DIR/release/libaurorawallet*.* || true
+
+artifacts:
+  discard-paths: yes
+  files:
+      - /tmp/artifacts/*

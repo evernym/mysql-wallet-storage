@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+
+  base:
+    build:
+      context: base/$OSNAME
+    image: evernym/base:$OSNAME
+
+  rust:
+    build:
+      context: rust/$OSNAME
+      args:
+          - RUST_VERSION
+    image: evernym/rust:$OSNAME
