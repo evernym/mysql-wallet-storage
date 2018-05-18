@@ -125,17 +125,16 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{"~tag1": null, "~tag2": true, "~tag3": 1, "~tag4": -1, "~tag5": 9.876}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
-        let mut record_handle = -1;
-        let mut id_p: *const c_char = ptr::null_mut();
-        let mut value_p: *const u8 = ptr::null_mut();
-        let mut value_len_p = 0;
-        let mut tags_json_p: *const c_char = ptr::null_mut();
+//        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+//        let mut record_handle = -1;
+//        let mut id_p: *const c_char = ptr::null_mut();
+//        let mut value_p: *const u8 = ptr::null_mut();
+//        let mut value_len_p = 0;
+//        let mut tags_json_p: *const c_char = ptr::null_mut();
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::InvalidStructure);
-
-        // TODO: when implemented support for non-string tag values
+//        TODO: when implemented support for non-string tag values
 //        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
 //        assert_eq!(err, ErrorCode::Success);
 //
@@ -1011,7 +1010,7 @@ mod high_casees {
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
         assert_eq!(err, ErrorCode::InvalidStructure);
 
-        // TODO: when added support for non-string tag values.
+//        TODO: when added support for non-string tag values.
 //        let mut record_handle = -1;
 //        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
 //        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
@@ -1288,4 +1287,645 @@ mod high_casees {
         let err = api::free_metadata(handle, metadata_handle);
         assert_eq!(err, ErrorCode::Success);
     }
+
+     /** Search Record Tests */
+
+    #[test]
+    fn test_search_records() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type_test_search_records").unwrap();
+
+        // -- Add records --
+        let id_1 = CString::new(random_name()).unwrap();
+        let value_1 = vec![1, 2, 3, 4];
+        let tags_json_1 = CString::new(r##"{"tag1": "value_nem1", "tag2": "value_nem2", "~tag3": "value_nem3"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id_1.as_ptr(), value_1.as_ptr(), value_1.len(), tags_json_1.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let id_2 = CString::new(random_name()).unwrap();
+        let value_2 = vec![1, 2, 3, 4];
+        let tags_json_2 = CString::new(r##"{"tag1": "value_nem11", "tag2": "value_nem22", "~tag3": "value_nem33"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id_2.as_ptr(), value_2.as_ptr(), value_2.len(), tags_json_2.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        // -- Search Records --
+        let query_json = json!({
+            "tag1": {"$in": ["value_nem1", "value_nem11"]},
+            "~tag3": {"$in": ["value_nem3", "value_nem33"]},
+            "$not": {
+                "tag2": "value_nem22"
+            }
+        });
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+
+        let options_json = CString::new(r##"{"fetch_type": false, "fetch_value": true, "fetch_tags": true}"##).unwrap();
+
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut record_handle = -1;
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        // Check type
+        let mut type_p: *const c_char = ptr::null_mut();
+        let err = api::get_record_type(handle, record_handle, &mut type_p);
+        assert_eq!(err, ErrorCode::InvalidState);
+
+        // Check id/name
+        let mut id_p: *const c_char = ptr::null_mut();
+        let err = api::get_record_id(handle, record_handle, &mut id_p);
+        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(unsafe { CStr::from_ptr(id_p) }.to_owned(), id_1);
+
+        // Check value
+        let mut value_p: *const u8 = ptr::null_mut();
+        let mut value_len_p = 0;
+        let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
+        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(unsafe { slice::from_raw_parts(value_p, value_len_p) }, value_1.as_slice());
+
+        // Check tags
+        let mut tags_json_p: *const c_char = ptr::null_mut();
+        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+        assert_eq!(err, ErrorCode::Success);
+
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json_1.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        assert_eq!(tags_map, expected_tags_map);
+
+        // No more records in the result set
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
+
+        // After the iterator is exhausted search handle is invalidated
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
+
+        // -- Delete records
+        let err = api::delete_record(handle, type_.as_ptr(), id_1.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id_2.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_search_records_number_of_records() {
+
+        let num_of_records: i32 = 5;
+
+        let handle = open_storage();
+        let mut record_ids: Vec<CString> = Vec::new();
+
+        let type_ = CString::new("type_test_search_records_number_of_records").unwrap();
+
+        // -- Add records --
+        for _i in 0..num_of_records {
+            let id = CString::new(random_name()).unwrap();
+            let value = vec![1, 2, 3, 4];
+            let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+
+            let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+
+            record_ids.push(id);
+        }
+
+        // -- Search Records --
+        let query_json = json!({
+            "tag1": "value1",
+            "tag2": "value2",
+            "~tag3": "value3",
+            "$not": {
+                "tag1": "value11",
+                "tag2": "value22",
+                "~tag3": "value33",
+            }
+        });
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+
+        let options_json = CString::new(r##"{"fetch_type": true, "fetch_value": true, "fetch_tags": true}"##).unwrap();
+
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut record_handle = -1;
+
+        for _i in 0..num_of_records {
+            let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+            assert_eq!(err, ErrorCode::Success);
+        }
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
+
+        for id in record_ids {
+            let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+        }
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_format() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type_test_search_records_invalid_query_format").unwrap();
+        let query_json = CString::new("").unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_options_format() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type_test_search_records_invalid_options_format").unwrap();
+        let query_json = CString::new("{}").unwrap();
+        let options_json = CString::new("").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_eq_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "tag_name": 1
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_neq_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "tag_name": {"$neq": 1}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_gt_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$gt": 1}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_gte_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$gte": 1}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_lt_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$lt": 1}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_lte_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$lte":  1}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_like_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k2": {"$like": 1},
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_regex_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k5": {
+                "$regex": 1
+            }
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_not_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "$in": [1, "value_nem33"]
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_or_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "$or": [
+                {
+                    "k2": 1,
+                },
+            ],
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_in_with_non_string_arg() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "$in": [1, "value_nem33"]
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_gt_with_encrypted_tag_name() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$gt": "a"}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_gte_with_encrypted_tag_name() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$gte": "a"}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_lt_with_encrypted_tag_name() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$lt": "a"}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_lte_with_encrypted_tag_name() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k3": {"$lte": "a"}
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_like_with_encrypted_tag_name() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k2": {"$like": "like_target"},
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_query_regex_with_encrypted_tag_name() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+
+        let query_json = json!({
+
+            "k5": {
+                "$regex": "regex_string"
+            }
+
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_search_records_invalid_storage_handle() {
+        let handle: i32 = -1;
+
+        let type_ = CString::new("type_test_search_records_invalid_storage_handle").unwrap();
+        let query_json = CString::new("{}").unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidState);
+    }
+
+    /** Search All Records Tests */
+
+    #[test]
+    fn test_search_all_records() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let metadata = CString::new(random_string(512)).unwrap();
+
+        let err = api::create(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut handle: i32 = -1;
+        let err = api::open(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let num_of_records: i32 = 10;
+        let mut record_ids: Vec<CString> = Vec::new();
+
+        let type_ = CString::new("type_search_all_records").unwrap();
+
+        // -- Add records --
+        for _i in 0..num_of_records {
+            let id = CString::new(random_name()).unwrap();
+            let value = vec![1, 2, 3, 4];
+            let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+
+            let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+
+            record_ids.push(id);
+        }
+
+        // -- Search Records --
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_all_records(handle, &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut record_handle = -1;
+
+        for _i in 0..num_of_records {
+            let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+            assert_eq!(err, ErrorCode::Success);
+        }
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
+
+        for id in record_ids {
+            let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+        }
+
+        let err = api::delete(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_search_all_records_invalid_storage_handle() {
+        let handle: i32 = -1;
+
+        let type_ = CString::new("type1").unwrap();
+        let query_json = CString::new("{}").unwrap();
+        let options_json = CString::new("{}").unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::InvalidState);
+    }
+
+    #[test]
+    fn fetch_search_next_record_invalid_search_handle() {
+        let handle: i32 = -1;
+
+        let search_handle: i32 = -1;
+        let mut record_handle: i32 = -1;
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::InvalidState);
+    }
 }
+
