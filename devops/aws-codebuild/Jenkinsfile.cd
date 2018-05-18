@@ -4,7 +4,7 @@
 // - add branch name or use BUILD_TAG (but need to replace %2f) to artifactName
 //   https://issues.jenkins-ci.org/browse/JENKINS-44360
 
-projectName = 'aurora-wallet'
+def projectName = 'aurora-wallet'
 
 def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retriever: modernSCM(
     github(credentialsId: 'evernym-github-machine-user', repoOwner: 'evernym', repository: 'jenkins-shared')
@@ -13,10 +13,13 @@ def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retri
 utils = evLibrary.Utils.new(this)
 logger = evLibrary.Logger.new(this)
 gitHelper = evLibrary.Git.new(this)
+awsCliECR = evLibrary.AwsCliECR.new(this)
+awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
 
 logger.setGlobalLevel('TRACE')
 
-node {
+
+nodeWrapper {
     try {
         def sha1
         def packageName = 'libaurorawallet'

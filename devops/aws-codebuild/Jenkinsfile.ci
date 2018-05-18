@@ -25,8 +25,8 @@ def buildF(String osname, List goals, Map buildCtx) {
     }
 
     stage("$osname: Prepare CI project") {
-        awsCBHelper.prepareCIProject(buildCtx) {
-            cbProjectNameSuffix = "-$osname"
+        awsCBHelper.prepareProject(buildCtx) {
+            cbProjectNameSuffix = "ci-$osname"
             buildspec = 'devops/aws-codebuild/buildspec.yml'
             environmentVariables = [
                 [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"]
@@ -38,7 +38,8 @@ def buildF(String osname, List goals, Map buildCtx) {
     }
 
     stage("$osname: Build Env") {
-        awsCBHelper.buildEnvCBProject(buildCtx) {
+        awsCBHelper.buildEnvProject(buildCtx) {
+            cbProjectNameSuffix = "ci-$osname"
             environmentVariables = [
                 [name: 'OSNAME', value: "$osname"],
                 [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
@@ -52,7 +53,8 @@ def buildF(String osname, List goals, Map buildCtx) {
 
     try {
         stage("$osname: Test") {
-            awsCBHelper.buildCICBProject(buildCtx) {
+            awsCBHelper.buildProject(buildCtx) {
+                cbProjectNameSuffix = "ci-$osname"
                 artifactNameOverride = artifactName
                 environmentVariables = [
                     [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
