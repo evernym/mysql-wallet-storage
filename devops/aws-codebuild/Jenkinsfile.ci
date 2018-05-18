@@ -17,6 +17,7 @@ logger.setGlobalLevel('TRACE')
 def buildF(String osname, List goals, Map buildCtx) {
     def ciImageTag
     def artifactName = "build-${BUILD_NUMBER}.${osname}.zip"
+    def cbPrSuffix = "ci-$osname"
 
     stage("$osname: Resolve image tag") {
         def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
@@ -26,7 +27,7 @@ def buildF(String osname, List goals, Map buildCtx) {
 
     stage("$osname: Prepare CI project") {
         awsCBHelper.prepareProject(buildCtx) {
-            cbProjectNameSuffix = "ci-$osname"
+            cbProjectNameSuffix = cbPrSuffix
             buildspec = 'devops/aws-codebuild/buildspec.yml'
             environmentVariables = [
                 [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"]
@@ -37,13 +38,14 @@ def buildF(String osname, List goals, Map buildCtx) {
         logger.info("Prepared AWS infrastructure info: PROJECT $buildCtx.ciCBProject, ECR REPO $buildCtx.ciECRRepo")
     }
 
+    def _buildCtx = buildCtx[cbPrSuffix]
     stage("$osname: Build Env") {
         awsCBHelper.buildEnvProject(buildCtx) {
-            cbProjectNameSuffix = "ci-$osname"
+            cbProjectNameSuffix = cbPrSuffix
             environmentVariables = [
                 [name: 'OSNAME', value: "$osname"],
                 [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
-                [name: 'AWS_ECR_REPO_NAME', value: "$buildCtx.ciECRRepo.name"],
+                [name: 'AWS_ECR_REPO_NAME', value: "$_buildCtx.ecr.name"],
                 [name: 'DOCKER_NAME', value: "$projectName"],
                 [name: 'DOCKER_TAG', value: "$ciImageTag"],
                 [name: 'MAKE_GOAL', value: "image_ci"],
@@ -54,7 +56,7 @@ def buildF(String osname, List goals, Map buildCtx) {
     try {
         stage("$osname: Test") {
             awsCBHelper.buildProject(buildCtx) {
-                cbProjectNameSuffix = "ci-$osname"
+                cbProjectNameSuffix = cbPrSuffix
                 artifactNameOverride = artifactName
                 environmentVariables = [
                     [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
@@ -66,7 +68,7 @@ def buildF(String osname, List goals, Map buildCtx) {
         dir("./_artifacts") {
             stage("$osname: Download/Remove S3 Artifacts") {
                 s3Wrapper.download(unzip: true, removeAfter: true) {
-                    path = "${buildCtx.ciCBProject.artifacts.path}/${artifactName}"
+                    path = "${_buildCtx.cb.artifacts.path}/${artifactName}"
                     file = './artifacts.zip'
                     force = true
                 }
@@ -101,7 +103,7 @@ nodeWrapper {
 
     // TODO do not create project for PR if no env chages are proposed
     stage('Prepare CI Env project') {
-        awsCBHelper.prepareBuildEnvProject(buildCtx) {
+        awsCBHelper.prepareEnvProject(buildCtx) {
             buildspec = 'devops/aws-codebuild/aws-ecr/buildspec.yml'
         }
         logger.info("Prepared AWS infrastructure info: $buildCtx.envCBProject")
@@ -120,7 +122,7 @@ nodeWrapper {
             }
         } else { // build on current node
             builds[osname] = {
-                buildF(osname, goals, buildCtx.clone())
+                buildF(osname, goals, buildCtx)
             }
         }
     }
