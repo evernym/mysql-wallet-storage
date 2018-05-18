@@ -16,7 +16,6 @@ logger.setGlobalLevel('TRACE')
 
 def buildF(String osname, List goals, Map buildCtx) {
     def ciImageTag
-    def artifactName = "build-${BUILD_NUMBER}.${osname}.zip"
     def cbPrSuffix = "ci-$osname"
 
     stage("$osname: Resolve image tag") {
@@ -25,55 +24,24 @@ def buildF(String osname, List goals, Map buildCtx) {
         logger.info("CI docker image tag: $ciImageTag")
     }
 
-    stage("$osname: Prepare CI project") {
-        awsCBHelper.prepareProject(buildCtx) {
-            cbProjectNameSuffix = cbPrSuffix
-            buildspec = 'devops/aws-codebuild/buildspec.yml'
-            environmentVariables = [
-                [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"]
-            ]
-            envBuildCtxPath = ['devops'] // TODO make more accurate
-            ecrImageTag = ciImageTag
-        }
-        logger.info("Prepared AWS infrastructure info: PROJECT $buildCtx.ciCBProject, ECR REPO $buildCtx.ciECRRepo")
-    }
+    awsCBHelper.build(buildCtx) {
+        cbProjectNameSuffix = cbPrSuffix
+        buildspec = 'devops/aws-codebuild/buildspec.yml'
+        environmentVariables = [
+            [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"]
+        ]
 
-    def _buildCtx = buildCtx[cbPrSuffix]
-    stage("$osname: Build Env") {
-        awsCBHelper.buildEnvProject(buildCtx) {
-            cbProjectNameSuffix = cbPrSuffix
-            environmentVariables = [
-                [name: 'OSNAME', value: "$osname"],
-                [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
-                [name: 'AWS_ECR_REPO_NAME', value: "$_buildCtx.ecr.name"],
-                [name: 'DOCKER_NAME', value: "$projectName"],
-                [name: 'DOCKER_TAG', value: "$ciImageTag"],
-                [name: 'MAKE_GOAL', value: "image_ci"],
-            ]
-        }
-    }
+        ecrImage.ctxPaths = ['devops'] // TODO make more accurate
+        ecrImage.tag = ciImageTag
+        ecrImage.environmentVariables = [
+            [name: 'OSNAME', value: "$osname"],
+            [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
+            [name: 'DOCKER_NAME', value: "$projectName"],
+            [name: 'DOCKER_TAG', value: "$ciImageTag"],
+            [name: 'MAKE_GOAL', value: "image_ci"],
+        ]
 
-    try {
-        stage("$osname: Test") {
-            awsCBHelper.buildProject(buildCtx) {
-                cbProjectNameSuffix = cbPrSuffix
-                artifactNameOverride = artifactName
-                environmentVariables = [
-                    [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-                    [name: 'OSNAME', value: "$osname"],
-                ]
-            }
-        }
-    } finally {
-        dir("./_artifacts") {
-            stage("$osname: Download/Remove S3 Artifacts") {
-                s3Wrapper.download(unzip: true, removeAfter: true) {
-                    path = "${_buildCtx.cb.artifacts.path}/${artifactName}"
-                    file = './artifacts.zip'
-                    force = true
-                }
-            }
-
+        artifactsClosure = {
             stage("$osname: Archive artifacts") {
                 goals.each {
                     def _fname = "${osname}.${it}.out"
@@ -101,7 +69,7 @@ nodeWrapper {
         logger.info("Uploaded current HEAD to S3 ,  metadata:  $buildCtx.s3Src")
     }
 
-    // TODO do not create project for PR if no env chages are proposed
+    // TODO do not create project for PR if no env changes are proposed
     stage('Prepare CI Env project') {
         awsCBHelper.prepareEnvProject(buildCtx) {
             buildspec = 'devops/aws-codebuild/aws-ecr/buildspec.yml'
