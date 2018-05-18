@@ -1,9 +1,10 @@
 pub mod statement;
+mod query_translator;
 
 use utils::handle_store::HandleStore;
 use aurora_storage::statement::Statement;
 
-use std::sync::Arc;
+use std::sync::{RwLock, Arc};
 use mysql::{Pool, QueryResult, Error};
 use errors::error_code::ErrorCode;
 use std::collections::HashMap;
@@ -13,9 +14,17 @@ use serde_json;
 fn default_true() -> bool {
     true
 }
+fn default_false() -> bool {
+    false
+}
+
+// TODO: Update documentation strings with new error codes
 
 #[derive(Deserialize)]
 pub struct FetchOptions {
+    #[serde(default="default_false")]
+    fetch_type: bool,
+
     #[serde(default="default_true")]
     fetch_value: bool,
 
@@ -23,6 +32,17 @@ pub struct FetchOptions {
     fetch_tags: bool,
 }
 
+pub struct Search<'a> {
+    pub search_result: RwLock<QueryResult<'a>>,
+}
+
+impl<'a> Search<'a> {
+    fn new(search_result: QueryResult<'a>) -> Self {
+        Self{ search_result: RwLock::new(search_result) }
+    }
+}
+
+#[derive(Debug)]
 pub struct Record {
     pub id: CString,
     pub value: Option<Vec<u8>>,
@@ -36,19 +56,16 @@ impl Record {
     }
 }
 
-struct SearchRecord {
-}
-
-pub struct AuroraStorage {
+pub struct AuroraStorage<'a> {
     wallet_id: u64,
     records: HandleStore<Record>,
-    searches: HandleStore<SearchRecord>,
+    searches: HandleStore<Search<'a>>,
     metadata: HandleStore<CString>,
     read_pool: Arc<Pool>, // cached reference to the pool
     write_pool: Arc<Pool>,
 }
 
-impl AuroraStorage {
+impl<'a> AuroraStorage<'a> {
     pub fn new(wallet_id: u64, read_pool: Arc<Pool>, write_pool: Arc<Pool>) -> Self {
         Self{wallet_id, records: HandleStore::new(), searches: HandleStore::new(), metadata: HandleStore::new(), read_pool, write_pool}
     }
@@ -209,7 +226,7 @@ impl AuroraStorage {
     ///  * `type_` - record type
     ///  * `id` - record id (name)
     ///  * `options` - options in the form of {"fetch_value": true, "fetch_tags": true} determining whether to fetch the value and/or tags
-    ///  * `record_handle_p` - user handle that will be used for accessing the fetched record
+    ///  * `record_handle_p` - output param - handle that will be used for accessing the fetched record
     ///
     /// # Returns
     ///
@@ -548,54 +565,49 @@ impl AuroraStorage {
         for (tag_name, tag_value) in tags {
             let first_char = tag_name.chars().next().unwrap_or('\0');
 
-            let affected_rows = {
-                let result = match first_char {
-                    '~' => {
-                        let mut tag_name = tag_name.clone();
-                        tag_name.remove(0);
+            let result = match first_char {
+                '~' => {
+                    let mut tag_name = tag_name.clone();
+                    tag_name.remove(0);
 
-                        match tag_value {
-                            &serde_json::Value::String(ref tag_value) => {
-                                transaction.prep_exec(
-                                    Statement::UpsertPlaintextTag.as_str(),
-                                    params!{
-                                        "value" => tag_value,
-                                        "name" => tag_name,
-                                        item_id
-                                    }
-                                )
-                            },
-                            _ => {
-                                // TODO Non String Tag Handling
-                                return ErrorCode::InvalidStructure;
-                            }
+                    match tag_value {
+                        &serde_json::Value::String(ref tag_value) => {
+                            transaction.prep_exec(
+                                Statement::UpsertPlaintextTag.as_str(),
+                                params!{
+                                    "value" => tag_value,
+                                    "name" => tag_name,
+                                    item_id
+                                }
+                            )
+                        },
+                        _ => {
+                            // TODO Non String Tag Handling
+                            return ErrorCode::InvalidStructure;
                         }
-                    },
-                    _ => {
-                        transaction.prep_exec(
-                            Statement::UpsertEncryptedTag.as_str(),
-                            params!{
-                                "value" => tag_value.as_str(),
-                                "name" => tag_name,
-                                item_id
-                            }
-                        )
                     }
-                };
+                },
+                _ => {
+                    transaction.prep_exec(
+                        Statement::UpsertEncryptedTag.as_str(),
+                        params!{
+                            "value" => tag_value.as_str(),
+                            "name" => tag_name,
+                            item_id
+                        }
+                    )
+                }
+            };
 
-                let result = match result {
-                    Err(Error::MySqlError(err)) => {
-                        match err.state.as_ref() {
-                            "22001" => {return ErrorCode::InvalidStructure },
-                            _ => {return ErrorCode::IOError },
-                        };
-                    },
-                    Err(_) => return ErrorCode::IOError,
-                    Ok(result) => result,
-                };
-
-                result.affected_rows()
-
+             match result {
+                Err(Error::MySqlError(err)) => {
+                    match err.state.as_ref() {
+                        "22001" => {return ErrorCode::InvalidStructure },
+                        _ => {return ErrorCode::IOError },
+                    };
+                },
+                Err(_) => return ErrorCode::IOError,
+                Ok(result) => result,
             };
         }
 
@@ -651,7 +663,7 @@ impl AuroraStorage {
         for tag_name in tag_names {
             let first_char = tag_name.chars().next().unwrap_or('\0');
 
-            let result = match first_char {
+            match first_char {
                 '~' => {
                     let mut tag_name = tag_name.clone();
                     tag_name.remove(0);
@@ -663,7 +675,7 @@ impl AuroraStorage {
                             }
                         ),
                         ErrorCode::IOError
-                    )
+                    );
                 },
                 _ => {
                     check_result!(
@@ -674,9 +686,9 @@ impl AuroraStorage {
                             }
                         ),
                         ErrorCode::IOError
-                    )
+                    );
                 }
-            };
+            }
         }
 
         check_result!(transaction.commit(), ErrorCode::IOError);
@@ -706,7 +718,7 @@ impl AuroraStorage {
     }
 
     pub fn set_metadata(&self, metadata: &str) -> ErrorCode {
-        let result: QueryResult = check_result!(
+        check_result!(
             self.write_pool.prep_exec(
                 Statement::SetMetadata.as_str(),
                 params! {
@@ -727,5 +739,136 @@ impl AuroraStorage {
         else {
             ErrorCode::InvalidState
         }
+    }
+
+    ///
+    /// Performs a search defined by the user query and options.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - type of the record that we are searching for
+    ///  * `query_json` - query conditions specified in the form of a json
+    ///         {
+    ///             "tagName": "tagValue",
+    ///             $or: {
+    ///                 "tagName2": { $regex: 'pattern' },
+    ///                 "tagName3": { $gte: 123 },
+    ///             },
+    ///         }
+    ///  * `options_json` - options specifying what attributes ought to be fetched ex.
+    ///         {
+    ///             fetch_type: (optional, true by default)
+    ///             fetch_value: (optional, true by default)
+    ///             fetch_value: (optional, true by default)
+    ///         }
+    ///  * `search_handle_p` - output param - handle that will be used for accessing the search result
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> query | options
+    ///
+    pub fn search_records(&self, type_: &str, query_json: &str, options_json: &str, search_handle_p: *mut i32) -> ErrorCode {
+        let fetch_options: FetchOptions = check_result!(serde_json::from_str(options_json), ErrorCode::InvalidStructure);
+
+        let wql = check_option!(query_translator::parse_from_json(&query_json), ErrorCode::InvalidStructure);
+        let (query, arguments) = check_option!(query_translator::wql_to_sql(self.wallet_id, type_, &wql, &fetch_options), ErrorCode::InvalidStructure);
+
+        let search_result: QueryResult = check_result!(
+            self.read_pool.prep_exec(query, arguments),
+            ErrorCode::IOError
+        );
+
+        let search_handle = self.searches.insert(Search::new(search_result));
+
+        unsafe { *search_handle_p = search_handle; }
+
+        ErrorCode::Success
+    }
+
+    ///
+    /// Performs a search that grabs all records of a wallet with all attributes from the DB.
+    ///
+    /// # Arguments
+    ///
+    ///  * `search_handle_p` - output param - handle that will be used for accessing the search result
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn search_all_records(&self, search_handle_p: *mut i32) -> ErrorCode {
+         let search_result: QueryResult = check_result!(
+            self.read_pool.prep_exec(
+                Statement::GetAllRecords.as_str(),
+                params! {
+                    "wallet_id" => self.wallet_id,
+                }
+            ),
+            ErrorCode::IOError
+        );
+
+        let search_handle = self.searches.insert(Search::new(search_result));
+
+        unsafe { *search_handle_p = search_handle; }
+
+        ErrorCode::Success
+    }
+
+    ///
+    /// Fetches a new record from the search result set.
+    ///
+    /// # Arguments
+    ///
+    ///  * `search_handle` - unique identifier of a search request
+    ///  * `record_handle_p` - output param - handle that will be used for accessing the record
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `InvalidState` - Provided search handle does not exist, or parsing of data has gone wrong
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///  * `WalletItemNotFound` - Result set exhausted, no more records to fetch
+    ///
+    pub fn fetch_search_next_record(&self, search_handle: i32, record_handle_p: *mut i32) -> ErrorCode {
+        let search = check_option!(self.searches.get(search_handle), ErrorCode::InvalidState);
+
+        let mut search_result = check_result!(search.search_result.write(), ErrorCode::IOError);
+
+        let next_result = check_option!(search_result.next(), ErrorCode::WalletItemNotFound);
+
+        let row = check_result!(next_result, ErrorCode::IOError);
+
+        let record_type: Option<String> = check_option!(row.get(0), ErrorCode::IOError);
+        let record_id: String = check_option!(row.get(1), ErrorCode::IOError);
+        let record_value: Option<Vec<u8>> = check_option!(row.get(2), ErrorCode::IOError);
+        let record_tags: Option<String> = check_option!(row.get(3), ErrorCode::IOError);
+
+        let record = Record::new(
+            check_result!(CString::new(record_id), ErrorCode::InvalidState),
+            record_value,
+            if let Some(record_tags) = record_tags { Some(check_result!(CString::new(record_tags), ErrorCode::InvalidState)) } else { None },
+            if let Some(record_type) = record_type { Some(check_result!(CString::new(record_type), ErrorCode::InvalidState)) } else { None },
+        );
+
+        let record_handle = self.records.insert(record);
+
+        unsafe { *record_handle_p = record_handle; }
+
+        ErrorCode::Success
     }
 }
