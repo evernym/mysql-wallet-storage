@@ -11,3 +11,6 @@ libc = "0.2.21"
 lazy_static = "0.2"
 mysql = "13.0"
 rand = "*"
+
+[dev-dependencies]
+indy = {git="https://github.com/hyperledger/indy-sdk", branch="feature/wallet_storage_integration", path="libindy"}
