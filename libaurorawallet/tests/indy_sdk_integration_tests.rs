@@ -1,8 +1,18 @@
 // Local dependencies
 extern crate libaurorawallet;
 
+pub mod test_utils;
+use test_utils::config::{ConfigType, Config};
+
+#[macro_use]
+extern crate serde_json;
+
+#[macro_use]
+extern crate lazy_static;
+
 use libaurorawallet::api as api;
 use libaurorawallet::errors::error_code::ErrorCode;
+use std::ffi::CString;
 
 mod high_casees {
     use super::*;
