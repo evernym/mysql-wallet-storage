@@ -14,50 +14,8 @@ awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
 
 logger.setGlobalLevel('TRACE')
 
-def buildF(String osname, List goals, Map buildCtx) {
-    def ciImageTag
-    def cbPrSuffix = "ci-$osname"
-
-    stage("$osname: Resolve image tag") {
-        def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
-        ciImageTag = "${_imgVersion}-${osname}-ci"
-        logger.info("CI docker image tag: $ciImageTag")
-    }
-
-    awsCBHelper.build(buildCtx) {
-        cbProjectNameSuffix = cbPrSuffix
-        buildspec = 'devops/aws-codebuild/buildspec.yml'
-        environmentVariables = [
-            [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"],
-            [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-        ]
-
-        delegate.envImage.ctxPaths = ['devops'] // TODO make more accurate
-        delegate.envImage.tag = ciImageTag
-        delegate.envImage.environmentVariables = [
-            [name: 'OSNAME', value: "$osname"],
-            [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
-            [name: 'DOCKER_NAME', value: "$projectName"],
-            [name: 'DOCKER_TAG', value: "$ciImageTag"],
-            [name: 'MAKE_GOAL', value: "image_ci"],
-        ]
-
-        artifactsClosure = {
-            this.stage("$osname: Archive artifacts") {
-                goals.each {
-                    def _fname = "${osname}.${it}.out"
-                    this.sh "mv '${it}.out' '$_fname'"
-                    this.utils.truncateFile(_fname, "${_fname}.tail")
-                }
-                this.archiveArtifacts artifacts: "${osname}.*.out*"
-            }
-        }
-    }
-}
-
 nodeWrapper {
     List osnames = ['xenial', 'centos7']
-    Map builds = [:]
     def goals = ['test_dry', 'test']
     Map buildCtx = [projectName: projectName]
 
@@ -78,26 +36,51 @@ nodeWrapper {
         logger.info("Prepared AWS infrastructure info: $buildCtx.envCBProject")
     }
 
-    osnames.each { osname ->
-        if (builds.size()) {
-            builds[osname] = {
-                nodeWrapper {
-                    stage("$osname: Checkout from SCM") {
-                        checkout scm
-                    }
+    Map builds = osnames.collectEntries {osname ->
+        [(osname): {
+            def ciImageTag
+            def cbPrSuffix = "ci-$osname"
 
-                    buildF(osname, goals, buildCtx.clone())
+            stage("$osname: Resolve image tag") {
+                def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
+                ciImageTag = "${_imgVersion}-${osname}-ci"
+                logger.info("CI docker image tag: $ciImageTag")
+            }
+
+            awsCBHelper.build(buildCtx) {
+                cbProjectNameSuffix = cbPrSuffix
+                buildspec = 'devops/aws-codebuild/buildspec.yml'
+                environmentVariables = [
+                    [name: 'OSNAME', value: "$osname"],
+                    [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
+                ]
+
+                delegate.envImage.ctxPaths = ['devops'] // TODO make more accurate
+                delegate.envImage.tag = ciImageTag
+                delegate.envImage.environmentVariables = [
+                    [name: 'OSNAME', value: "$osname"],
+                    [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
+                    [name: 'DOCKER_NAME', value: "$projectName"],
+                    [name: 'DOCKER_TAG', value: "$ciImageTag"],
+                    [name: 'MAKE_GOAL', value: "image_ci"],
+                ]
+
+                artifactsClosure = {
+                    this.stage("$osname: Archive artifacts") {
+                        goals.each {
+                            def _fname = "${osname}.${it}.out"
+                            this.sh "mv '${it}.out' '$_fname'"
+                            this.utils.truncateFile(_fname, "${_fname}.tail")
+                        }
+                        this.archiveArtifacts artifacts: "${osname}.*.out*"
+                    }
                 }
             }
-        } else { // build on current node
-            builds[osname] = {
-                buildF(osname, goals, buildCtx)
-            }
-        }
+        }]
     }
+    builds.failFast = false
 
     stage("Build and test") {
-        builds.failFast = false
-        parallel builds
+        utils.parallel builds
     }
 }
