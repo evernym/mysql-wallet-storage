@@ -28,12 +28,13 @@ def buildF(String osname, List goals, Map buildCtx) {
         cbProjectNameSuffix = cbPrSuffix
         buildspec = 'devops/aws-codebuild/buildspec.yml'
         environmentVariables = [
-            [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"]
+            [type: 'PLAINTEXT', name: 'OSNAME', value: "$osname"],
+            [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
         ]
 
-        ecrImage.ctxPaths = ['devops'] // TODO make more accurate
-        ecrImage.tag = ciImageTag
-        ecrImage.environmentVariables = [
+        delegate.envImage.ctxPaths = ['devops'] // TODO make more accurate
+        delegate.envImage.tag = ciImageTag
+        delegate.envImage.environmentVariables = [
             [name: 'OSNAME', value: "$osname"],
             [name: 'AWS_ECR_IMAGE_TAGS', value: "$ciImageTag"],
             [name: 'DOCKER_NAME', value: "$projectName"],
@@ -42,13 +43,13 @@ def buildF(String osname, List goals, Map buildCtx) {
         ]
 
         artifactsClosure = {
-            stage("$osname: Archive artifacts") {
+            this.stage("$osname: Archive artifacts") {
                 goals.each {
                     def _fname = "${osname}.${it}.out"
-                    sh "mv '${it}.out' '$_fname'"
-                    utils.truncateFile(_fname, "${_fname}.tail")
+                    this.sh "mv '${it}.out' '$_fname'"
+                    this.utils.truncateFile(_fname, "${_fname}.tail")
                 }
-                archiveArtifacts artifacts: "${osname}.*.out*"
+                this.archiveArtifacts artifacts: "${osname}.*.out*"
             }
         }
     }
