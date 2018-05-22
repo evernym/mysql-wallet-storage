@@ -1,28 +1,25 @@
 #!groovy
 
-def projectName = 'aurora-wallet'
-
 def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retriever: modernSCM(
     github(credentialsId: 'evernym-github-machine-user', repoOwner: 'evernym', repository: 'jenkins-shared')
 )).com.evernym.pipeline
 
-utils = evLibrary.Utils.new(this)
 logger = evLibrary.Logger.new(this)
-awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
-
 logger.setGlobalLevel('TRACE')
 
 nodeWrapper {
     List osnames = ['xenial', 'centos7']
     def goals = ['test_dry', 'test']
-    Map buildCtx = [projectName: projectName]
 
     stage('Checkout from SCM') {
         checkout scm
     }
 
+    def utils = evLibrary.Utils.new(this)
+    def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
+
     stage('Upload source to S3') {
-        awsCBHelper.uploadSourceToS3(buildCtx)
+        awsCBHelper.uploadSourceToS3()
     }
 
     Map builds = osnames.collectEntries { osname ->
@@ -37,7 +34,7 @@ nodeWrapper {
             }
 
             try {
-                awsCBHelper.build(buildCtx) {
+                awsCBHelper.build() {
                     projectTag = prTag
 
                     // env and build spec
@@ -61,8 +58,8 @@ nodeWrapper {
                     ]
                 }
             } finally {
-                if (buildCtx[prTag].artifactsDir) {
-                    dir(buildCtx[prTag].artifactsDir) {
+                if (awsCBHelper.buildCtx.projects[prTag].artifactsDir) {
+                    dir(awsCBHelper.buildCtx.projects[prTag].artifactsDir) {
                         stage("$osname: Archive artifacts") {
                             goals.each {
                                 def _fname = "${osname}.${it}.out"
