@@ -5,11 +5,12 @@ services:
   base:
     build:
       context: base/$OSNAME
-    image: evernym/base:${BASE_DOCKER_TAG_PREFIX:-}$OSNAME
+    # TODO ${VAR:-} raises error in docker-compose < 1.21.0
+    image: evernym/base:${BASE_DOCKER_TAG_PREFIX}${OSNAME}
 
   rust:
     build:
       context: rust/$OSNAME
       args:
           - RUST_VERSION
-    image: evernym/rust:${RUST_DOCKER_TAG_PREFIX:-}$OSNAME
+    image: evernym/rust:${RUST_DOCKER_TAG_PREFIX}${OSNAME}
