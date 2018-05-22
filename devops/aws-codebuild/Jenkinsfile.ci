@@ -49,7 +49,7 @@ nodeWrapper {
                     ]
 
                     // build spec for env image
-                    imageBuildSrc = ['devops'] // TODO make more accurate
+                    imageBuildSrc = ['devops', 'libaurorawallet/Cargo.toml'] // TODO make more accurate
                     imageBuildCmd = 'export PROJECT_DIR=$PWD; make -C devops image_ci'
                     imageBuildEnvv = [
                         [name: 'OSNAME', value: "$osname"],
