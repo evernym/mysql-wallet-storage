@@ -1,5 +1,6 @@
-FROM evernym/base:centos7
+FROM evernym/base:0.2.0-centos7
 # TODO LABEL maintainer="Name <email-address>"
+
 ARG RUST_VERSION
 
 ENV RUST_VERSION=${RUST_VERSION:-1.25.0}
@@ -13,3 +14,5 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-tool
     && rustc --version
 
 # TODO CMD ENTRYPOINT ...
+
+ENV RUST_ENV_VERSION=0.2.0

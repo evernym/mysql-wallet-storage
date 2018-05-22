@@ -15,6 +15,8 @@ PROJECT_NAME ?= $(notdir $(PROJECT_DIR))
 SRC_VERSION ?= 0.1.0
 PRE_PACKAGE_GOALS ?=
 
+docker_img_version = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
+
 # required for in-docker targets
 DOCKER_NAME ?=
 DOCKER_TAG ?=
@@ -68,10 +70,18 @@ package: check_fpm_args $(PRE_PACKAGE_GOALS)
 # TODO refactor that once compose provides support for images
 # build oreder: https://github.com/docker/compose/issues/5228
 image_base:
-	docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build base
+ifeq ($(BASE_DOCKER_VERSION),)
+	$(eval BASE_DOCKER_VERSION=$(call docker_img_version,'BASE_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/base/$(OSNAME)/Dockerfile))
+endif
+	BASE_DOCKER_TAG_PREFIX=$(BASE_DOCKER_VERSION)- \
+		docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build base
 
 image_rust: image_base
-	docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build rust
+ifeq ($(RUST_DOCKER_VERSION),)
+	$(eval RUST_DOCKER_VERSION=$(call docker_img_version,'RUST_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/rust/$(OSNAME)/Dockerfile))
+endif
+	RUST_DOCKER_TAG_PREFIX=$(RUST_DOCKER_VERSION)- \
+		docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build rust
 
 %_in_docker: image_%
 	echo "Re-running goal $* in docker $(DOCKER_NAME):$(DOCKER_TAG)"

@@ -1,10 +1,8 @@
-FROM evernym/rust:centos7
+FROM evernym/rust:0.2.0-centos7
 # TODO LABEL maintainer="Name <email-address>"
 
 ARG u_id=1000
 ARG u_name=user
-
-ENV CI_ENV_VERSION=0.1.0
 
 # project's specific dependencies
 #RUN yum install -y \
@@ -16,3 +14,5 @@ USER $u_name
 
 # TODO CMD ENTRYPOINT ...
 WORKDIR /home/$u_name
+
+ENV CI_ENV_VERSION=0.2.0

@@ -43,3 +43,5 @@ RUN yum install -y \
     && yum clean all
 
 # TODO CMD ENTRYPOINT ...
+
+ENV BASE_ENV_VERSION=0.2.0

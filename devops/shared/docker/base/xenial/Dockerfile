@@ -27,3 +27,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
 # TODO CMD ENTRYPOINT ...
+
+ENV BASE_ENV_VERSION=0.1.0

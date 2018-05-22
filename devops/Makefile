@@ -56,14 +56,11 @@ include shared/Makefile
 
 export OSNAME
 
-docker_img_version = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
-
 image_ci_version:
 	echo $(call docker_img_version,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)
 
 image_ci: image_rust
 ifeq ($(DOCKER_TAG),)
-	# TODO refactor, it's a copy paste
 	$(eval DOCKER_TAG=$(call docker_img_version,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)-$(OSNAME)-ci)
 endif
 	OSNAME=$(OSNAME) \
