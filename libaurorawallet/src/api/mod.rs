@@ -118,6 +118,19 @@ pub extern "C" fn add_record(storage_handle: i32, type_p: *const c_char, id_p: *
     storage.add_record(&type_, &id, &value, &tags)
 }
 
+pub extern "C" fn add_record_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, value_p: *const u8, value_len: usize, tags_json_p: *const c_char) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    let type_ = c_char_to_str!(type_p);
+    let id = c_char_to_str!(id_p);
+    let tags = c_char_to_str!(tags_json_p);
+
+    let mut value: Vec<u8> = Vec::new();
+    unsafe { value.extend_from_slice(slice::from_raw_parts(value_p, value_len)); }
+
+    storage.add_record_1(&type_, &id, &value, &tags)
+}
+
 pub extern "C" fn get_record(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, options_json_p: *const c_char, record_handle_p: *mut i32) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
@@ -126,6 +139,16 @@ pub extern "C" fn get_record(storage_handle: i32, type_p: *const c_char, id_p: *
     let options = c_char_to_str!(options_json_p);
 
     storage.fetch_record(type_, id, options, record_handle_p)
+}
+
+pub extern "C" fn get_record_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, options_json_p: *const c_char, record_handle_p: *mut i32) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    let type_ = c_char_to_str!(type_p);
+    let id = c_char_to_str!(id_p);
+    let options = c_char_to_str!(options_json_p);
+
+    storage.fetch_record_1(type_, id, options, record_handle_p)
 }
 
 pub extern "C" fn delete_record(storage_handle: i32, type_p: *const c_char, id_p: *const c_char) -> ErrorCode {
@@ -167,6 +190,16 @@ pub extern "C" fn update_record_tags(storage_handle: i32, type_p: *const c_char,
     let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidStructure);
 
     storage.update_record_tags(&type_, &id, &tags)
+}
+
+pub extern "C" fn update_record_tags_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    let type_ = c_char_to_str!(type_p);
+    let id = c_char_to_str!(id_p);
+    let tags = c_char_to_str!(tags_json_p);
+
+    storage.update_record_tags_1(&type_, &id, &tags)
 }
 
 pub extern "C" fn delete_record_tags(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tag_names_json_p: *const c_char) -> ErrorCode {

@@ -219,6 +219,50 @@ impl<'a> AuroraStorage<'a> {
     }
 
     ///
+    /// Adds a new record identified by type and id.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///  * `value` - record value
+    ///  * `tags` - a map of (tag_name: tag_value) pairs
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `RecordAlreadExists` - Record with the provided type and id already exist in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn add_record_1(&self, type_: &str, id: &str, value: &Vec<u8>, tags: &str) -> ErrorCode {
+
+        let result = {
+            self.write_pool.prep_exec(
+                        Statement::InsertRecord_1.as_str(),
+                        params!{
+                            "type" => type_,
+                            "name" => id,
+                            "value" => value,
+                            "tags" => tags,
+                            "wallet_id" => self.wallet_id
+                        }
+                )
+        };
+
+        let result: QueryResult = match result {
+            Err(Error::MySqlError(err)) => { println!("{:?}", err); return ErrorCode::RecordAlreadyExists; },
+            Err(_) => return ErrorCode::IOError,
+            Ok(result) => result,
+        };
+
+        ErrorCode::Success
+    }
+
+    ///
     /// Fetches a record identified by type and id.
     ///
     /// # Arguments
@@ -261,6 +305,72 @@ impl<'a> AuroraStorage<'a> {
                 '}') tags"
             }
                 else {"''"}
+        );
+
+        let mut result: QueryResult = check_result!(
+            self.read_pool.prep_exec(
+                &query,
+                params!{
+                    "wallet_id" => self.wallet_id,
+                    "type" => type_,
+                    "name" => id
+                }
+            ),
+            ErrorCode::IOError
+        );
+
+        let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
+
+        // These 2 value cannot be NULL.
+        let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::IOError);
+        let tags: String = check_option!(row.get(1), ErrorCode::IOError);
+
+        let record = Record::new(
+            check_result!(CString::new(id), ErrorCode::InvalidState),
+            if options.fetch_value {Some(db_value)} else {None},
+            if options.fetch_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
+            None
+        );
+
+        let record_handle = self.records.insert(record);
+
+        unsafe { *record_handle_p = record_handle; }
+
+        ErrorCode::Success
+    }
+
+    ///
+    /// Fetches a record identified by type and id.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///  * `options` - options in the form of {"fetch_value": true, "fetch_tags": true} determining whether to fetch the value and/or tags
+    ///  * `record_handle_p` - output param - handle that will be used for accessing the fetched record
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///  * `InvalidEncoding` - Invalid encoding of a provided/fetched string
+    ///
+    pub fn fetch_record_1(&self, type_: &str, id: &str, options: &str, record_handle_p: *mut i32) -> ErrorCode {
+        let options: FetchOptions = check_result!(serde_json::from_str(options), ErrorCode::InvalidStructure);
+
+        let query = format!(
+            "SELECT {}, {} FROM items_1 i \
+                WHERE \
+                    wallet_id = :wallet_id \
+                    AND type = :type \
+                    AND name = :name",
+            if options.fetch_value { "value" } else {"''"},
+            if options.fetch_tags { "tags" } else {"''"}
         );
 
         let mut result: QueryResult = check_result!(
@@ -612,6 +722,50 @@ impl<'a> AuroraStorage<'a> {
         }
 
         check_result!(transaction.commit(), ErrorCode::IOError);
+
+        ErrorCode::Success
+    }
+
+    ///
+    /// Updates tags of a record identified by type and id.
+    /// This function will replace all tags with new.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///  * `tag_names` - a map containing (tag_name: new_tag_value) pairs
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `UnknownTag` - Tag name specified in the map does not exist in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn update_record_tags_1(&self, type_: &str, id: &str, tags: &str) -> ErrorCode {
+
+        let result = {
+            self.write_pool.prep_exec(
+                        Statement::UpdateTags.as_str(),
+                        params!{
+                            "tags" => tags,
+                            "type" => type_,
+                            "name" => id,
+                            "wallet_id" => self.wallet_id
+                        }
+                )
+        };
+
+        let result: QueryResult = match result {
+            Err(Error::MySqlError(err)) => { println!("{:?}", err); return ErrorCode::InvalidStructure; },
+            Err(_) => return ErrorCode::IOError,
+            Ok(result) => result,
+        };
 
         ErrorCode::Success
     }
