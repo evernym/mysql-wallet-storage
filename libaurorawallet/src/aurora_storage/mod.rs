@@ -203,9 +203,10 @@ impl<'a> AuroraStorage<'a> {
 
             match result {
                 Err(Error::MySqlError(err)) => {
-                    match err.state.as_ref() {
-                        "22001" => {return ErrorCode::InvalidStructure },
-                        _ => {return ErrorCode::IOError },
+                    match err.code {
+                        1062 => return ErrorCode::RecordAlreadyExists,
+                        1406 => return ErrorCode::InvalidStructure,
+                        _ => return ErrorCode::IOError,
                     };
                 },
                 Err(_) => return ErrorCode::IOError,
@@ -253,11 +254,17 @@ impl<'a> AuroraStorage<'a> {
                 )
         };
 
-        let result: QueryResult = match result {
-            Err(Error::MySqlError(err)) => { println!("{:?}", err); return ErrorCode::RecordAlreadyExists; },
-            Err(_) => return ErrorCode::IOError,
-            Ok(result) => result,
-        };
+        match result {
+                Err(Error::MySqlError(err)) => {
+                    match err.code {
+                        1062 => return ErrorCode::RecordAlreadyExists,
+                        1406 => return ErrorCode::InvalidStructure,
+                        _ => return ErrorCode::IOError,
+                    };
+                },
+                Err(_) => return ErrorCode::IOError,
+                Ok(result) => result,
+            };
 
         ErrorCode::Success
     }
@@ -363,40 +370,51 @@ impl<'a> AuroraStorage<'a> {
     pub fn fetch_record_1(&self, type_: &str, id: &str, options: &str, record_handle_p: *mut i32) -> ErrorCode {
         let options: FetchOptions = check_result!(serde_json::from_str(options), ErrorCode::InvalidStructure);
 
-        let query = format!(
-            "SELECT {}, {} FROM items_1 i \
-                WHERE \
-                    wallet_id = :wallet_id \
-                    AND type = :type \
-                    AND name = :name",
-            if options.fetch_value { "value" } else {"''"},
-            if options.fetch_tags { "tags" } else {"''"}
-        );
+        let record: Record;
 
-        let mut result: QueryResult = check_result!(
-            self.read_pool.prep_exec(
-                &query,
-                params!{
-                    "wallet_id" => self.wallet_id,
-                    "type" => type_,
-                    "name" => id
-                }
-            ),
-            ErrorCode::IOError
-        );
+        if options.fetch_type | options.fetch_tags {
+            let query = format!(
+                "SELECT {}, {} FROM items_1 i \
+                    WHERE \
+                        wallet_id = :wallet_id \
+                        AND type = :type \
+                        AND name = :name",
+                if options.fetch_value { "value" } else {"''"},
+                if options.fetch_tags { "tags" } else {"''"}
+            );
 
-        let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
+            let mut result: QueryResult = check_result!(
+                self.read_pool.prep_exec(
+                    &query,
+                    params!{
+                        "wallet_id" => self.wallet_id,
+                        "type" => type_,
+                        "name" => id
+                    }
+                ),
+                ErrorCode::IOError
+            );
 
-        // These 2 value cannot be NULL.
-        let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::IOError);
-        let tags: String = check_option!(row.get(1), ErrorCode::IOError);
+            let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
 
-        let record = Record::new(
-            check_result!(CString::new(id), ErrorCode::InvalidState),
-            if options.fetch_value {Some(db_value)} else {None},
-            if options.fetch_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
-            None
-        );
+            // These 2 value cannot be NULL.
+            let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::IOError);
+            let tags: String = check_option!(row.get(1), ErrorCode::IOError);
+
+            record = Record::new(
+                check_result!(CString::new(id), ErrorCode::InvalidState),
+                if options.fetch_value {Some(db_value)} else {None},
+                if options.fetch_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
+                Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
+            );
+        } else {
+            record = Record::new(
+                check_result!(CString::new(id), ErrorCode::InvalidState),
+                None,
+                None,
+                Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
+            );
+        }
 
         let record_handle = self.records.insert(record);
 
@@ -622,6 +640,51 @@ impl<'a> AuroraStorage<'a> {
     }
 
     ///
+    /// Adds tags for a record identified by type and id.
+    /// If tag with that name exists it will be updated.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///  * `tag_names` - a map containing (tag_name: tag_value) pairs
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `TagAlreadyExists` - Provided tag already exists in the DB
+    ///  * `TagDataTooLong` - Provided tag_name or tag_value exceed the size limit
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn add_record_tags_1(&self, type_: &str, id: &str, tags: &str) -> ErrorCode {
+
+        let result = {
+            self.write_pool.prep_exec(
+                        Statement::AddTags.as_str(),
+                        params!{
+                            "tags" => tags,
+                            "type" => type_,
+                            "name" => id,
+                            "wallet_id" => self.wallet_id
+                        }
+                )
+        };
+
+        let result: QueryResult = match result {
+            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
+            Err(_) => return ErrorCode::IOError,
+            Ok(result) => result,
+        };
+
+        ErrorCode::Success
+    }
+
+    ///
     /// Updates tags of a record identified by type and id.
     /// This function will replace all tags with new.
     ///
@@ -762,7 +825,7 @@ impl<'a> AuroraStorage<'a> {
         };
 
         let result: QueryResult = match result {
-            Err(Error::MySqlError(err)) => { println!("{:?}", err); return ErrorCode::InvalidStructure; },
+            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
             Err(_) => return ErrorCode::IOError,
             Ok(result) => result,
         };
@@ -846,6 +909,66 @@ impl<'a> AuroraStorage<'a> {
         }
 
         check_result!(transaction.commit(), ErrorCode::IOError);
+
+        ErrorCode::Success
+    }
+
+    ///
+    /// Deletes tags of a record identified by type and id.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///  * `tag_names` - list of tag names that need to be deleted
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `UnknownTag` - Tag name specified in the list does not exist in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn delete_record_tags_1(&self, type_: &str, id: &str, tag_names: &Vec<String>) -> ErrorCode {
+
+        let mut tag_name_paths: Vec<String> = Vec::new();
+
+        for tag_name in tag_names {
+            let tag_name_path = format!(r#"'$."{}"'"#, tag_name);
+            tag_name_paths.push(tag_name_path);
+        }
+
+        let test = tag_name_paths.join(",");
+
+        let query = format!("UPDATE items_1 \
+                            SET tags = JSON_REMOVE(tags, {}) \
+                            WHERE type = :type \
+                            AND name = :name \
+                            AND wallet_id = :wallet_id",
+                            test
+        );
+
+
+        let result = {
+            self.write_pool.prep_exec(
+                        query,
+                        params!{
+                            "type" => type_,
+                            "name" => id,
+                            "wallet_id" => self.wallet_id
+                        }
+                )
+        };
+
+        let result: QueryResult = match result {
+            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
+            Err(_) => return ErrorCode::IOError,
+            Ok(result) => result,
+        };
 
         ErrorCode::Success
     }

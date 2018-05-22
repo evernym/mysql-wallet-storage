@@ -29,12 +29,10 @@ mod demo {
         static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
     }
 
-    const WALLET_NAME: &'static str = "demo-wallet";
-    const ITEM_NAME: &'static str = "demo-item";
     const ITEM_TYPE: &'static str = "demo-type";
 
-    fn open_storage() -> i32 {
-        let name = CString::new(WALLET_NAME).unwrap();
+    fn open_storage(wallet_name: String) -> i32 {
+        let name = CString::new(wallet_name).unwrap();
         let config = CString::new(TEST_CONFIG.get_config()).unwrap();
         let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
@@ -61,7 +59,9 @@ mod demo {
     }
 
     /** ADD RECORD */
-    fn add_record(handle: i32, x: u64, y: u64) {
+    fn add_record(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
         let type_ =CString::new(ITEM_TYPE).unwrap();
@@ -75,7 +75,9 @@ mod demo {
 
 
     /** ADD RECORD */
-    fn add_record_1(handle: i32, x: u64, y: u64) {
+    fn add_record_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
         let type_ =CString::new(ITEM_TYPE).unwrap();
@@ -88,11 +90,12 @@ mod demo {
     }
 
     /** GET RECORD */
-    fn get_record() {
-        let handle = open_storage();
-
+    fn get_record(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
         let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = CString::new("record_0_2999").unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
         let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
 
         let mut record_handle = -1;
@@ -120,11 +123,12 @@ mod demo {
     }
 
     /** GET RECORD */
-    fn get_record_1() {
-        let handle = open_storage();
-
+    fn get_record_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
         let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = CString::new("record_0_2999").unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
         let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
 
         let mut record_handle = -1;
@@ -164,56 +168,80 @@ mod demo {
 //        assert_eq!(err, ErrorCode::Success);
 //    }
 
-//    /** ADD TAGS */
-//    fn add_record_tags(x: String, y: String) {
-//        let handle = open_storage();
-//
-//        let type_ = CString::new(ITEM_TYPE).unwrap();
-//        let id = format!("{}_{}");
-//        let id = CString::new(ITEM_NAME).unwrap();
-//
-//        let tags_json = CString::new(r##"{"new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be"}"##).unwrap();
-//        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-//
-//        assert_eq!(err, ErrorCode::Success);
-//    }
+    /** ADD TAGS */
+    fn add_record_tags(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let tags_json = CString::new(r##"{"new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be"}"##).unwrap();
+        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** ADD TAGS */
+    fn add_record_tags_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let tags_json = CString::new(r##"{"new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be"}"##).unwrap();
+        let err = api::add_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+
+        assert_eq!(err, ErrorCode::Success);
+    }
 
     /** UPDATE TAGS*/
-    fn update_record_tags() {
-        let handle = open_storage();
-
+    fn update_record_tags(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
         let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = CString::new("record_0_2999").unwrap();
-
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
         let tags_json = CString::new(r##"{"new_encrypted": "After update", "~new_plaintext": "After Update"}"##).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
 
     /** UPDATE TAGS*/
-    fn update_record_tags_1() {
-        let handle = open_storage();
-
+    fn update_record_tags_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
         let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = CString::new("record_0_2999").unwrap();
-
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
         let tags_json = CString::new(r##"{"new_encrypted": "After update", "~new_plaintext": "After Update"}"##).unwrap();
         let err = api::update_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
 
-////
-////    /** DELETE TAGS */
-////    fn delete_record_tags() {
-////        let handle = open_storage();
-////
-////        let type_ = CString::new(ITEM_TYPE).unwrap();
-////        let id = CString::new(ITEM_NAME).unwrap();
-////
-////        let tag_names = CString::new(r##"["~int_tag", "~float_tag", "~string_tag", "~bool_tag", "~null_tag", "encrypted_tag"]"##).unwrap();
-////        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-////        assert_eq!(err, ErrorCode::Success);
-////    }
+
+    /** DELETE TAGS */
+    fn delete_record_tags(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let tag_names = CString::new(r##"["~new_plaintext", "tag2"]"##).unwrap();
+        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** DELETE TAGS */
+    fn delete_record_tags_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let tag_names = CString::new(r##"["~new_plaintext", "tag2"]"##).unwrap();
+        let err = api::delete_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
 ////
 ////
 ////    /** DELETE RECORD */
@@ -396,8 +424,6 @@ mod demo {
     #[test]
     fn benchmark() {
 
-        let handle = open_storage();
-
         const AGENT_CNT: u64 = 1;
         const OPERATIONS_CNT: u64 = 5000;
 
@@ -413,12 +439,16 @@ mod demo {
                 for y in 0..OPERATIONS_CNT {
                     let time = SystemTime::now();
 //                    create_wallet(x, y);
-//                    add_record(handle, x, y);
-                    add_record_1(handle, x, y);
-//                    get_record();
-//                    get_record_1();
-//                    update_record_tags();
-//                    update_record_tags_1();
+//                    add_record(x, y);
+//                    add_record_1(x, y);
+//                    get_record(x, y);
+//                    get_record_1(x, y);
+//                    add_record_tags(x, y);
+//                    add_record_tags_1(x, y);
+//                    update_record_tags(x, y);
+//                    update_record_tags_1(x, y);
+//                    delete_record_tags(x, y);
+                    delete_record_tags_1(x, y);
                     let time_diff = SystemTime::now().duration_since(time).unwrap();
                     time_diffs.push(time_diff);
                 }
@@ -448,7 +478,7 @@ mod demo {
                      Operations Executed:     \t{:?}\n\
                      Sum of Exection times:   \t{:?}\n\
                      Total Duration:          \t{:?}\n\
-                     Aprox QPS:               \t{:?}",
+                     Aprox TPS:               \t{:?}",
             time_diff_max, AGENT_CNT * OPERATIONS_CNT, time_sum_diff, total_duration, ((OPERATIONS_CNT * AGENT_CNT) / total_duration.as_secs())
         );
     }
