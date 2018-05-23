@@ -434,6 +434,61 @@ mod demo {
 
     extern crate mysql;
 
+
+     fn perf_runner<F>(action: F) where F: Fn(u64, u64) + Send + Sync + Copy + 'static {
+
+        const AGENT_CNT: u64 = 1;
+        const OPERATIONS_CNT: u64 = 5000;
+
+        let start_time = SystemTime::now();
+
+        let mut results = Vec::new();
+
+        for x in 0..AGENT_CNT {
+
+            let thread = thread::spawn(move || {
+                let mut time_diffs = Vec::new();
+
+                for y in 0..OPERATIONS_CNT {
+                    let time = SystemTime::now();
+                    action(x, y);
+                    let time_diff = SystemTime::now().duration_since(time).unwrap();
+                    time_diffs.push(time_diff);
+                }
+
+                time_diffs
+            });
+
+            results.push(thread);
+        }
+
+        let mut all_diffs = Vec::new();
+        for result in results {
+            all_diffs.push(result.join().unwrap());
+        }
+        let total_duration = SystemTime::now().duration_since(start_time).unwrap();
+
+
+        let mut time_diff_max = Duration::from_secs(0);
+        let mut time_sum_diff = Duration::from_secs(0);
+        for time_diffs in all_diffs {
+            time_diff_max = time_diffs.iter().fold(time_diff_max, |acc, cur| max(acc, *cur));
+            time_sum_diff = time_diffs.iter().fold(time_sum_diff, |acc, cur| acc + *cur);
+        }
+
+        println!("================= Summary =================\n\
+                     Max Execution Time:      \t{:?}\n\
+                     Operations Executed:     \t{:?}\n\
+                     Sum of Exection times:   \t{:?}\n\
+                     Total Duration:          \t{:?}\n\
+                     Aprox TPS:               \t{:?}",
+            time_diff_max, AGENT_CNT * OPERATIONS_CNT, time_sum_diff, total_duration, ((OPERATIONS_CNT * AGENT_CNT) / total_duration.as_secs())
+        );
+    }
+
+
+
+
     #[test]
     fn benchmark() {
 
@@ -495,6 +550,33 @@ mod demo {
                      Aprox TPS:               \t{:?}",
             time_diff_max, AGENT_CNT * OPERATIONS_CNT, time_sum_diff, total_duration, ((OPERATIONS_CNT * AGENT_CNT) / total_duration.as_secs())
         );
+    }
+
+    #[test]
+    fn testoo() {
+
+        println!("Starting perf runner...");
+
+        let mut actions: Vec<(&str, &(Fn(u64, u64) + Send + Sync + 'static))> = Vec::new();
+        actions.push(("Create Wallet", &create_wallet));
+        actions.push(("Add Record", &add_record));
+        actions.push(("Add Record 1", &add_record_1));
+        actions.push(("Get Record", &get_record));
+        actions.push(("Get Record 1", &get_record_1));
+        actions.push(("Add Record Tags", &add_record_tags));
+        actions.push(("Add Record Tags 1", &add_record_tags_2));
+        actions.push(("Update Record Tags", &update_record_tags));
+        actions.push(("Update Record Tags 1", &update_record_tags_1));
+        actions.push(("Delete Record Tags", &delete_record_tags));
+        actions.push(("Delete Record Tags", &delete_record_tags_1));
+
+        for (action_name, action) in actions {
+            println!("\tBenchmarking {}", action_name);
+            perf_runner(action);
+            println!("\t{} Done", action_name);
+        }
+
+        println!("Done!");
     }
 }
 
