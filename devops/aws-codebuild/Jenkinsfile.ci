@@ -16,6 +16,8 @@ nodeWrapper {
     }
 
     def utils = evLibrary.Utils.new(this)
+    // TODO Cargo.toml is necessary only for variable in makefile which is not used for that context, thus
+    // shouldn't be taken into account when deciding to rebuild docker images
     def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet', ['devops', 'libaurorawallet/Cargo.toml'])
     def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
 
@@ -47,19 +49,19 @@ nodeWrapper {
                     ]
 
                     // build spec for env image
-                    imageBuildSrc = ['devops'] // TODO make more accurate
-                    imageBuildCmds = [
+                    envBuildSrc = ['devops'] // TODO make more accurate
+                    envBuildCmds = [
                         'export PROJECT_DIR=$PWD',
                         'make -C devops image_ci'
                     ].
-                    imageBuildEnvv = [
+                    envBuildEnvv = [
                         [name: 'OSNAME', value: "$osname"],
                         [name: 'DOCKER_NAME', value: "$awsCBHelper.buildCtx.projectName"],
                         [name: 'DOCKER_TAG', value: "$ciImageTag"],
                     ]
                 }
             } finally {
-                if (awsCBHelper.buildCtx.projects[prTag].artifactsDir) {
+                if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
                     dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
                         stage("$osname: Archive artifacts") {
                             goals.each {
