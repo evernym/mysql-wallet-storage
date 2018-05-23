@@ -28,7 +28,7 @@ phases:
       - printenv
       - export PROJECT_DIR="$PWD"
       - |
-        for goal in "$MAKE_GOALS"; do
+        for goal in $MAKE_GOALS; do
             /bin/bash -c "
                 set -xe
                 set -o pipefail
@@ -41,7 +41,7 @@ phases:
       - echo Build completed on `date`
       - echo Preparing artifacts
       - |
-        for art in "$ARTIFACTS"; do
+        for art in $ARTIFACTS; do
             cp -vR -t /tmp/artifacts $art
         fi
       - find /tmp/artifacts
