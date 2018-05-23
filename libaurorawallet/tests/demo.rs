@@ -435,7 +435,7 @@ mod demo {
     extern crate mysql;
 
 
-     fn perf_runner<F>(action: F) where F: Fn(u64, u64) + Send + Sync + Copy + 'static {
+     fn bench<F>(action: F) where F: Fn(u64, u64) + Send + Sync + Copy + 'static {
 
         const AGENT_CNT: u64 = 1;
         const OPERATIONS_CNT: u64 = 5000;
@@ -553,7 +553,7 @@ mod demo {
     }
 
     #[test]
-    fn testoo() {
+    fn perf_runner() {
 
         println!("Starting perf runner...");
 
@@ -568,12 +568,11 @@ mod demo {
         actions.push(("Update Record Tags", &update_record_tags));
         actions.push(("Update Record Tags 1", &update_record_tags_1));
         actions.push(("Delete Record Tags", &delete_record_tags));
-        actions.push(("Delete Record Tags", &delete_record_tags_1));
+        actions.push(("Delete Record Tags 1", &delete_record_tags_1));
 
         for (action_name, action) in actions {
             println!("\tBenchmarking {}", action_name);
-            perf_runner(action);
-            println!("\t{} Done", action_name);
+            bench(action);
         }
 
         println!("Done!");
