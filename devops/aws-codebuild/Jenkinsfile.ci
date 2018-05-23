@@ -16,7 +16,8 @@ nodeWrapper {
     }
 
     def utils = evLibrary.Utils.new(this)
-    def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
+    def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet', ['devops', 'libaurorawallet/Cargo.toml'])
+    def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
 
     stage('Upload source to S3') {
         awsCBHelper.uploadSourceToS3()
@@ -46,7 +47,7 @@ nodeWrapper {
                     ]
 
                     // build spec for env image
-                    imageBuildSrc = ['devops', 'libaurorawallet/Cargo.toml'] // TODO make more accurate
+                    imageBuildSrc = ['devops'] // TODO make more accurate
                     imageBuildCmds = [
                         'export PROJECT_DIR=$PWD',
                         'make -C devops image_ci'
