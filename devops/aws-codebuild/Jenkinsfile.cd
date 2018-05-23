@@ -1,137 +1,116 @@
 #!groovy
 
-// TODO
-// - add branch name or use BUILD_TAG (but need to replace %2f) to artifactName
-//   https://issues.jenkins-ci.org/browse/JENKINS-44360
-
-def projectName = 'aurora-wallet'
-
 def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retriever: modernSCM(
     github(credentialsId: 'evernym-github-machine-user', repoOwner: 'evernym', repository: 'jenkins-shared')
 )).com.evernym.pipeline
 
-utils = evLibrary.Utils.new(this)
 logger = evLibrary.Logger.new(this)
-gitHelper = evLibrary.Git.new(this)
-awsCliECR = evLibrary.AwsCliECR.new(this)
-awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this)
-
 logger.setGlobalLevel('TRACE')
 
-
 nodeWrapper {
+    def packageName = 'libaurorawallet'
+    def srcVersion
+    def lastRevision
+    def debPVersion
+    def cratePVersion
+
+    stage('Checkout sources from SCM') {
+        checkout scm
+    }
+
+    def utils = evLibrary.Utils.new(this)
+    def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet')
+    def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
+
+    stage('Resolve current source version') {
+        srcVersion = utils.srcVersion(projectType: 'rust')
+        logger.info("Current source version: $srcVersion")
+    }
+
+    stage('Resolve last revision') {
+        lastRevision = evernymRepo.getLastRevision {
+            delegate.packageName = packageName
+            packageSrcVersion = srcVersion
+            repoDistr = 'agency-dev'
+        }
+
+        if (lastRevision) {
+            logger.info("Found last revision number: $lastRevision")
+        } else {
+            logger.info("No previous revision was found")
+        }
+    }
+
+    stage('Set release parameters') {
+        def releaseVersion = "${lastRevision ? lastRevision[0] + 1: 1}.$BUILD_NUMBER"
+
+        debPVersion = utils.packageVersion('deb-kraken', srcVersion, releaseVersion)
+        logger.info("Package version for evernym repo: $debPVersion")
+
+        cratePVersion = utils.packageVersion('crate', srcVersion, releaseVersion)
+        logger.info("Package version for rust registry: $cratePVersion")
+    }
+
+    def ciImageTag
+    def osname = 'xenial'
+    def prTag = "ci-$osname"
+
+    stage("$osname: Resolve image tag") {
+        def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
+        ciImageTag = "${_imgVersion}-${osname}-ci"
+        logger.info("CI docker image tag: $ciImageTag")
+    }
+
+    stage('Upload source to S3') {
+        awsCBHelper.uploadSourceToS3()
+    }
+
     try {
-        def sha1
-        def packageName = 'libaurorawallet'
-        def srcVersion
-        def lastRevision
-        def debPVersion
-        def cratePVersion
-        def artifactPath = projectName
-        def artifactName
-        def goals = ['package']
-        def s3path
+        awsCBHelper.build() {
+            projectTag = "ci-$osname"
 
-        stage('Checkout sources from SCM') {
-            checkout scm
-            sha1 = gitHelper.sha1()
+            // env and build spec
+            imageTag = ciImageTag
+            buildspec = 'devops/aws-codebuild/buildspec.yml'
+            envv = [
+                [name: 'OSNAME', value: "$osname"],
+                [name: 'MAKE_GOALS', value: "package"],
+                [name: 'ARTIFACTS', value: 'libaurorawallet/target/release/libaurorawallet*.*'],
+                [name: 'FPM_P_VERSION', value: debPVersion],
+               // [name: 'CRATE_P_VERSION', value: cratePVersion],
+            ]
         }
-
-        stage('Resolve current source version') {
-            srcVersion = utils.srcVersion(projectType: 'rust')
-            logger.info("Current source version: $srcVersion")
-        }
-
-        stage('Resolve last revision') {
-            lastRevision = evernymRepo.getLastRevision {
-                delegate.packageName = packageName
-                packageSrcVersion = srcVersion
-                repoDistr = 'agency-dev'
-            }
-
-            if (lastRevision) {
-                logger.info("Found last revision number: $lastRevision")
-            } else {
-                logger.info("No previous revision was found")
-            }
-        }
-
-        stage('Set release parameters') {
-            def releaseVersion = "${lastRevision ? lastRevision[0] + 1: 1}.$BUILD_NUMBER"
-
-            debPVersion = utils.packageVersion('deb-kraken', srcVersion, releaseVersion)
-            logger.info("Package version for evernym repo: $debPVersion")
-
-            cratePVersion = utils.packageVersion('crate', srcVersion, releaseVersion)
-            logger.info("Package version for rust registry: $cratePVersion")
-
-            def sha1Short = gitHelper.sha1(rev: sha1, shortN: true)
-            artifactName = "build-$srcVersion-$releaseVersion-${sha1Short}.zip"
-
-            // awsCodeBuild and s3 plugins use different arguments
-            // for specifying path to artifacts in S3
-            s3path = "${artifactPath}/${artifactName}"
-
-            logger.info("Artifact name in S3: $artifactName, S3 path: $s3path")
-        }
-
-        stage('Prepare ECR Image') {
-            awsCodeBuildWrapper {
-                projectName = 'aurora-wallet-docker-image'
-                sourceVersion = sha1
-            }
-        }
-
-        def tmpArtsDir = './_artifacts'
-        try {
-            stage('Package and publish') {
-                awsCodeBuildWrapper {
-                    projectName = 'aurora-wallet'
-                    sourceVersion = sha1
-                    artifactPathOverride = artifactPath
-                    artifactNameOverride = artifactName
-                    envVariables = "[{GOALS,${goals.join(' ')}},{FPM_P_VERSION,$debPVersion},{CRATE_P_VERSION,$cratePVersion}]"
-                }
-            }
-        } finally {
-            dir(tmpArtsDir) {
-                stage('Download/Remove Artifacts S3') {
-                    s3Wrapper.download(unzip: true, removeAfter: true) {
-                        path = s3path
-                        file = './artifacts.zip'
-                        force = true
-                    }
-                }
-
-                stage('Archiving console output artifacts') {
+    } finally {
+        if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
+            stage("$osname: Archive logs artifacts") {
+                dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
                     goals.each {
-                        archiveArtifacts artifacts: "${it}.out"
+                        def _fname = "${osname}.${it}.out"
+                        sh "mv '${it}.out' '$_fname'"
+                        utils.truncateFile(_fname, "${_fname}.tail")
                     }
+                    archiveArtifacts artifacts: "${osname}.*.out*"
                 }
-
             }
         }
+    }
 
-        stage('Upload deb to Evernym repo') {
+    stage('Upload deb to Evernym repo') {
+        dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
             evernymRepo.upload {
                 repoDistr = 'agency_dev'
-                delegate.packagePath = "$tmpArtsDir/*$packageName*$debPVersion*.deb"
+                delegate.packagePath = "$packageName*$debPVersion*.deb"
             }
         }
+    }
 
-        ['agency_dev', 'agency_qa'].each { distr ->
-            stage("Promote deb from $distr") {
-                evernymRepo.promote {
-                    repoDistr = distr
-                    delegate.packageName = packageName
-                    delegate.packageVersion = debPVersion
-                }
+    ['agency_dev', 'agency_qa'].each { distr ->
+        stage("Promote deb from $distr") {
+            evernymRepo.promote {
+                repoDistr = distr
+                delegate.packageName = packageName
+                delegate.packageVersion = debPVersion
             }
-        }
-
-    } finally {
-        stage('Workspace Cleanup') {
-            cleanWs()
         }
     }
 }

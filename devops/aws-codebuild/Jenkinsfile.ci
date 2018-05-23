@@ -62,8 +62,8 @@ nodeWrapper {
                 }
             } finally {
                 if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
-                    dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
-                        stage("$osname: Archive artifacts") {
+                    stage("$osname: Archive artifacts") {
+                        dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
                             goals.each {
                                 def _fname = "${osname}.${it}.out"
                                 sh "mv '${it}.out' '$_fname'"
