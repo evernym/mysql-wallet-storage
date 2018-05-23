@@ -53,7 +53,7 @@ nodeWrapper {
                     ].
                     imageBuildEnvv = [
                         [name: 'OSNAME', value: "$osname"],
-                        [name: 'DOCKER_NAME', value: "$projectName"],
+                        [name: 'DOCKER_NAME', value: "$awsCBHelper.buildCtx.projectName"],
                         [name: 'DOCKER_TAG', value: "$ciImageTag"],
                     ]
                 }
