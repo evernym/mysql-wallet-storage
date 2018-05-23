@@ -53,7 +53,7 @@ nodeWrapper {
                     envBuildCmds = [
                         'export PROJECT_DIR=$PWD',
                         'make -C devops image_ci'
-                    ].
+                    ]
                     envBuildEnvv = [
                         [name: 'OSNAME', value: "$osname"],
                         [name: 'DOCKER_NAME', value: "$awsCBHelper.buildCtx.projectName"],
