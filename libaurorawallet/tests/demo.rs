@@ -188,8 +188,21 @@ mod demo {
         let type_ = CString::new(ITEM_TYPE).unwrap();
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
-        let tags_json = CString::new(r##"{"new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be"}"##).unwrap();
+        let tags_json = CString::new(r##"{"tag1": "new_value1", "new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be", "~age": 30}"##).unwrap();
         let err = api::add_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** ADD TAGS */
+    fn add_record_tags_2(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let tags_json = CString::new(r##"{"tag1": "new_value1", "new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be", "~age": 30}"##).unwrap();
+        let err = api::add_record_tags_2(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
 
         assert_eq!(err, ErrorCode::Success);
     }
@@ -445,6 +458,7 @@ mod demo {
 //                    get_record_1(x, y);
 //                    add_record_tags(x, y);
 //                    add_record_tags_1(x, y);
+//                    add_record_tags_2(x, y);
 //                    update_record_tags(x, y);
 //                    update_record_tags_1(x, y);
 //                    delete_record_tags(x, y);

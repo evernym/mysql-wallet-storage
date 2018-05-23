@@ -192,6 +192,16 @@ pub extern "C" fn add_record_tags_1(storage_handle: i32, type_p: *const c_char, 
     storage.add_record_tags_1(&type_, &id, &tags)
 }
 
+pub extern "C" fn add_record_tags_2(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    let type_ = c_char_to_str!(type_p);
+    let id = c_char_to_str!(id_p);
+    let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidStructure);
+
+    storage.add_record_tags_2(&type_, &id, &tags)
+}
+
 pub extern "C" fn update_record_tags(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 

@@ -685,6 +685,67 @@ impl<'a> AuroraStorage<'a> {
     }
 
     ///
+    /// Adds tags for a record identified by type and id.
+    /// If tag with that name exists it will be updated.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///  * `tag_names` - a map containing (tag_name: tag_value) pairs
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `TagAlreadyExists` - Provided tag already exists in the DB
+    ///  * `TagDataTooLong` - Provided tag_name or tag_value exceed the size limit
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn add_record_tags_2(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
+
+        let mut tag_name_value_paths: Vec<String> = Vec::new();
+
+        for (tag_name, tag_value) in tags {
+            let tag_name_path = format!(r#"'$."{}"', {}"#, tag_name, tag_value);
+            tag_name_value_paths.push(tag_name_path);
+        }
+
+        let test = tag_name_value_paths.join(",");
+
+        let query = format!("UPDATE items_1 \
+                            SET tags = JSON_SET(tags, {}) \
+                            WHERE type = :type \
+                            AND name = :name \
+                            AND wallet_id = :wallet_id",
+                            test
+        );
+
+        let result = {
+            self.write_pool.prep_exec(
+                        query,
+                        params!{
+                            "type" => type_,
+                            "name" => id,
+                            "wallet_id" => self.wallet_id
+                        }
+                )
+        };
+
+        let result: QueryResult = match result {
+            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
+            Err(_) => return ErrorCode::IOError,
+            Ok(result) => result,
+        };
+
+        ErrorCode::Success
+    }
+
+    ///
     /// Updates tags of a record identified by type and id.
     /// This function will replace all tags with new.
     ///
