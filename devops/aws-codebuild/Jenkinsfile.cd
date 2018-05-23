@@ -13,6 +13,11 @@ nodeWrapper {
     def lastRevision
     def debPVersion
     def cratePVersion
+    def goals = ['package']
+
+    def ciImageTag
+    def osname = 'xenial'
+    def prTag = "ci-$osname"
 
     stage('Checkout sources from SCM') {
         checkout scm
@@ -51,10 +56,6 @@ nodeWrapper {
         logger.info("Package version for rust registry: $cratePVersion")
     }
 
-    def ciImageTag
-    def osname = 'xenial'
-    def prTag = "ci-$osname"
-
     stage("$osname: Resolve image tag") {
         def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
         ciImageTag = "${_imgVersion}-${osname}-ci"
@@ -74,7 +75,7 @@ nodeWrapper {
             buildspec = 'devops/aws-codebuild/buildspec.yml'
             envv = [
                 [name: 'OSNAME', value: "$osname"],
-                [name: 'MAKE_GOALS', value: "package"],
+                [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
                 [name: 'ARTIFACTS', value: 'libaurorawallet/target/release/libaurorawallet*.*'],
                 [name: 'FPM_P_VERSION', value: debPVersion],
                // [name: 'CRATE_P_VERSION', value: cratePVersion],
