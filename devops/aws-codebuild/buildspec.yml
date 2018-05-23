@@ -43,12 +43,12 @@ phases:
       - |
         for art in $ARTIFACTS; do
             cp -vR -t /tmp/artifacts $art
-        fi
+        done
       - find /tmp/artifacts
 
 artifacts:
-  discard-paths: yes
+  # (for now CodeBuild doesn't allow to use env variables in artifacts phase)
+  # https://forums.aws.amazon.com/thread.jspa?threadID=250742
+  base-directory: /tmp/artifacts
   files:
-      # (for now CodeBuild doesn't allow to use env variables in artifacts phase)
-      # https://forums.aws.amazon.com/thread.jspa?threadID=250742
-      - /tmp/artifacts/**/*
+      - '**/*'
