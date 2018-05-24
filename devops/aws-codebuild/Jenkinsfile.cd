@@ -17,7 +17,7 @@ nodeWrapper {
 
     def ciImageTag
     def osname = 'xenial'
-    def prTag = "ci-$osname"
+    def prTag = "ci-$osname" // use ci project
 
     stage('Checkout sources from SCM') {
         checkout scm
@@ -52,8 +52,9 @@ nodeWrapper {
         debPVersion = utils.packageVersion('deb-kraken', srcVersion, releaseVersion)
         logger.info("Package version for evernym repo: $debPVersion")
 
-        cratePVersion = utils.packageVersion('crate', srcVersion, releaseVersion)
-        logger.info("Package version for rust registry: $cratePVersion")
+        // TODO crate and rpm
+        //cratePVersion = utils.packageVersion('crate', srcVersion, releaseVersion)
+        //logger.info("Package version for rust registry: $cratePVersion")
     }
 
     stage("$osname: Resolve image tag") {
