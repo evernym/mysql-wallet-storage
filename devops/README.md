@@ -10,7 +10,7 @@ This folder includes devops related routine and consists of the following parts:
 
 ## Docker
 
-Aurora wallet is shipped with dockerfiles for ubuntu [xenial](devops/ci/xenial/Dockerfile) and [centos7](devops/ci/xenial/Dockerfile) which describe images with necessary environment for CI/CD tasks on these OSes.
+Aurora wallet is shipped with dockerfiles for ubuntu [xenial](ci/xenial/Dockerfile) and [centos7](ci/xenial/Dockerfile) which describe images with necessary environment for CI/CD tasks on these OSes.
 
 ## CI pipeline
 
@@ -34,7 +34,7 @@ CD pipeline is described by [Jenkinsfile.cd](aws-codebuild/Jenkinsfile.cd). It u
 CD pipeline stages:
 - clone GitHub repository
 - resolve the following parameters:
-  - current source version from [Cargo.toml](libaurorawallet/Cargo.toml)
+  - current source version from [Cargo.toml](../libaurorawallet/Cargo.toml)
   - last revision number among the debian packages with the same source version in [Evernym debian repo](https://repo.corp.evernym.com/deb/dists/evernym-agency-dev-ubuntu/)
 - evaluate new deb package version baseing on source version, last revision number and current build number
 - upload current HEAD as zip archive to AWS S3 bucket used by CodeBuild project
@@ -74,7 +74,7 @@ Each target could be run in two ways - with or without `_in_docker` postfix: e.g
 - `RELEASE`: adds `--release` flag to cargo `test` and `build` commands if is set to `1`. Default: `1`
 - `OSNAME`: switches os contexts, possible values: `xenial`, `centos7`. Default: `xenial`.
 - `CARGO_TARGET_DIR`: sets [CARGO_TARGET_DIR](https://doc.rust-lang.org/cargo/reference/environment-variables.html) variable. Default: `target/$(OSNAME)`.
-- `CRATE_P_VERSION`: if set overwrites `version` field of `[package]` section in [Cargo.toml](libaurorawallet/Cargo.toml) before crate publishing. Default: not set.
+- `CRATE_P_VERSION`: if set overwrites `version` field of `[package]` section in [Cargo.toml](../libaurorawallet/Cargo.toml) before crate publishing. Default: not set.
 - `CARGO_LOGIN_TOKEN`: token to perform `cargo login` during crate publishing. Default: not set.
 - `DOCKER_NAME`: name of the image built by `image_ci` target. Default: `evernym/aurora-wallet`.
 - `DOCKER_TAG`: tag of the image built by `image_ci` target. Default: `<CI_ENV_VERSION>-$(OSNAME)-ci`, where `CI_ENV_VERSION` is the current version of accordant dockerfile.
@@ -97,6 +97,6 @@ Inherited from [ext](ext/Makefile):
   - ``: value for fpm's `` option. Default: not set.
   - ``: value for fpm's `` option. Default: not set.
   - `FPM_ARGS`: string with any fpm arguments to end to the end of fpm arguments list. Default: not set.
-  - ... (please refer to [fpm.mk](devops/ext/fpm.mk) for more details about related environment variables)
+  - ... (please refer to [fpm.mk](ext/fpm.mk) for more details about related environment variables)
 
   [3c28cd3e]: https://github.com/jordansissel/fpm/wiki "fpm wiki"
