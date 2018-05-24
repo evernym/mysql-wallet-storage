@@ -97,7 +97,7 @@ nodeWrapper {
     }
 
     stage('Upload deb to Evernym repo') {
-        dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
+        dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}") {
             evernymRepo.upload {
                 repoDistr = 'agency_dev'
                 delegate.packagePath = "$packageName*$debPVersion*.deb"
