@@ -71,6 +71,9 @@ nodeWrapper {
         awsCBHelper.build() {
             projectTag = "ci-$osname"
 
+            // TODO shouldn't create/update CodeBuild project assuming that CI did this before
+            // and no changes in settings have appeared
+
             // env and build spec
             imageTag = ciImageTag
             buildspec = 'devops/aws-codebuild/buildspec.yml'
