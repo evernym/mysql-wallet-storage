@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 
 # TODO
+#
 # 	- fail in case of grep fail for set_docker_img_ver
 # 	- more fpm arguments
 #	- package-static with libname.a
