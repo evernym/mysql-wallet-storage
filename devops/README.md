@@ -14,33 +14,33 @@ Aurora wallet is shipped with dockerfiles for ubuntu [xenial](docker/ci/xenial/D
 
 ## CI pipeline
 
-CI pipeline is described by [Jenkinsfile.ci](aws-codebuild/Jenkinsfile.ci). It uses [Jenkins shared library](Jenkins shared library) API to build projects on [AWS CodeBuild](https://aws.amazon.com/codebuild/). CI uses docker containers from [docker/ci](docker/ci) folder to run tests on both ubuntu `xenial` and `centos7`.
+CI pipeline is described by [Jenkinsfile.ci](aws-codebuild/Jenkinsfile.ci). It uses [Jenkins shared library](https://github.com/evernym/jenkins-shared/tree/aws-codebuild) API to build projects on [AWS CodeBuild](https://aws.amazon.com/codebuild/). CI uses docker containers from [docker/ci](docker/ci) folder to run tests on both ubuntu `xenial` and `centos7`.
 
 CI pipeline stages:
-- clone GitHub repository
+- clone the GitHub repository
 - upload current HEAD as zip archive to AWS S3 bucket used by CodeBuild project
-- launch CodeBuild project using `AwsCodeBuildHelper.build` API. It includes a set of sub-stages:
-  - (optional) create/update CodeBuild project
-  - (optional) create AWS ECR repository to use by CodeBuild project
-  - (optional) build docker image and push it to AWS ECR repository
-  - run CodeBuild project to perform cargo testing
+- launch a CodeBuild project using `AwsCodeBuildHelper.build` API. It includes a set of sub-stages:
+  - (optional) create/update the CodeBuild project
+  - (optional) create an AWS ECR repository to use by CodeBuild project
+  - (optional) build docker image and push it to the AWS ECR repository
+  - run the CodeBuild project to perform cargo testing
   - download logs
 - archive logs
 
 ## CD pipeline
 
-CD pipeline is described by [Jenkinsfile.cd](aws-codebuild/Jenkinsfile.cd). It uses [Jenkins shared library](Jenkins shared library) API as well.
+CD pipeline is described by [Jenkinsfile.cd](aws-codebuild/Jenkinsfile.cd). It uses [Jenkins shared library](Jenkins shared library) API as well. For now CD generates artifacts (debian package) only for ubuntu `xenial`.
 
 CD pipeline stages:
-- clone GitHub repository
+- clone the GitHub repository
 - resolve the following parameters:
   - current source version from [Cargo.toml](../libaurorawallet/Cargo.toml)
   - last revision number among the debian packages with the same source version in [Evernym debian repo](https://repo.corp.evernym.com/deb/dists/evernym-agency-dev-ubuntu/)
-- evaluate new deb package version baseing on source version, last revision number and current build number
+- evaluate new deb package version basing on source version, last revision number and current build number
 - upload current HEAD as zip archive to AWS S3 bucket used by CodeBuild project
-- launch CodeBuild project using `AwsCodeBuildHelper.build` API. It includes a set of sub-stages:
-  - (optional) create/update CodeBuild project
-  - run CodeBuild project to perform debian packaging
+- launch a CodeBuild project using the same `AwsCodeBuildHelper.build` API as CI does. The main difference here is that CD pipeline doesn't build an image for AWS ECR repository assuming that it has been done previously by CI pipeline. Its sub-stages:
+  - (optional) create/update CodeBuild project (TODO shouldn't do that in any case assuming CI did that)
+  - run the CodeBuild project to perform debian packaging
   - download logs
 - archive logs
 - upload created debian package to [Evernym debian repo](https://repo.corp.evernym.com/deb/dists/evernym-agency-dev-ubuntu/)
