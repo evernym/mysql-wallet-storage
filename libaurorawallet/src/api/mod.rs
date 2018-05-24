@@ -160,6 +160,15 @@ pub extern "C" fn delete_record(storage_handle: i32, type_p: *const c_char, id_p
     storage.delete_record(&type_, &id)
 }
 
+pub extern "C" fn delete_record_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    let type_ = c_char_to_str!(type_p);
+    let id = c_char_to_str!(id_p);
+
+    storage.delete_record_1(&type_, &id)
+}
+
 pub extern "C" fn update_record_value(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, value_p: *const u8, value_len: usize) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
@@ -338,6 +347,12 @@ pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut 
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     storage.search_all_records(search_handle_p)
+}
+
+pub extern "C" fn search_all_records_1(storage_handle: i32, search_handle_p: *mut i32) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    storage.search_all_records_1(search_handle_p)
 }
 
 #[allow(unused_variables)]

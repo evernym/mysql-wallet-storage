@@ -7,6 +7,7 @@ pub enum Statement {
     FetchRecord,
     GetRecordID,
     DeleteRecord,
+    DeleteRecord_1,
     UpdateRecordValue,
     CheckRecordExists,
     AddTags,
@@ -20,7 +21,8 @@ pub enum Statement {
     DeleteAllEncryptedTags,
     GetMetadata,
     SetMetadata,
-    GetAllRecords
+    GetAllRecords,
+    GetAllRecords_1
 }
 
 impl Statement {
@@ -34,6 +36,7 @@ impl Statement {
             &Statement::FetchRecord => "SELECT :value, :tags WHERE type = :type, AND name = :name AND wallet_id = :wallet_id",
             &Statement::GetRecordID => "SELECT id FROM items WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
             &Statement::DeleteRecord => "DELETE FROM items WHERE wallet_id = :wallet_id AND type = :type AND name = :name",
+            &Statement::DeleteRecord_1 => "DELETE FROM items_1 WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
             &Statement::UpdateRecordValue => "UPDATE items SET value = :value WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
             &Statement::CheckRecordExists => "SELECT COUNT(id) FROM items WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
             &Statement::AddTags => "UPDATE items_1 SET tags = JSON_MERGE_PATCH(tags, :tags) WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
@@ -57,7 +60,8 @@ impl Statement {
                                                 ), \
                                             '}') tags \
                                           FROM items i \
-                                          WHERE wallet_id = :wallet_id"
+                                          WHERE wallet_id = :wallet_id",
+            &Statement::GetAllRecords_1 => "SELECT type, name, value, tags FROM items_1 WHERE wallet_id = :wallet_id",
         }
     }
 }

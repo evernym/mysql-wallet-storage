@@ -231,6 +231,71 @@ mod demo {
         assert_eq!(err, ErrorCode::Success);
     }
 
+    /** SEARCH RECORDS */
+    fn search_records(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+
+        let mut record_handle = -1;
+        let mut id_p: *const c_char = ptr::null_mut();
+        let mut value_p: *const u8 = ptr::null_mut();
+        let mut value_len_p = 0;
+        let mut tags_json_p: *const c_char = ptr::null_mut();
+
+
+        let query_json = json!({
+            "new_encrypted": {"$in": ["After update", "value2"]},
+            "~new_plaintext": {"$in": ["After update", "value2"]}
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+
+        let query_json = CString::new(query_json).unwrap();
+
+        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+
+        let mut search_handle: i32 = -1;
+
+        println!("HANDLE: {}", handle);
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** SEARCH ALL RECORDS */
+    fn search_all_records(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_all_records(handle, &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** SEARCH ALL RECORDS */
+    fn search_all_records_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_all_records_1(handle, &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+    }
 
     /** DELETE TAGS */
     fn delete_record_tags(x: u64, y: u64) {
@@ -255,118 +320,44 @@ mod demo {
         let err = api::delete_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
-////
-////
-////    /** DELETE RECORD */
-////    fn delete_record() {
-////        let handle = open_storage();
-////
-////        let id = CString::new(ITEM_NAME).unwrap();
-////        let type_ =CString::new(ITEM_TYPE).unwrap();
-////
-////        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
-////        assert_eq!(err, ErrorCode::Success);
-////    }
-////
-////    /** DELETE WALLET */
-////    fn delete_wallet() {
-////        let name = CString::new(WALLET_NAME).unwrap();
-////        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
-////        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
-////
-////        let err = api::delete(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
-////        assert_eq!(err, ErrorCode::Success);
-////    }
-////
-//    fn search_records() {
-//        let handle = open_storage();
-//
-//        let id = CString::new(ITEM_NAME).unwrap();
-//        let type_ = CString::new(ITEM_TYPE).unwrap();
-//        let mut record_handle = -1;
-//        let mut id_p: *const c_char = ptr::null_mut();
-//        let mut value_p: *const u8 = ptr::null_mut();
-//        let mut value_len_p = 0;
-//        let mut tags_json_p: *const c_char = ptr::null_mut();
-//
-//
-//        let query_json = json!({
-//            "new_encrypted": {"$in": ["After update", "value2"]},
-//            "~new_plaintext": {"$in": ["After update", "value2"]}
-//        });
-//
-////        let query_json = json!({
-////            "k1": "v1",
-////            "$or": [
-////                {
-////                    "~k2": {"$like": "like_target"},
-////                    "~k3": {"$gte": "100"},
-////                    "$not": {
-////                        "k4": "v4",
-////                        "~k5": {
-////                            "$regex": "regex_string"
-////                        },
-////                    },
-////                },
-////                {
-////                    "k6": {"$in": ["in_string_1", "in_string_2"]},
-////                }
-////            ],
-////            "$not": {
-////                "$not": {
-////                    "$not": {
-////                        "$not": {
-////                            "k7": "v7"
-////                        }
-////                    }
-////                }
-////            },
-////            "$not": {
-////                "k8": "v8"
-////            }
-////        });
-//
-//        let query_json = serde_json::to_string(&query_json).unwrap();
-//
-//        let query_json = CString::new(query_json).unwrap();
-//
-//        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
-//
-//        let mut search_handle: i32 = -1;
-//
-//        println!("HANDLE: {}", handle);
-//
-////        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
-////        assert_eq!(err, ErrorCode::Success);
-//
-//        let err = api::search_all_records(handle, &mut search_handle);
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let mut total_count: usize = 0;
-//
-//        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let mut string = String::new();
-//
-//        let err = api::get_record_id(handle, record_handle, &mut id_p);
-//        assert_eq!(err, ErrorCode::Success);
-//        let record_id = unsafe { CStr::from_ptr(id_p) }.to_owned();
-//        println!("\t\tRecord ID: {:?}", record_id);
-//
-//        let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
-//        assert_eq!(err, ErrorCode::Success);
-//        let record_value = unsafe { slice::from_raw_parts(value_p, value_len_p) };
-//        println!("\t\tRecord Value: {:?}", record_value);
-//
-//        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-//        assert_eq!(err, ErrorCode::Success);
-//        let record_tags = unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap();
-//        println!("\t\tRecord Tags: {:?}", record_tags);
-//    }
+
+
+    /** DELETE RECORD */
+    fn delete_record(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let type_ =CString::new(ITEM_TYPE).unwrap();
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** DELETE RECORD */
+    fn delete_record_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let type_ =CString::new(ITEM_TYPE).unwrap();
+
+        let err = api::delete_record_1(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** DELETE WALLET */
+    fn delete_wallet(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let wallet_name = CString::new(wallet_name).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+
+        let err = api::delete(wallet_name.as_ptr(), config.as_ptr(), credentials.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
 //
 //    #[test]
 //    fn runner() {
@@ -567,8 +558,14 @@ mod demo {
         actions.push(("Add Record Tags 1", &add_record_tags_2));
         actions.push(("Update Record Tags", &update_record_tags));
         actions.push(("Update Record Tags 1", &update_record_tags_1));
+        actions.push(("Search Records", &search_records));
+        actions.push(("Search All Records", &search_all_records));
+        actions.push(("Search All Records 1", &search_all_records_1));
         actions.push(("Delete Record Tags", &delete_record_tags));
         actions.push(("Delete Record Tags 1", &delete_record_tags_1));
+        actions.push(("Delete Record", &delete_record));
+        actions.push(("Delete Record 1", &delete_record_1));
+        actions.push(("Delete Wallet", &delete_wallet));
 
         for (action_name, action) in actions {
             println!("\tBenchmarking {}", action_name);

@@ -477,6 +477,44 @@ impl<'a> AuroraStorage<'a> {
     }
 
     ///
+    /// Deletes a record identified by type and id.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn delete_record_1(&self, type_: &str, id: &str) -> ErrorCode {
+        let result: QueryResult = check_result!(
+            self.write_pool.prep_exec(
+                Statement::DeleteRecord_1.as_str(),
+                params! {
+                    "type" => type_,
+                    "name" => id,
+                    "wallet_id" => self.wallet_id,
+                }
+            ),
+            ErrorCode::IOError
+        );
+
+        if result.affected_rows() != 1 {
+            return ErrorCode::WalletNotFoundError;
+        }
+
+        ErrorCode::Success
+    }
+
+    ///
     /// Updates the value of a record identified by type and id.
     ///
     /// # Arguments
@@ -1162,6 +1200,41 @@ impl<'a> AuroraStorage<'a> {
 
         ErrorCode::Success
     }
+
+     ///
+    /// Performs a search that grabs all records of a wallet with all attributes from the DB.
+    ///
+    /// # Arguments
+    ///
+    ///  * `search_handle_p` - output param - handle that will be used for accessing the search result
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn search_all_records_1(&self, search_handle_p: *mut i32) -> ErrorCode {
+         let search_result: QueryResult = check_result!(
+            self.read_pool.prep_exec(
+                Statement::GetAllRecords_1.as_str(),
+                params! {
+                    "wallet_id" => self.wallet_id,
+                }
+            ),
+            ErrorCode::IOError
+        );
+
+        let search_handle = self.searches.insert(Search::new(search_result));
+
+        unsafe { *search_handle_p = search_handle; }
+
+        ErrorCode::Success
+    }
+
 
     ///
     /// Fetches a new record from the search result set.
