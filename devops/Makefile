@@ -52,7 +52,7 @@ EXPORT_ENV += OSNAME RELEASE CARGO_TARGET_DIR CRATE_P_VERSION CARGO_LOGIN_TOKEN
 
 all: test_dry test package
 
-include shared/Makefile
+include ext/Makefile
 
 export OSNAME
 
