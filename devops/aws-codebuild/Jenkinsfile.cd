@@ -106,6 +106,7 @@ nodeWrapper {
         }
     }
 
+    /*
     ['agency_dev', 'agency_qa'].each { distr ->
         stage("Promote deb from $distr") {
             evernymRepo.promote {
@@ -115,4 +116,5 @@ nodeWrapper {
             }
         }
     }
+    */
 }
