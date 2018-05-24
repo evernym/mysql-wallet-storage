@@ -1,8 +1,8 @@
 // Local dependencies
-extern crate libaurorawallet;
+extern crate aurorastorage;
 
-use libaurorawallet::api as api;
-use libaurorawallet::errors::error_code::ErrorCode;
+use aurorastorage::api as api;
+use aurorastorage::errors::error_code::ErrorCode;
 
 mod test_utils;
 use test_utils::config::{ConfigType, Config};
@@ -38,7 +38,7 @@ mod high_casees {
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
         let mut handle: i32 = -1;
 
-        let err = api::open(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
 
         assert_eq!(err, ErrorCode::Success);
         handle
@@ -61,17 +61,17 @@ mod high_casees {
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
         let metadata = CString::new(random_string(512)).unwrap();
 
-        let err = api::create(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
         let mut handle: i32 = -1;
-        let err = api::open(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::Success);
 
-        let err = api::close(handle);
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
 
-        let err = api::delete(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
+        let err = api::delete_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -1852,11 +1852,11 @@ mod high_casees {
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
         let metadata = CString::new(random_string(512)).unwrap();
 
-        let err = api::create(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
         let mut handle: i32 = -1;
-        let err = api::open(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::Success);
 
         let num_of_records: i32 = 10;
@@ -1900,7 +1900,7 @@ mod high_casees {
             assert_eq!(err, ErrorCode::Success);
         }
 
-        let err = api::delete(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
+        let err = api::delete_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
 
