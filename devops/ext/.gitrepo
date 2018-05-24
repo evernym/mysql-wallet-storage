@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:andkononykhin/aurora-wallet.git
+	branch = subrepo/devops/ext
+	commit = b83b0b03df0bf8bab3e76afa75f3c3b7f4abbe4f
+	parent = 1a01603c0dc009249307e9de84505622adc33da0
+	cmdver = 0.3.1
