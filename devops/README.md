@@ -14,7 +14,7 @@ Aurora wallet is shipped with dockerfiles for ubuntu [xenial](docker/ci/xenial/D
 
 ## CI pipeline
 
-CI pipeline is described by [Jenkinsfile.ci](aws-codebuild/Jenkinsfile.ci). It uses [Jenkins shared library](https://github.com/evernym/jenkins-shared/tree/aws-codebuild) API to build projects on [AWS CodeBuild](https://aws.amazon.com/codebuild/). CI uses docker containers from [docker/ci](docker/ci) folder to run tests on both ubuntu `xenial` and `centos7`.
+CI pipeline is described by [Jenkinsfile.ci](aws-codebuild/Jenkinsfile.ci). It uses [Jenkins shared library](https://github.com/evernym/jenkins-shared/tree/aws-codebuild) API to build projects on [AWS CodeBuild](https://aws.amazon.com/codebuild/). CI utilizes docker containers from [docker/ci](docker/ci) folder to run tests on both ubuntu `xenial` and `centos7`.
 
 CI pipeline stages:
 - clone the GitHub repository
@@ -29,14 +29,14 @@ CI pipeline stages:
 
 ## CD pipeline
 
-CD pipeline is described by [Jenkinsfile.cd](aws-codebuild/Jenkinsfile.cd). It uses [Jenkins shared library](Jenkins shared library) API as well. For now CD generates artifacts (debian package) only for ubuntu `xenial`.
+CD pipeline is described by [Jenkinsfile.cd](aws-codebuild/Jenkinsfile.cd). It uses [Jenkins shared library](https://github.com/evernym/jenkins-shared/tree/aws-codebuild) API as well. For now CD generates artifacts (debian package) only for ubuntu `xenial`.
 
 CD pipeline stages:
 - clone the GitHub repository
 - resolve the following parameters:
   - current source version from [Cargo.toml](../libaurorawallet/Cargo.toml)
   - last revision number among the debian packages with the same source version in [Evernym debian repo](https://repo.corp.evernym.com/deb/dists/evernym-agency-dev-ubuntu/)
-- evaluate new deb package version basing on source version, last revision number and current build number
+- evaluate new debian package version basing on source version, last revision number and current build number
 - upload current HEAD as zip archive to AWS S3 bucket used by CodeBuild project
 - launch a CodeBuild project using the same `AwsCodeBuildHelper.build` API as CI does. The main difference here is that CD pipeline doesn't build an image for AWS ECR repository assuming that it has been done previously by CI pipeline. Its sub-stages:
   - (optional) create/update CodeBuild project (TODO shouldn't do that in any case assuming CI did that)
@@ -49,6 +49,8 @@ CD pipeline stages:
 
 ### Requirements
 
+- make
+- docker
 - docker-compose
 
 ### Targets
@@ -56,8 +58,8 @@ CD pipeline stages:
 - `test` runs `libaurorawallet` tests: `cargo test`
 - `build` runs `cargo build`
 - `publish_crate` publishes the code to crates.io performing cargo `login`, `package` and `publish` commands
-- `image_ci` builds docker image with necessary env for performing both CI and CD tasks
-- `image_ci_version` prints current version of docker image (dockerfile) built by `image_ci` target
+- `image_ci` builds docker image with necessary environment for performing both CI and CD tasks
+- `image_ci_version` prints current version of the docker image (dockerfile) built by `image_ci` target
 
 Inherited from [ext](ext/Makefile):
 - `package` performs `deb` / `rpm` packaging using [fpm][349f7485] tool
@@ -70,33 +72,31 @@ Each target could be run in two ways - with or without `_in_docker` postfix: e.g
 
 ### Environment variables
 
-- `PROJECT_DIR`: absolute path of top level project dir. Default: resolved as `git rev-parse --show-toplevel`.
-- `RELEASE`: adds `--release` flag to cargo `test` and `build` commands if is set to `1`. Default: `1`
-- `OSNAME`: switches os contexts, possible values: `xenial`, `centos7`. Default: `xenial`.
-- `CARGO_TARGET_DIR`: sets [CARGO_TARGET_DIR](https://doc.rust-lang.org/cargo/reference/environment-variables.html) variable. Default: `target/$(OSNAME)`.
-- `CRATE_P_VERSION`: if set overwrites `version` field of `[package]` section in [Cargo.toml](../libaurorawallet/Cargo.toml) before crate publishing. Default: not set.
-- `CARGO_LOGIN_TOKEN`: token to perform `cargo login` during crate publishing. Default: not set.
-- `DOCKER_NAME`: name of the image built by `image_ci` target. Default: `evernym/aurora-wallet`.
-- `DOCKER_TAG`: tag of the image built by `image_ci` target. Default: `<CI_ENV_VERSION>-$(OSNAME)-ci`, where `CI_ENV_VERSION` is the current version of accordant dockerfile.
+- `PROJECT_DIR`: absolute path of top level project dir. Default: resolved as `git rev-parse --show-toplevel`
+- `RELEASE`: adds `--release` flag to cargo `test` and `build` commands if set to `1`. Default: `1`
+- `OSNAME`: switches os contexts, possible values: `xenial`, `centos7`. Default: `xenial`
+- `CARGO_TARGET_DIR`: sets [CARGO_TARGET_DIR](https://doc.rust-lang.org/cargo/reference/environment-variables.html) environment variable. Default: `target/$(OSNAME)`
+- `CRATE_P_VERSION`: if set overwrites `version` field of `[package]` section in [Cargo.toml](../libaurorawallet/Cargo.toml) before crate publishing. Default: not set
+- `CARGO_LOGIN_TOKEN`: token to perform `cargo login` during crate publishing. Default: not set
+- `DOCKER_NAME`: name of the image built by `image_ci` target. Default: `evernym/aurora-wallet`
+- `DOCKER_TAG`: tag of the image built by `image_ci` target. Default: `<VERSION>-$(OSNAME)-ci`, where `VERSION` is value of `CI_ENV_VERSION` environment variable in accordant dockerfile
 
 Inherited from [ext](ext/Makefile):
 - `DOCKER_UID`: `uid` of the user passed to `docker run` command. Default: resolved as `id -u`
-- `BASE_DOCKER_VERSION`: impacts the tag of the image built by `image_base` target, tag is formed as: `$(BASE_DOCKER_VERSION)-$(OSNAME)`. Default: value of `BASE_ENV_VERSION` env variable in accordant dockerfile.
-- `RUST_DOCKER_VERSION`: impacts the tag of the image built by `image_rust` target, tag is formed as: `$(RUST_DOCKER_VERSION)-$(OSNAME)`. Default: value of `RUST_ENV_VERSION` env variable in accordant dockerfile.
+- `BASE_DOCKER_VERSION`: impacts the tag of the image built by `image_base` target. The tag is evaluated as: `$(BASE_DOCKER_VERSION)-$(OSNAME)`. Default: value of `BASE_ENV_VERSION` environment variable in accordant dockerfile
+- `RUST_DOCKER_VERSION`: impacts the tag of the image built by `image_rust` target. The tag is evaluated as: `$(RUST_DOCKER_VERSION)-$(OSNAME)`. Default: value of `RUST_ENV_VERSION` environment variable in accordant dockerfile
 - variables to config packaing using [fpm][349f7485] tool:
-  - (please refer to to [fpm wiki][3c28cd3e] more information about fpm command line options)
-  - `FPM_P_NAME` (REQUIRED): value for fpm's `--name` option. Default: not set.
-  - `FPM_P_VERSION`: value for fpm's `--version` option. Default: not set.
+  - (please refer to [fpm wiki][3c28cd3e] for more information about the fpm command line options)
+  - `FPM_P_NAME` (REQUIRED): value for fpm's `--name` option. Default: not set
+  - `FPM_P_VERSION`: value for fpm's `--version` option. Default: not set
   - `FPM_P_INPUT_TYPE`: value for fpm's `--input-type` option. Default: `dir`
-  - `FPM_P_OUTPUT_TYPE`: value for fpm's `--output-type` option. Default: `deb` if `OSNAME=xenial`, `rpm` if `OSNAME=centos7`, otherwise - not set.
-  - `FPM_P_OUTPUT_DIR`: value for fpm's `--package` option. Default: not set.
-  - `FPM_P_MAINTAINER`: value for fpm's `--maintainer` option. Default: not set.
-  - `FPM_P_URL`: value for fpm's `--url` option. Default: not set.
-  - `FPM_P_LICENSE`: value for fpm's `--license` option. Default: not set.
-  - `FPM_P_DESCRIPTION`: value for fpm's `--description` option. Default: not set.
-  - ``: value for fpm's `` option. Default: not set.
-  - ``: value for fpm's `` option. Default: not set.
-  - `FPM_ARGS`: string with any fpm arguments to end to the end of fpm arguments list. Default: not set.
-  - ... (please refer to [fpm.mk](ext/fpm.mk) for more details about related environment variables)
+  - `FPM_P_OUTPUT_TYPE`: value for fpm's `--output-type` option. Default: `deb` if `OSNAME=xenial`, `rpm` if `OSNAME=centos7`, otherwise - not set
+  - `FPM_P_OUTPUT_DIR`: value for fpm's `--package` option. Default: not set
+  - `FPM_P_MAINTAINER`: value for fpm's `--maintainer` option. Default: not set
+  - `FPM_P_URL`: value for fpm's `--url` option. Default: not set
+  - `FPM_P_LICENSE`: value for fpm's `--license` option. Default: not set
+  - `FPM_P_DESCRIPTION`: value for fpm's `--description` option. Default: not set
+  - `FPM_ARGS`: string with any fpm arguments to add to the end of the fpm command line. Default: not set
+  - ... (please refer to [fpm.mk](ext/fpm.mk) for more details about fpm related environment variables)
 
   [3c28cd3e]: https://github.com/jordansissel/fpm/wiki "fpm wiki"
