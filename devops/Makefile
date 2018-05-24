@@ -94,7 +94,9 @@ ifneq ($(CARGO_LOGIN_TOKEN),)
 else
 	$(warning CARGO_LOGIN_TOKEN is not defined, skip login)
 endif
+ifneq ($(CRATE_P_VERSION),)
 	sed -i 's/^version = ".*"$$/version = "$(CRATE_P_VERSION)"/' $</Cargo.toml
+endif
 	cd $< && cargo package --allow-dirty
 	cd $< && cargo publish --allow-dirty
 
