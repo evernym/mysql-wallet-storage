@@ -1,20 +1,20 @@
 # Aurora-wallet devops routine
 
 This folder includes devops related routine and consists of the following parts:
-- `Makefile` automates devops tasks like test, package and publish to [crates.io](https://crates.io/) which could be performed either on-host or in-docker
-- `docker` folder holds docker related routine
-- `aws-codebuild` folder consists of files that describes AWS CodeBuild based CI/CD pipelines
-- `ext` folder is a [git-subrepo][d003158e] of shared [library](https://github.com/andkononykhin/aurora-wallet/tree/subrepo/devops/ext) which provides makefile based approach of devops tasks automation. Please check its [README.md](ext/README.md) for more information.
+- [Makefile](Makefile) automates devops tasks like test, package and publish to [crates.io](https://crates.io/) which could be performed either on-host or in-docker
+- [docker](docker) folder holds docker related routine
+- [aws-codebuild](aws-codebuild) folder consists of files that describes AWS CodeBuild based CI/CD pipelines
+- [ext](ext) folder is a [git-subrepo][d003158e] of shared [library](https://github.com/andkononykhin/aurora-wallet/tree/subrepo/devops/ext) which provides makefile based approach of devops tasks automation. Please check its [README.md](ext/README.md) for more information.
 
   [d003158e]: https://github.com/ingydotnet/git-subrepo "git-subrepo"
 
 ## Docker
 
-Aurora wallet is shipped with dockerfiles for ubuntu [xenial](ci/xenial/Dockerfile) and [centos7](ci/xenial/Dockerfile) which describe images with necessary environment for CI/CD tasks on these OSes.
+Aurora wallet is shipped with dockerfiles for ubuntu [xenial](docker/ci/xenial/Dockerfile) and [centos7](docker/ci/xenial/Dockerfile) which describe images with necessary environment for CI/CD tasks on these OSes.
 
 ## CI pipeline
 
-CI pipeline is described by [Jenkinsfile.ci](aws-codebuild/Jenkinsfile.ci). It uses [Jenkins shared library](Jenkins shared library) API to build projects on [AWS CodeBuild](https://aws.amazon.com/codebuild/). CI uses docker containers from `docker/ci` folder to run tests on both ubuntu `xenial` and `centos7`.
+CI pipeline is described by [Jenkinsfile.ci](aws-codebuild/Jenkinsfile.ci). It uses [Jenkins shared library](Jenkins shared library) API to build projects on [AWS CodeBuild](https://aws.amazon.com/codebuild/). CI uses docker containers from [docker/ci](docker/ci) folder to run tests on both ubuntu `xenial` and `centos7`.
 
 CI pipeline stages:
 - clone GitHub repository
