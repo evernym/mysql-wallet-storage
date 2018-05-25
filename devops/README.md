@@ -54,8 +54,8 @@ CD pipeline stages:
 - docker-compose
 
 ### Targets
-- `test_dry` runs `libaurorawallet` tests in "dry" mode: `cargo test --no-run`
-- `test` runs `libaurorawallet` tests: `cargo test`
+- `test_dry` runs tests in "dry" mode: `cargo test --no-run`
+- `test` runs tests: `cargo test`
 - `build` runs `cargo build`
 - `publish_crate` publishes the code to crates.io performing cargo `login`, `package` and `publish` commands
 - `image_ci` builds docker image with necessary environment for performing both CI and CD tasks
