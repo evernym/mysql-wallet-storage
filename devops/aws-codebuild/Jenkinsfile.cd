@@ -5,119 +5,138 @@ def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retri
 )).com.evernym.pipeline
 
 logger = evLibrary.Logger.new(this)
+notifier = evLibrary.Notifier.new(this)
 logger.setGlobalLevel('TRACE')
 
-nodeWrapper {
-    def packageName = 'libaurorastorage'
-    def srcVersion
-    def lastRevision
-    def debPVersion
-    def cratePVersion
-    def goals = ['package']
+pipelineWrapper({
 
-    def ciImageTag
-    def osname = 'xenial'
-    def prTag = "ci-$osname" // use ci project
+    nodeWrapper {
+        def packageName = 'libaurorastorage'
+        def srcVersion
+        def lastRevision
+        def debPVersion
+        def cratePVersion
+        def goals = ['package']
 
-    stage('Checkout sources from SCM') {
-        checkout scm
-    }
+        def ciImageTag
+        def osname = 'xenial'
+        def prTag = "ci-$osname" // use ci project
 
-    def utils = evLibrary.Utils.new(this)
-    def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet')
-    def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
-
-    stage('Resolve current source version') {
-        srcVersion = utils.srcVersion(projectType: 'rust')
-        logger.info("Current source version: $srcVersion")
-    }
-
-    stage('Resolve last revision') {
-        lastRevision = evernymRepo.getLastRevision {
-            delegate.packageName = packageName
-            packageSrcVersion = srcVersion
-            repoDistr = 'agency-dev'
+        stage('Checkout sources from SCM') {
+            checkout scm
         }
 
-        if (lastRevision) {
-            logger.info("Found last revision number: $lastRevision")
-        } else {
-            logger.info("No previous revision was found")
+        def utils = evLibrary.Utils.new(this)
+        def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet')
+        def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
+
+        stage('Resolve current source version') {
+            srcVersion = utils.srcVersion(projectType: 'rust')
+            logger.info("Current source version: $srcVersion")
         }
-    }
 
-    stage('Set release parameters') {
-        def releaseVersion = "${lastRevision ? lastRevision[0] + 1: 1}.$BUILD_NUMBER"
+        stage('Resolve last revision') {
+            lastRevision = evernymRepo.getLastRevision {
+                delegate.packageName = packageName
+                packageSrcVersion = srcVersion
+                repoDistr = 'agency-dev'
+            }
 
-        debPVersion = utils.packageVersion('deb-kraken', srcVersion, releaseVersion)
-        logger.info("Package version for evernym repo: $debPVersion")
-
-        // TODO crate and rpm
-        //cratePVersion = utils.packageVersion('crate', srcVersion, releaseVersion)
-        //logger.info("Package version for rust registry: $cratePVersion")
-    }
-
-    stage("$osname: Resolve image tag") {
-        def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
-        ciImageTag = "${_imgVersion}-${osname}-ci"
-        logger.info("CI docker image tag: $ciImageTag")
-    }
-
-    stage('Upload source to S3') {
-        awsCBHelper.uploadSourceToS3()
-    }
-
-    try {
-        awsCBHelper.build() {
-            projectTag = "ci-$osname"
-
-            // TODO shouldn't create/update CodeBuild project assuming that CI did this before
-            // and no changes in settings have appeared
-
-            // env and build spec
-            imageTag = ciImageTag
-            buildspec = 'devops/aws-codebuild/buildspec.yml'
-            envv = [
-                [name: 'OSNAME', value: "$osname"],
-                [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-                [name: 'ARTIFACTS', value: 'libaurorawallet/target/release/libaurorastorage*.*'],
-                [name: 'FPM_P_VERSION', value: debPVersion],
-               // [name: 'CRATE_P_VERSION', value: cratePVersion],
-            ]
+            if (lastRevision) {
+                logger.info("Found last revision number: $lastRevision")
+            } else {
+                logger.info("No previous revision was found")
+            }
         }
-    } finally {
-        if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
-            stage("$osname: Archive logs artifacts") {
-                dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
-                    goals.each {
-                        def _fname = "${osname}.${it}.out"
-                        sh "mv '${it}.out' '$_fname'"
-                        utils.truncateFile(_fname, "${_fname}.tail")
+
+        stage('Set release parameters') {
+            def releaseVersion = "${lastRevision ? lastRevision[0] + 1: 1}.$BUILD_NUMBER"
+
+            debPVersion = utils.packageVersion('deb-kraken', srcVersion, releaseVersion)
+            logger.info("Package version for evernym repo: $debPVersion")
+
+            // TODO crate and rpm
+            //cratePVersion = utils.packageVersion('crate', srcVersion, releaseVersion)
+            //logger.info("Package version for rust registry: $cratePVersion")
+        }
+
+        stage("$osname: Resolve image tag") {
+            def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
+            ciImageTag = "${_imgVersion}-${osname}-ci"
+            logger.info("CI docker image tag: $ciImageTag")
+        }
+
+        stage('Upload source to S3') {
+            awsCBHelper.uploadSourceToS3()
+        }
+
+        try {
+            awsCBHelper.build() {
+                projectTag = "ci-$osname"
+
+                // TODO shouldn't create/update CodeBuild project assuming that CI did this before
+                // and no changes in settings have appeared
+
+                // env and build spec
+                imageTag = ciImageTag
+                buildspec = 'devops/aws-codebuild/buildspec.yml'
+                envv = [
+                    [name: 'OSNAME', value: "$osname"],
+                    [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
+                    [name: 'ARTIFACTS', value: 'libaurorawallet/target/release/libaurorastorage*.*'],
+                    [name: 'FPM_P_VERSION', value: debPVersion],
+                   // [name: 'CRATE_P_VERSION', value: cratePVersion],
+                ]
+            }
+        } finally {
+            if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
+                stage("$osname: Archive logs artifacts") {
+                    dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
+                        goals.each {
+                            def _fname = "${osname}.${it}.out"
+                            sh "mv '${it}.out' '$_fname'"
+                            utils.truncateFile(_fname, "${_fname}.tail")
+                        }
+                        archiveArtifacts artifacts: "${osname}.*.out*"
                     }
-                    archiveArtifacts artifacts: "${osname}.*.out*"
                 }
             }
         }
-    }
 
-    stage('Upload deb to Evernym repo') {
-        dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}") {
-            evernymRepo.upload {
-                repoDistr = 'agency_dev'
-                delegate.packagePath = "$packageName*$debPVersion*.deb"
+        stage('Upload deb to Evernym repo') {
+            dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}") {
+                evernymRepo.upload {
+                    repoDistr = 'agency_dev'
+                    delegate.packagePath = "$packageName*$debPVersion*.deb"
+                }
+            }
+
+            notifier.email {
+                subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb v.$debPVersion was published
+                body = "New debian package $debPVersion was built and published" + '''
+                    Check console output at $BUILD_URL to view the results.
+                '''
             }
         }
-    }
 
-    /*
-    ['agency_dev', 'agency_qa'].each { distr ->
-        stage("Promote deb from $distr") {
-            evernymRepo.promote {
-                repoDistr = distr
-                delegate.packageName = packageName
-                delegate.packageVersion = debPVersion
+        /*
+        ['agency_dev', 'agency_qa'].each { distr ->
+            stage("Promote deb from $distr") {
+                evernymRepo.promote {
+                    repoDistr = distr
+                    delegate.packageName = packageName
+                    delegate.packageVersion = debPVersion
+                }
             }
         }
+        */
     }
-    */
-}
+}, { err ->
+    if (err) {
+        logger.error("Pipeline failed with the error $err")
+    }
+
+    stage("Build result notification") {
+        notifier.email()
+    }
+})
