@@ -8,86 +8,89 @@ logger = evLibrary.Logger.new(this)
 notifier = evLibrary.Notifier.new(this)
 logger.setGlobalLevel('TRACE')
 
-try {
+pipelineWrapper {
+    nodeWrapper {
+        List osnames = ['xenial', 'centos7']
+        def goals = ['test_dry', 'test']
 
-nodeWrapper {
-    List osnames = ['xenial', 'centos7']
-    def goals = ['test_dry', 'test']
+        stage('Checkout from SCM') {
+            checkout scm
+        }
 
-    stage('Checkout from SCM') {
-        checkout scm
-    }
+        def utils = evLibrary.Utils.new(this)
+        // TODO Cargo.toml is necessary only for variable in makefile which is not used for that context, thus
+        // shouldn't be taken into account when deciding to rebuild docker images
+        def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet', ['devops', 'libaurorawallet/Cargo.toml'])
+        def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
 
-    def utils = evLibrary.Utils.new(this)
-    // TODO Cargo.toml is necessary only for variable in makefile which is not used for that context, thus
-    // shouldn't be taken into account when deciding to rebuild docker images
-    def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet', ['devops', 'libaurorawallet/Cargo.toml'])
-    def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
+        stage('Upload source to S3') {
+            awsCBHelper.uploadSourceToS3()
+        }
 
-    stage('Upload source to S3') {
-        awsCBHelper.uploadSourceToS3()
-    }
+        Map builds = osnames.collectEntries { osname ->
+            [(osname): {
+                def ciImageTag
+                def prTag = "ci-$osname"
 
-    Map builds = osnames.collectEntries { osname ->
-        [(osname): {
-            def ciImageTag
-            def prTag = "ci-$osname"
-
-            stage("$osname: Resolve image tag") {
-                def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
-                ciImageTag = "${_imgVersion}-${osname}-ci"
-                logger.info("CI docker image tag: $ciImageTag")
-            }
-
-            try {
-                awsCBHelper.build() {
-                    projectTag = prTag
-
-                    // env and build spec
-                    imageTag = ciImageTag
-                    buildspec = 'devops/aws-codebuild/buildspec.yml'
-                    envv = [
-                        [name: 'OSNAME', value: "$osname"],
-                        [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-                    ]
-
-                    // build spec for env image
-                    envBuildSrc = ['devops'] // TODO make more accurate
-                    envBuildCmds = [
-                        'export PROJECT_DIR=$PWD',
-                        'make -C devops image_ci'
-                    ]
-                    envBuildEnvv = [
-                        [name: 'OSNAME', value: "$osname"],
-                        [name: 'DOCKER_NAME', value: "$awsCBHelper.buildCtx.projectName"],
-                        [name: 'DOCKER_TAG', value: "$ciImageTag"],
-                    ]
+                stage("$osname: Resolve image tag") {
+                    def _imgVersion = utils.shStdout("OSNAME=$osname make -C devops image_ci_version -s")
+                    ciImageTag = "${_imgVersion}-${osname}-ci"
+                    logger.info("CI docker image tag: $ciImageTag")
                 }
-            } finally {
-                if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
-                    stage("$osname: Archive artifacts") {
-                        dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
-                            goals.each {
-                                def _fname = "${osname}.${it}.out"
-                                sh "mv '${it}.out' '$_fname'"
-                                utils.truncateFile(_fname, "${_fname}.tail")
+
+                try {
+                    awsCBHelper.build() {
+                        projectTag = prTag
+
+                        // env and build spec
+                        imageTag = ciImageTag
+                        buildspec = 'devops/aws-codebuild/buildspec.yml'
+                        envv = [
+                            [name: 'OSNAME', value: "$osname"],
+                            [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
+                        ]
+
+                        // build spec for env image
+                        envBuildSrc = ['devops'] // TODO make more accurate
+                        envBuildCmds = [
+                            'export PROJECT_DIR=$PWD',
+                            'make -C devops image_ci'
+                        ]
+                        envBuildEnvv = [
+                            [name: 'OSNAME', value: "$osname"],
+                            [name: 'DOCKER_NAME', value: "$awsCBHelper.buildCtx.projectName"],
+                            [name: 'DOCKER_TAG', value: "$ciImageTag"],
+                        ]
+                    }
+                } finally {
+                    if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
+                        stage("$osname: Archive artifacts") {
+                            dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
+                                goals.each {
+                                    def _fname = "${osname}.${it}.out"
+                                    sh "mv '${it}.out' '$_fname'"
+                                    utils.truncateFile(_fname, "${_fname}.tail")
+                                }
+                                archiveArtifacts artifacts: "${osname}.*.out*"
                             }
-                            archiveArtifacts artifacts: "${osname}.*.out*"
                         }
                     }
                 }
-            }
-        }]
+            }]
+        }
+
+        stage("Build and test") {
+            builds.failFast = false
+            utils.parallel builds
+        }
+    }
+}, { err ->
+    if (err) {
+        logger.error("Pipeline failed with the error $err")
     }
 
-    stage("Build and test") {
-        builds.failFast = false
-        utils.parallel builds
-    }
-}
-
-} finally {
     stage("Build result notification") {
         notifier.email()
     }
 }
+
