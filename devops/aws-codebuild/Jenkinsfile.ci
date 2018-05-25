@@ -10,6 +10,9 @@ logger.setGlobalLevel('TRACE')
 
 pipelineWrapper {
     nodeWrapper {
+
+        error "Test error"
+
         List osnames = ['xenial', 'centos7']
         def goals = ['test_dry', 'test']
 
