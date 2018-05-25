@@ -11,10 +11,13 @@ ifndef PROJECT_DIR
 PROJECT_DIR := $(shell git rev-parse --show-toplevel)
 endif
 
+# TODO make it as Simply expanded variables (":=")
 PROJECT_NAME ?= $(notdir $(PROJECT_DIR))
+# TODO not sure that it is needed, used only in fpm.mk
 SRC_VERSION ?= 0.1.0
 PRE_PACKAGE_GOALS ?=
 
+# TODO rename the variable, it's more generic than just getting image version
 docker_img_version = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
 
 # required for in-docker targets
@@ -28,7 +31,9 @@ endif
 
 # SELF POSITIONING
 ROOT_MK_REL_DIR := $(subst $(PROJECT_DIR),.,$(CURDIR))
-ROOT_MK_REL_PATH := $(word 1,$(MAKEFILE_LIST))  # is unlikely to be an absolute one
+
+# is unlikely to be an absolute one
+ROOT_MK_REL_PATH := $(word 1,$(MAKEFILE_LIST))
 _THIS_MK_ABS_PATH := $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 #	absolute include/read
 ifneq ($(wildcard $(abspath $(_THIS_MK_ABS_PATH))),)
@@ -47,7 +52,7 @@ DOCKER = docker
 DOCKER_COMPOSE = docker-compose
 FPM = fpm
 
-.PHONY: check_fpm_args package check_dockerfile clean_docker clean_build _default_docker_image_target
+.PHONY: _check_fpm_args package check_dockerfile clean_docker clean_build _default_docker_image_target
 
 # list of conditionally (using '?=') defined variables that
 # should be passed to in-docker re-run
@@ -56,7 +61,7 @@ EXPORT_ENV += OSNAME PROJECT_NAME SRC_VERSION
 export $(EXPORT_ENV)
 
 # PACKAGING ROUTINE
-check_fpm_args:
+_check_fpm_args:
 ifeq ($(FPM_P_NAME),)
 	$(error Package name is not specified)
 else ifeq ($(FPM_P_VERSION),)
@@ -64,7 +69,7 @@ else ifeq ($(FPM_P_VERSION),)
 endif
 
 # TODO deps with versions like "package (>= 1.0)"
-package: check_fpm_args $(PRE_PACKAGE_GOALS)
+package: _check_fpm_args $(PRE_PACKAGE_GOALS)
 	$(FPM) $(FPM_ARGS)
 
 # TODO refactor that once compose provides support for images
