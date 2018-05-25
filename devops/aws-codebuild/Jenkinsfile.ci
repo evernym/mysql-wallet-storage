@@ -8,7 +8,7 @@ logger = evLibrary.Logger.new(this)
 notifier = evLibrary.Notifier.new(this)
 logger.setGlobalLevel('TRACE')
 
-pipelineWrapper {
+pipelineWrapper({
     nodeWrapper {
 
         error "Test error"
@@ -95,5 +95,4 @@ pipelineWrapper {
     stage("Build result notification") {
         notifier.email()
     }
-}
-
+})
