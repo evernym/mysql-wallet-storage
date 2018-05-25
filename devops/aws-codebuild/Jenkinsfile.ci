@@ -5,7 +5,10 @@ def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retri
 )).com.evernym.pipeline
 
 logger = evLibrary.Logger.new(this)
+notifier = evLibrary.Notify.new(this)
 logger.setGlobalLevel('TRACE')
+
+try {
 
 nodeWrapper {
     List osnames = ['xenial', 'centos7']
@@ -81,4 +84,8 @@ nodeWrapper {
         builds.failFast = false
         utils.parallel builds
     }
+}
+
+} finally {
+    notifier.email()
 }
