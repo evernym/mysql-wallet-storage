@@ -72,9 +72,9 @@ Each target could be run in two ways - with or without `_in_docker` postfix: e.g
 
 ### Environment variables
 
-- `PROJECT_DIR`: absolute path of top level project dir. Default: resolved as `git rev-parse --show-toplevel`
+- `PROJECT_DIR`: absolute path of the top level project dir. Default: resolved as `git rev-parse --show-toplevel`
 - `RELEASE`: adds `--release` flag to cargo `test` and `build` commands if set to `1`. Default: `1`
-- `OSNAME`: switches os contexts, possible values: `xenial`, `centos7`. Default: `xenial`
+- `OSNAME`: switches OS context, possible values: `xenial`, `centos7`. Default: `xenial`
 - `CARGO_TARGET_DIR`: sets [CARGO_TARGET_DIR](https://doc.rust-lang.org/cargo/reference/environment-variables.html) environment variable. Default: `target/$(OSNAME)`
 - `CRATE_P_VERSION`: if set overwrites `version` field of `[package]` section in [Cargo.toml](../libaurorawallet/Cargo.toml) before crate publishing. Default: not set
 - `CARGO_LOGIN_TOKEN`: token to perform `cargo login` during crate publishing. Default: not set
