@@ -22,14 +22,32 @@ fn default_false() -> bool {
 
 #[derive(Deserialize)]
 pub struct FetchOptions {
-    #[serde(default="default_false")]
-    fetch_type: bool,
+    #[serde(default="default_false", rename="retrieveType")]
+    retrieve_type: bool,
 
-    #[serde(default="default_true")]
-    fetch_value: bool,
+    #[serde(default="default_true", rename="retrieveValue")]
+    retrieve_value: bool,
 
-    #[serde(default="default_true")]
-    fetch_tags: bool,
+    #[serde(default="default_true", rename="retrieveTags")]
+    retrieve_tags: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchOptions {
+    #[serde(default="default_true", rename="retrieveRecords")]
+    pub retrieve_records: bool,
+
+    #[serde(default="default_false", rename="retrieveTotalCount")]
+    pub retrieve_total_count: bool,
+
+    #[serde(default="default_false", rename="retrieveType")]
+    pub retrieve_type: bool,
+
+    #[serde(default="default_true", rename="retrieveValue")]
+    pub retrieve_value: bool,
+
+    #[serde(default="default_false", rename="retrieveTags")]
+    pub retrieve_tags: bool,
 }
 
 pub struct Search<'a> {
@@ -299,9 +317,9 @@ impl<'a> AuroraStorage<'a> {
                 WHERE wallet_id = :wallet_id \
                     AND type = :type \
                     AND name = :name",
-            if options.fetch_value { "value" }
+            if options.retrieve_value { "value" }
                 else {"''"},
-            if options.fetch_tags {
+            if options.retrieve_tags {
                 "CONCAT(\
                     '{', \
                     CONCAT_WS(\
@@ -334,8 +352,8 @@ impl<'a> AuroraStorage<'a> {
 
         let record = Record::new(
             check_result!(CString::new(id), ErrorCode::InvalidState),
-            if options.fetch_value {Some(db_value)} else {None},
-            if options.fetch_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
+            if options.retrieve_value {Some(db_value)} else {None},
+            if options.retrieve_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
             None
         );
 
@@ -1150,10 +1168,16 @@ impl<'a> AuroraStorage<'a> {
     ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> query | options
     ///
     pub fn search_records(&self, type_: &str, query_json: &str, options_json: &str, search_handle_p: *mut i32) -> ErrorCode {
-        let fetch_options: FetchOptions = check_result!(serde_json::from_str(options_json), ErrorCode::InvalidStructure);
+        let search_options: SearchOptions = check_result!(serde_json::from_str(options_json), ErrorCode::InvalidStructure);
+
+        // TODO: implement options.retrieve_total_count
+
+        if !search_options.retrieve_records { // && !search_options.retrieve_total_count {
+            return ErrorCode::InvalidStructure;
+        }
 
         let wql = check_option!(query_translator::parse_from_json(&query_json), ErrorCode::InvalidStructure);
-        let (query, arguments) = check_option!(query_translator::wql_to_sql(self.wallet_id, type_, &wql, &fetch_options), ErrorCode::InvalidStructure);
+        let (query, arguments) = check_option!(query_translator::wql_to_sql(self.wallet_id, type_, &wql, &search_options), ErrorCode::InvalidStructure);
 
         let search_result: QueryResult = check_result!(
             self.read_pool.prep_exec(query, arguments),
