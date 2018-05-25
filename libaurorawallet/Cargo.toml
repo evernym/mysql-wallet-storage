@@ -1,11 +1,12 @@
 [package]
-name = "aurorawallet"
+name = "aurorastorage"
 version = "0.1.0"
 authors = ["Darko Kulic <darko.kulic@evernym.com>"]
+build = "build.rs"
 
 [lib]
-path = "src/lib.rs"
-crate-type = ["staticlib","rlib", "dylib"]
+name = "aurorastorage"
+crate-type = ["dylib", "rlib"]
 
 [dependencies]
 serde = "1.0"
