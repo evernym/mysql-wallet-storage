@@ -2,7 +2,7 @@ use std::string;
 use serde_json;
 use mysql::Value;
 
-use aurora_storage::FetchOptions;
+use aurora_storage::SearchOptions;
 
 #[derive(Debug)]
 pub enum Operator {
@@ -349,7 +349,7 @@ fn join_operators(operators: &[Operator], join_str: &str, arguments: &mut Vec<Va
 // Translates Wallet Query Language to SQL
 // WQL input is provided as a reference to a top level Operator
 // Result is a tuple of query string and query arguments
-pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &FetchOptions) -> Option<(String, Vec<Value>)> {
+pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &SearchOptions) -> Option<(String, Vec<Value>)> {
     let mut arguments: Vec<Value> = Vec::new();
     let query_condition = match operator_to_sql(wql, &mut arguments) {
         Some(query_condition) => query_condition,
@@ -358,9 +358,9 @@ pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &FetchOp
 
     let query_string = format!(
         "SELECT {}, i.name, {}, {} FROM items i WHERE {} AND i.type = ? AND i.wallet_id = ?;",
-        if options.fetch_type { "i.type" } else {"NULL"},
-        if options.fetch_value { "i.value" } else {"NULL"},
-        if options.fetch_tags {
+        if options.retrieve_type { "i.type" } else {"NULL"},
+        if options.retrieve_value { "i.value" } else {"NULL"},
+        if options.retrieve_tags {
             "CONCAT(\
                 '{', \
                 CONCAT_WS(\
