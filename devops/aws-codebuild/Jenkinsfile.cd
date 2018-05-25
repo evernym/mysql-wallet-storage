@@ -113,9 +113,8 @@ pipelineWrapper({
 
             notifier.email {
                 subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb v.$debPVersion was published"
-                body = "New debian package $debPVersion was built and published" + '''
-                    Check console output at $BUILD_URL to view the results.
-                '''
+                body = ("New debian package v.$debPVersion was built and published" +
+                    '\n\nCheck console output at $BUILD_URL to view the results.')
             }
         }
 
