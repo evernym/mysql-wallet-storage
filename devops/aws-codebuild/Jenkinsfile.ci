@@ -87,5 +87,7 @@ nodeWrapper {
 }
 
 } finally {
-    notifier.email()
+    stage("Build result notification") {
+        notifier.email()
+    }
 }
