@@ -5,7 +5,7 @@ def evLibrary = library(identifier: 'evernym-aws-codebuild@aws-codebuild', retri
 )).com.evernym.pipeline
 
 logger = evLibrary.Logger.new(this)
-notifier = evLibrary.Notify.new(this)
+notifier = evLibrary.Notifier.new(this)
 logger.setGlobalLevel('TRACE')
 
 try {
