@@ -6,6 +6,6 @@
 [subrepo]
 	remote = git@github.com:andkononykhin/aurora-wallet.git
 	branch = subrepo/devops/ext
-	commit = 08764ccfac091a18c96d094817906d06fd04425c
-	parent = 2c25466282294e8ae7ea4376bbcfe86a8d3cb78c
+	commit = 9e0d773ab7ed21a071830c1beefb6eb4ddba7d6a
+	parent = 4c1cf88c3b0a2383e61fc0e6514e953f569c6b5a
 	cmdver = 0.3.1
