@@ -44,6 +44,14 @@ mod high_casees {
         handle
     }
 
+    fn fetch_options(retrieve_value: bool, retrieve_tags: bool) -> CString {
+        let mut map = HashMap::new();
+        map.insert("retrieveValue", retrieve_value);
+        map.insert("retrieveTags", retrieve_tags);
+
+        CString::new(serde_json::to_string(&map).unwrap()).unwrap()
+    }
+
     /** Storage OPEN Tests */
 
     #[test]
@@ -166,7 +174,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": false}"##).unwrap();
+        let options_json = fetch_options(true, false);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -202,7 +210,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": false, "fetch_tags": true}"##).unwrap();
+        let options_json = fetch_options(false, true);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -241,7 +249,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": false, "fetch_tags": false}"##).unwrap();
+        let options_json = fetch_options(false, false);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -316,7 +324,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let options_json = fetch_options(true, true);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -356,7 +364,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": false}"##).unwrap();
+        let options_json = fetch_options(true, false);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -392,7 +400,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": false, "fetch_tags": true}"##).unwrap();
+        let options_json = fetch_options(false, true);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -431,7 +439,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{}"##).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": false, "fetch_tags": false}"##).unwrap();
+        let options_json = fetch_options(false, false);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -1294,7 +1302,7 @@ mod high_casees {
     fn test_search_records() {
         let handle = open_storage();
 
-        let type_ = CString::new("type_test_search_records").unwrap();
+        let type_ = CString::new(random_name()).unwrap();
 
         // -- Add records --
         let id_1 = CString::new(random_name()).unwrap();
@@ -1322,7 +1330,7 @@ mod high_casees {
         let query_json = serde_json::to_string(&query_json).unwrap();
         let query_json = CString::new(query_json).unwrap();
 
-        let options_json = CString::new(r##"{"fetch_type": false, "fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let options_json = CString::new(r##"{"retrieveType": false, "retrieveValue": true, "retrieveTags": true, "retrieveRecords": true}"##).unwrap();
 
         let mut search_handle: i32 = -1;
 
