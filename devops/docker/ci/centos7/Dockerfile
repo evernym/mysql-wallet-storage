@@ -2,6 +2,7 @@ FROM evernym/rust:0.2.0-centos7
 # TODO LABEL maintainer="Name <email-address>"
 
 ARG u_id=1000
+
 ARG u_name=user
 
 # project's specific dependencies
