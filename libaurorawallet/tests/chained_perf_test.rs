@@ -24,6 +24,53 @@ use std::cmp::max;
 use std::thread;
 use std::time::{Duration, Instant};
 
+///
+/// Module for testing general performance of Aurora Plugin functions.
+///
+/// # Main components
+///  * `driver functions` - functions that prepare input and call Storage Plugin API methods
+///  * `bench()` - function for benchmarking
+///  * `perf_runner()` - defines which `driver function` will be benchmarked via `bench()`
+///  * `THREAD_CNT` - defines how many threads will be used for the test
+///  * `OPERATIONS_CNT` - defines how many times the `driver function` will be called by a single thread
+///
+/// # General Idea
+///  This module defines driver functions that call appropriate Storage Plugin functions.
+///  Performance is tested by passing these functions to `bench()` function that runs them,
+///  and gather performance metrics. `perf_runner()` defines which driver methods will be tested,
+///  and passes them to `bench()`.
+///
+///  While being tested every function prepares the data for the function that follows. All driver
+///  functions accept two parameters, thread_id and operation_id that allow each thread and each
+///  operation to work without conflict. Thus the `chained` at the beginning of the module, as all
+///  driver are basically `chained` in their execution.
+///
+///  All tests in this module are performed on wallets that contain a single item.
+///
+///  This module is useful for getting a general fell of performance/regression of API methods,
+///  but it is not testing effects of real world load.
+///
+/// # Example Flow - Single thread, two operations
+///  * create_wallet is called -> wallet_0_0 and wallet_0_1 are created
+///  * add_record is called -> record_0_0 is created in wallet_0_0, and record_0_1 in wallet_0_1
+///  * add_tags is called -> identical tags are added to record_0_0 and record_0_1
+///  * etc...
+///
+/// # Example Output
+///
+///         Benchmarking Create Wallet
+///  ================= Summary =================
+///  Max Execution Time:      	Duration { secs: 0, nanos: 809019977 }
+///  Operations Executed:     	10000
+///  Sum of Exection times:   	Duration { secs: 58, nanos: 294541212 }
+///  Total Duration:          	Duration { secs: 58, nanos: 333146322 }
+///  Aprox TPS:               	172
+///
+/// # How to Execute
+///
+///  * If running from the console: run `cargo test --release --package aurorastorage --test chained_perf_test chaned_perf_test::perf_runner -- --exact --nocapture`
+///  * If using Pycharm: Run the `perf_runner()` test method - Right Click -> Run perf_runner
+///
 mod chaned_perf_test {
 
     use super::*;
@@ -32,10 +79,18 @@ mod chaned_perf_test {
         static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
     }
 
-    const AGENT_CNT: u64 = 1;
-    const OPERATIONS_CNT: u64 = 1;
+    const THREAD_CNT: u64 = 1;
+    const OPERATIONS_CNT: u64 = 10000;
     const ITEM_TYPE: &'static str = "demo-type";
 
+    ///
+    /// Helper function for establishing a connection to a wallet.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * wallet_name: String - name of the wallet that ought to be opened.
+    ///
     fn open_storage(wallet_name: String) -> i32 {
         let name = CString::new(wallet_name).unwrap();
         let config = CString::new(TEST_CONFIG.get_config()).unwrap();
@@ -49,8 +104,15 @@ mod chaned_perf_test {
         handle
     }
 
-
-    /** CREATE WALLET */
+    ///
+    /// `Create Wallet` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn create_wallet(x: u64, y: u64) {
         let name = format!("wallet_{}_{}", x, y);
         let name = CString::new(name).unwrap();
@@ -63,6 +125,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
+    ///
+    /// `Set Metadata` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn set_metadata(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -75,6 +146,15 @@ mod chaned_perf_test {
 
     }
 
+    ///
+    /// `Get Metadata` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn get_metadata(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -86,7 +166,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** ADD RECORD */
+    ///
+    /// Delete wallet driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn add_record(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -101,23 +189,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-
-    /** ADD RECORD */
-    fn add_record_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
-        let type_ =CString::new(ITEM_TYPE).unwrap();
-        let value = vec![1, 2, 3, 4];
-        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "tag3": "value3", "~tag4": "value4",  "~tag5": "value5", "~tag6": "value6"}"##).unwrap();
-//        let tags_json = CString::new(r##"{}"##).unwrap();
-
-        let err = api::add_record_1(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** GET RECORD */
+    ///
+    /// `Get Record` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn get_record(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -145,35 +225,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** GET RECORD */
-    fn get_record_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-        let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
-
-        let mut record_handle = -1;
-        let mut id_p: *const c_char = ptr::null_mut();
-        let mut value_p: *const u8 = ptr::null_mut();
-        let mut value_len_p = 0;
-        let mut tags_json_p: *const c_char = ptr::null_mut();
-
-        let err = api::get_record_1(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
-        assert_eq!(err, ErrorCode::Success);
-
-        let err = api::get_record_id(handle, record_handle, &mut id_p);
-        assert_eq!(err, ErrorCode::Success);
-
-        let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
-        assert_eq!(err, ErrorCode::Success);
-
-        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** UPDATE VALUE */
+    ///
+    /// `Update Value` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn update_record_value(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -186,33 +246,36 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** ADD TAGS */
+    ///
+    /// `Add Tags` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn add_record_tags(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
         let type_ = CString::new(ITEM_TYPE).unwrap();
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
-        let tags_json = CString::new(r##"{"new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be"}"##).unwrap();
+        let tags_json = CString::new(r##"{"tag1": "new_value1", "new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be", "~age": 30}"##).unwrap();
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
 
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** ADD TAGS */
-    fn add_record_tags_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-        let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
-        let tags_json = CString::new(r##"{"tag1": "new_value1", "new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be", "~age": 30}"##).unwrap();
-        let err = api::add_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** UPDATE TAGS*/
+    ///
+    /// `Update Tags` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn update_record_tags(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -224,19 +287,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** UPDATE TAGS*/
-    fn update_record_tags_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-        let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
-        let tags_json = CString::new(r##"{"new_encrypted": "After update", "~new_plaintext": "After Update"}"##).unwrap();
-        let err = api::update_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** SEARCH RECORDS */
+    ///
+    /// `Search` wallet driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn search_records(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -244,34 +303,12 @@ mod chaned_perf_test {
         let type_ = CString::new(ITEM_TYPE).unwrap();
 
         let query_json = json!({
-            "new_encrypted": "After update",
-            "$or": [
-                {
-                    "~new_plaintext": {"$like": "like_target"},
-                    "~new_plaintext": {"$gte": "100"},
-                    "$not": {
-                        "new_encrypted": "v4",
-                        "~new_plaintext": {
-                            "$regex": "regex_string"
-                        },
-                    },
+            "new_encrypted": {
+                "$in": ["After update", "After Update"]
                 },
-                {
-                    "new_encrypted": {"$in": ["in_string_1", "in_string_2"]},
+            "~new_plaintext": {
+                "$in": ["After Update", "After update"]
                 }
-            ],
-            "$not": {
-                "$not": {
-                    "$not": {
-                        "$not": {
-                            "new_encrypted": "v7"
-                        }
-                    }
-                }
-            },
-            "$not": {
-                "~new_plaintext": "v8"
-            }
         });
 
         let query_json = serde_json::to_string(&query_json).unwrap();
@@ -285,64 +322,23 @@ mod chaned_perf_test {
         let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
         assert_eq!(err, ErrorCode::Success);
 
-        let err = api::free_search(handle, search_handle);
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** SEARCH RECORDS */
-    fn search_records_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-
-        let type_ = CString::new(ITEM_TYPE).unwrap();
-
-        let query_json = json!({
-            "new_encrypted": "After update",
-            "$or": [
-                {
-                    "~new_plaintext": {"$like": "like_target"},
-                    "~new_plaintext": {"$gte": "100"},
-                    "$not": {
-                        "new_encrypted": "v4",
-                        "~new_plaintext": {
-                            "$regex": "regex_string"
-                        },
-                    },
-                },
-                {
-                    "new_encrypted": {"$in": ["in_string_1", "in_string_2"]},
-                }
-            ],
-            "$not": {
-                "$not": {
-                    "$not": {
-                        "$not": {
-                            "new_encrypted": "v7"
-                        }
-                    }
-                }
-            },
-            "$not": {
-                "~new_plaintext": "v8"
-            }
-        });
-
-        let query_json = serde_json::to_string(&query_json).unwrap();
-
-        let query_json = CString::new(query_json).unwrap();
-
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
-
-        let mut search_handle: i32 = -1;
-
-        let err = api::search_records_1(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        let mut record_handle = -1;
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** SEARCH ALL RECORDS */
+    ///
+    /// `Search All` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn search_all_records(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -356,21 +352,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** SEARCH ALL RECORDS */
-    fn search_all_records_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-
-        let mut search_handle: i32 = -1;
-
-        let err = api::search_all_records_1(handle, &mut search_handle);
-        assert_eq!(err, ErrorCode::Success);
-
-        let err = api::free_search(handle, search_handle);
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** DELETE TAGS */
+    ///
+    /// `Delete Record Tags` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn delete_record_tags(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -382,20 +372,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** DELETE TAGS */
-    fn delete_record_tags_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-        let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
-        let tag_names = CString::new(r##"["~new_plaintext", "tag2"]"##).unwrap();
-        let err = api::delete_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-
-    /** DELETE RECORD */
+    ///
+    /// `Delete Record` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn delete_record(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
@@ -408,20 +393,15 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    /** DELETE RECORD */
-    fn delete_record_1(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
-        let type_ =CString::new(ITEM_TYPE).unwrap();
-
-        let err = api::delete_record_1(handle, type_.as_ptr(), id.as_ptr());
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** DELETE WALLET */
+    ///
+    /// `Delete Wallet` driver function.
+    ///
+    /// Prepares all of the input parameters and calls the corresponding storage plugin api method.
+    ///
+    /// # Params
+    ///  * x: u64 - ID of the calling thread (goes from 0 to THREAD_CNT)
+    ///  * y: u64 - ID of the operation being performed by a thread (goes from 0 to OPERATION_COUNT)
+    ///
     fn delete_wallet(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let wallet_name = CString::new(wallet_name).unwrap();
@@ -432,13 +412,22 @@ mod chaned_perf_test {
         assert_eq!(err, ErrorCode::Success);
     }
 
+    ///
+    /// Benchmarking function.
+    ///
+    /// Accepts a function as an argument, and runs it defined number of times (OPERATIONS_CNT)
+    /// via defined number of threads (THREAD_CNT).
+    ///
+    /// # Params
+    ///  * Fn(u64, u64) + Send + Sync + Copy + 'static - function that will be benchmarked
+    ///
      fn bench<F>(action: F) where F: Fn(u64, u64) + Send + Sync + Copy + 'static {
 
         let start_time = Instant::now();
 
         let mut thread_handles = Vec::new();
 
-        for x in 0..AGENT_CNT {
+        for x in 0..THREAD_CNT {
 
             let thread = thread::spawn(move || {
                 let mut execution_times = Vec::new();
@@ -476,10 +465,15 @@ mod chaned_perf_test {
                      Sum of Exection times:   \t{:?}\n\
                      Total Duration:          \t{:?}\n\
                      Aprox TPS:               \t{:?}",
-            max_execution_time, AGENT_CNT * OPERATIONS_CNT, sum_execution_time, total_execution_time, ((OPERATIONS_CNT * AGENT_CNT) / total_execution_time.as_secs())
+                 max_execution_time, THREAD_CNT * OPERATIONS_CNT, sum_execution_time, total_execution_time, ((OPERATIONS_CNT * THREAD_CNT) / total_execution_time.as_secs())
         );
     }
 
+    ///
+    /// Test Entry point.
+    ///
+    /// Defines all of the driver functions that need to be passed through the `bench()` function.
+    ///
     #[test]
     fn perf_runner() {
 
@@ -490,22 +484,14 @@ mod chaned_perf_test {
         actions.push(("Set Metadata", &set_metadata));
         actions.push(("Get Metadata", &get_metadata));
         actions.push(("Add Record", &add_record));
-        actions.push(("Add Record 1", &add_record_1));
         actions.push(("Get Record", &get_record));
-        actions.push(("Get Record 1", &get_record_1));
         actions.push(("Update Record Value", &update_record_value));
         actions.push(("Add Record Tags", &add_record_tags));
-        actions.push(("Add Record Tags 1", &add_record_tags_1));
         actions.push(("Update Record Tags", &update_record_tags));
-        actions.push(("Update Record Tags 1", &update_record_tags_1));
         actions.push(("Search Records", &search_records));
-        actions.push(("Search Records", &search_records_1));
         actions.push(("Search All Records", &search_all_records));
-        actions.push(("Search All Records 1", &search_all_records_1));
         actions.push(("Delete Record Tags", &delete_record_tags));
-        actions.push(("Delete Record Tags 1", &delete_record_tags_1));
         actions.push(("Delete Record", &delete_record));
-        actions.push(("Delete Record 1", &delete_record_1));
         actions.push(("Delete Wallet", &delete_wallet));
 
         for (action_name, action) in actions {
@@ -516,6 +502,3 @@ mod chaned_perf_test {
         println!("Done!");
     }
 }
-
-
-

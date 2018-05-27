@@ -12,7 +12,7 @@ pub enum ErrorCode {
 macro_rules! check_result {
     ($r: expr, $e: expr) => {
         match $r {
-            Err(_err) => {println!("{:?}", _err); return $e},
+            Err(_err) => return $e,
             Ok(x) => x
         }
     }

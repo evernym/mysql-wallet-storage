@@ -12,7 +12,7 @@ use std::collections::HashMap;
 // TODO
 //  - Move create/open/delete logic from api file into aurora_storage file
 //  - Modify tests to use prepare/cleanup
-//  - Change the way we are connecting to the DB - OptsBuilder / CLIENT_FOUND_ROWS flag
+//  - Change the way we are connecting to the DB - OptsBuilder /  flag
 
 macro_rules! c_char_to_str {
     ($x: expr) => {
@@ -115,26 +115,12 @@ pub extern "C" fn add_record(storage_handle: i32, type_p: *const c_char, id_p: *
 
     let type_ = c_char_to_str!(type_p);
     let id = c_char_to_str!(id_p);
-    let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidStructure);
-
-    let mut value: Vec<u8> = Vec::new();
-    unsafe { value.extend_from_slice(slice::from_raw_parts(value_p, value_len)); }
-
-    storage.add_record(&type_, &id, &value, &tags)
-}
-
-#[no_mangle]
-pub extern "C" fn add_record_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, value_p: *const u8, value_len: usize, tags_json_p: *const c_char) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    let type_ = c_char_to_str!(type_p);
-    let id = c_char_to_str!(id_p);
     let tags = c_char_to_str!(tags_json_p);
 
     let mut value: Vec<u8> = Vec::new();
     unsafe { value.extend_from_slice(slice::from_raw_parts(value_p, value_len)); }
 
-    storage.add_record_1(&type_, &id, &value, &tags)
+    storage.add_record(&type_, &id, &value, &tags)
 }
 
 #[no_mangle]
@@ -149,17 +135,6 @@ pub extern "C" fn get_record(storage_handle: i32, type_p: *const c_char, id_p: *
 }
 
 #[no_mangle]
-pub extern "C" fn get_record_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, options_json_p: *const c_char, record_handle_p: *mut i32) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    let type_ = c_char_to_str!(type_p);
-    let id = c_char_to_str!(id_p);
-    let options = c_char_to_str!(options_json_p);
-
-    storage.fetch_record_1(type_, id, options, record_handle_p)
-}
-
-#[no_mangle]
 pub extern "C" fn delete_record(storage_handle: i32, type_p: *const c_char, id_p: *const c_char) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
@@ -167,16 +142,6 @@ pub extern "C" fn delete_record(storage_handle: i32, type_p: *const c_char, id_p
     let id = c_char_to_str!(id_p);
 
     storage.delete_record(&type_, &id)
-}
-
-#[no_mangle]
-pub extern "C" fn delete_record_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    let type_ = c_char_to_str!(type_p);
-    let id = c_char_to_str!(id_p);
-
-    storage.delete_record_1(&type_, &id)
 }
 
 #[no_mangle]
@@ -204,36 +169,14 @@ pub extern "C" fn add_record_tags(storage_handle: i32, type_p: *const c_char, id
 }
 
 #[no_mangle]
-pub extern "C" fn add_record_tags_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    let type_ = c_char_to_str!(type_p);
-    let id = c_char_to_str!(id_p);
-    let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidStructure);
-
-    storage.add_record_tags_1(&type_, &id, &tags)
-}
-
-#[no_mangle]
 pub extern "C" fn update_record_tags(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    let type_ = c_char_to_str!(type_p);
-    let id = c_char_to_str!(id_p);
-    let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidStructure);
-
-    storage.update_record_tags(&type_, &id, &tags)
-}
-
-#[no_mangle]
-pub extern "C" fn update_record_tags_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
     let id = c_char_to_str!(id_p);
     let tags = c_char_to_str!(tags_json_p);
 
-    storage.update_record_tags_1(&type_, &id, &tags)
+    storage.update_record_tags(&type_, &id, &tags)
 }
 
 #[no_mangle]
@@ -245,17 +188,6 @@ pub extern "C" fn delete_record_tags(storage_handle: i32, type_p: *const c_char,
     let tag_names: Vec<String> = check_result!(serde_json::from_str(c_char_to_str!(tag_names_json_p)), ErrorCode::InvalidStructure);
 
     storage.delete_record_tags(&type_, &id, &tag_names)
-}
-
-#[no_mangle]
-pub extern "C" fn delete_record_tags_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tag_names_json_p: *const c_char) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    let type_ = c_char_to_str!(type_p);
-    let id = c_char_to_str!(id_p);
-    let tag_names: Vec<String> = check_result!(serde_json::from_str(c_char_to_str!(tag_names_json_p)), ErrorCode::InvalidStructure);
-
-    storage.delete_record_tags_1(&type_, &id, &tag_names)
 }
 
 #[no_mangle]
@@ -359,28 +291,10 @@ pub extern "C" fn search_records(storage_handle: i32, type_p: *const c_char, que
     storage.search_records(type_, query_json, options_json, search_handle_p)
 }
 
-#[no_mangle]
-pub extern "C" fn search_records_1(storage_handle: i32, type_p: *const c_char, query_json_p: *const c_char, options_json_p: *const c_char, search_handle_p: *mut i32) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    let query_json = c_char_to_str!(query_json_p);
-    let options_json = c_char_to_str!(options_json_p);
-    let type_ = c_char_to_str!(type_p);
-
-    storage.search_records_1(type_, query_json, options_json, search_handle_p)
-}
-
-#[no_mangle]
 pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut i32) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     storage.search_all_records(search_handle_p)
-}
-
-pub extern "C" fn search_all_records_1(storage_handle: i32, search_handle_p: *mut i32) -> ErrorCode {
-    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
-
-    storage.search_all_records_1(search_handle_p)
 }
 
 #[allow(unused_variables)]
