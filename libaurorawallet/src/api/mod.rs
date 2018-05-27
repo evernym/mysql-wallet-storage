@@ -123,7 +123,7 @@ pub extern "C" fn add_record(storage_handle: i32, type_p: *const c_char, id_p: *
     storage.add_record(&type_, &id, &value, &tags)
 }
 
-<<<<<<< HEAD
+#[no_mangle]
 pub extern "C" fn add_record_1(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, value_p: *const u8, value_len: usize, tags_json_p: *const c_char) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
@@ -211,7 +211,7 @@ pub extern "C" fn add_record_tags_1(storage_handle: i32, type_p: *const c_char, 
     let id = c_char_to_str!(id_p);
     let tags: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(c_char_to_str!(tags_json_p)), ErrorCode::InvalidStructure);
 
-    storage.add_record_tags_2(&type_, &id, &tags)
+    storage.add_record_tags_1(&type_, &id, &tags)
 }
 
 #[no_mangle]
@@ -357,6 +357,17 @@ pub extern "C" fn search_records(storage_handle: i32, type_p: *const c_char, que
     let type_ = c_char_to_str!(type_p);
 
     storage.search_records(type_, query_json, options_json, search_handle_p)
+}
+
+#[no_mangle]
+pub extern "C" fn search_records_1(storage_handle: i32, type_p: *const c_char, query_json_p: *const c_char, options_json_p: *const c_char, search_handle_p: *mut i32) -> ErrorCode {
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+
+    let query_json = c_char_to_str!(query_json_p);
+    let options_json = c_char_to_str!(options_json_p);
+    let type_ = c_char_to_str!(type_p);
+
+    storage.search_records_1(type_, query_json, options_json, search_handle_p)
 }
 
 #[no_mangle]

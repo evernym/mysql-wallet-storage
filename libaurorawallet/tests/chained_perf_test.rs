@@ -1,8 +1,8 @@
 // Local dependencies
-extern crate libaurorawallet;
+extern crate aurorastorage;
 
-use libaurorawallet::api as api;
-use libaurorawallet::errors::error_code::ErrorCode;
+use aurorastorage::api as api;
+use aurorastorage::errors::error_code::ErrorCode;
 
 mod test_utils;
 use test_utils::config::{ConfigType, Config};
@@ -18,10 +18,13 @@ extern crate serde_json;
 extern crate lazy_static;
 
 use std::ptr;
-use std::ffi::{CStr, CString};
-use std::slice;
+use std::ffi::CString;
 
-mod demo {
+use std::cmp::max;
+use std::thread;
+use std::time::{Duration, Instant};
+
+mod chaned_perf_test {
 
     use super::*;
 
@@ -29,6 +32,8 @@ mod demo {
         static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
     }
 
+    const AGENT_CNT: u64 = 1;
+    const OPERATIONS_CNT: u64 = 1;
     const ITEM_TYPE: &'static str = "demo-type";
 
     fn open_storage(wallet_name: String) -> i32 {
@@ -38,14 +43,14 @@ mod demo {
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
         let mut handle: i32 = -1;
 
-        let err = api::open(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
 
         assert_eq!(err, ErrorCode::Success);
         handle
     }
 
-////
-////    /** CREATE WALLET */
+
+    /** CREATE WALLET */
     fn create_wallet(x: u64, y: u64) {
         let name = format!("wallet_{}_{}", x, y);
         let name = CString::new(name).unwrap();
@@ -54,7 +59,30 @@ mod demo {
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
         let metadata = CString::new("metadata").unwrap();
 
-        let err = api::create(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    fn set_metadata(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let new_metadata = String::from("METADATA METADATA METADATA METADATA METADATA METADATA");
+        let new_metadata_cstring = CString::new(new_metadata.clone()).unwrap();
+
+        let err = api::set_metadata(handle, new_metadata_cstring.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+    }
+
+    fn get_metadata(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let mut metadata_handle = -1;
+        let mut metadata_ptr: *const c_char = ptr::null_mut();
+
+        let err = api::get_metadata(handle, &mut metadata_ptr, &mut metadata_handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -96,7 +124,7 @@ mod demo {
         let type_ = CString::new(ITEM_TYPE).unwrap();
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
 
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
@@ -107,19 +135,14 @@ mod demo {
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
-        let mut string = String::new();
-
         let err = api::get_record_id(handle, record_handle, &mut id_p);
         assert_eq!(err, ErrorCode::Success);
-        let record_id = unsafe { CStr::from_ptr(id_p) }.to_owned();
 
         let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
         assert_eq!(err, ErrorCode::Success);
-        let record_value = unsafe { slice::from_raw_parts(value_p, value_len_p) };
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
-        let record_tags = unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap();
     }
 
     /** GET RECORD */
@@ -129,7 +152,7 @@ mod demo {
         let type_ = CString::new(ITEM_TYPE).unwrap();
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
 
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
@@ -140,33 +163,28 @@ mod demo {
         let err = api::get_record_1(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
-        let mut string = String::new();
-
         let err = api::get_record_id(handle, record_handle, &mut id_p);
         assert_eq!(err, ErrorCode::Success);
-        let record_id = unsafe { CStr::from_ptr(id_p) }.to_owned();
 
         let err = api::get_record_value(handle, record_handle, &mut value_p, &mut value_len_p);
         assert_eq!(err, ErrorCode::Success);
-        let record_value = unsafe { slice::from_raw_parts(value_p, value_len_p) };
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
-        let record_tags = unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap();
     }
 
+    /** UPDATE VALUE */
+    fn update_record_value(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+        let id = format!("record_{}_{}", x, y);
+        let id = CString::new(id).unwrap();
+        let new_value = vec![2, 5, 8, 13];
 
-//    /** UPDATE VALUE */
-//    fn update_record_value() {
-//        let handle = open_storage();
-//
-//        let type_ = CString::new(ITEM_TYPE).unwrap();
-//        let id = CString::new(ITEM_NAME).unwrap();
-//        let new_value = vec![2, 5, 8, 13];
-//
-//        let err = api::update_record_value(handle, type_.as_ptr(), id.as_ptr(), new_value.as_ptr(), new_value.len());
-//        assert_eq!(err, ErrorCode::Success);
-//    }
+        let err = api::update_record_value(handle, type_.as_ptr(), id.as_ptr(), new_value.as_ptr(), new_value.len());
+        assert_eq!(err, ErrorCode::Success);
+    }
 
     /** ADD TAGS */
     fn add_record_tags(x: u64, y: u64) {
@@ -190,19 +208,6 @@ mod demo {
         let id = CString::new(id).unwrap();
         let tags_json = CString::new(r##"{"tag1": "new_value1", "new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be", "~age": 30}"##).unwrap();
         let err = api::add_record_tags_1(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-
-        assert_eq!(err, ErrorCode::Success);
-    }
-
-    /** ADD TAGS */
-    fn add_record_tags_2(x: u64, y: u64) {
-        let wallet_name = format!("wallet_{}_{}", x, y);
-        let handle = open_storage(wallet_name);
-        let type_ = CString::new(ITEM_TYPE).unwrap();
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
-        let tags_json = CString::new(r##"{"tag1": "new_value1", "new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be", "~age": 30}"##).unwrap();
-        let err = api::add_record_tags_2(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
 
         assert_eq!(err, ErrorCode::Success);
     }
@@ -236,33 +241,101 @@ mod demo {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let handle = open_storage(wallet_name);
 
-        let id = format!("record_{}_{}", x, y);
-        let id = CString::new(id).unwrap();
         let type_ = CString::new(ITEM_TYPE).unwrap();
 
-        let mut record_handle = -1;
-        let mut id_p: *const c_char = ptr::null_mut();
-        let mut value_p: *const u8 = ptr::null_mut();
-        let mut value_len_p = 0;
-        let mut tags_json_p: *const c_char = ptr::null_mut();
-
-
         let query_json = json!({
-            "new_encrypted": {"$in": ["After update", "value2"]},
-            "~new_plaintext": {"$in": ["After update", "value2"]}
+            "new_encrypted": "After update",
+            "$or": [
+                {
+                    "~new_plaintext": {"$like": "like_target"},
+                    "~new_plaintext": {"$gte": "100"},
+                    "$not": {
+                        "new_encrypted": "v4",
+                        "~new_plaintext": {
+                            "$regex": "regex_string"
+                        },
+                    },
+                },
+                {
+                    "new_encrypted": {"$in": ["in_string_1", "in_string_2"]},
+                }
+            ],
+            "$not": {
+                "$not": {
+                    "$not": {
+                        "$not": {
+                            "new_encrypted": "v7"
+                        }
+                    }
+                }
+            },
+            "$not": {
+                "~new_plaintext": "v8"
+            }
         });
 
         let query_json = serde_json::to_string(&query_json).unwrap();
 
         let query_json = CString::new(query_json).unwrap();
 
-        let options_json = CString::new(r##"{"fetch_value": true, "fetch_tags": true}"##).unwrap();
+        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
 
         let mut search_handle: i32 = -1;
 
-        println!("HANDLE: {}", handle);
-
         let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    /** SEARCH RECORDS */
+    fn search_records_1(x: u64, y: u64) {
+        let wallet_name = format!("wallet_{}_{}", x, y);
+        let handle = open_storage(wallet_name);
+
+        let type_ = CString::new(ITEM_TYPE).unwrap();
+
+        let query_json = json!({
+            "new_encrypted": "After update",
+            "$or": [
+                {
+                    "~new_plaintext": {"$like": "like_target"},
+                    "~new_plaintext": {"$gte": "100"},
+                    "$not": {
+                        "new_encrypted": "v4",
+                        "~new_plaintext": {
+                            "$regex": "regex_string"
+                        },
+                    },
+                },
+                {
+                    "new_encrypted": {"$in": ["in_string_1", "in_string_2"]},
+                }
+            ],
+            "$not": {
+                "$not": {
+                    "$not": {
+                        "$not": {
+                            "new_encrypted": "v7"
+                        }
+                    }
+                }
+            },
+            "$not": {
+                "~new_plaintext": "v8"
+            }
+        });
+
+        let query_json = serde_json::to_string(&query_json).unwrap();
+
+        let query_json = CString::new(query_json).unwrap();
+
+        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
+
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records_1(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
         assert_eq!(err, ErrorCode::Success);
 
         let err = api::free_search(handle, search_handle);
@@ -355,116 +428,46 @@ mod demo {
         let config = CString::new(TEST_CONFIG.get_config()).unwrap();
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
 
-        let err = api::delete(wallet_name.as_ptr(), config.as_ptr(), credentials.as_ptr());
+        let err = api::delete_storage(wallet_name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
-//
-//    #[test]
-//    fn runner() {
-//        let mut string = String::new();
-//
-//        println!("Start Demo? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//
-//        println!("\nCreate Wallet? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        create_wallet();
-//        println!("\tWallet Created");
-//
-//        println!("\nAdd Record? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        add_record();
-//        println!("\tRecord Added!");
-//
-//        println!("\nAdd Tags? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        add_record_tags();
-//        println!("\tTags Added!");
-//
-//        println!("\nUpdate Tags? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        update_record_tags();
-//        println!("\tTags Updated!");
-//
-//        println!("\nSearch Record? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        search_records();
-//        println!("\nRecord Found!!!!");
-//
-//        println!("\nFetch Record? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        get_record();
-//        println!("\tRecord Fetched!");
-//
-//        println!("\nUpdate Record? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        update_record_value();
-//        println!("\tRecord Updated!");
-//
-//        println!("\nDelete Tags? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        delete_record_tags();
-//        println!("\tTags Deleted!");
-//
-//        println!("\nDelete Record? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        delete_record();
-//        println!("\tRecord Deleted");
-//
-//        println!("\nDelete Wallet? ");
-//        std::io::stdin().read_line(&mut string).unwrap();
-//        delete_wallet();
-//        println!("\tWallet Deleted");
-//
-//        println!("\nDemo Finished.");
-//    }
-
-    use std::cmp::max;
-    use std::thread;
-    use std::time::{Duration, SystemTime};
-
-    extern crate mysql;
-
 
      fn bench<F>(action: F) where F: Fn(u64, u64) + Send + Sync + Copy + 'static {
 
-        const AGENT_CNT: u64 = 1;
-        const OPERATIONS_CNT: u64 = 5000;
+        let start_time = Instant::now();
 
-        let start_time = SystemTime::now();
-
-        let mut results = Vec::new();
+        let mut thread_handles = Vec::new();
 
         for x in 0..AGENT_CNT {
 
             let thread = thread::spawn(move || {
-                let mut time_diffs = Vec::new();
+                let mut execution_times = Vec::new();
 
                 for y in 0..OPERATIONS_CNT {
-                    let time = SystemTime::now();
+                    let time = Instant::now();
                     action(x, y);
-                    let time_diff = SystemTime::now().duration_since(time).unwrap();
-                    time_diffs.push(time_diff);
+                    let time_diff = time.elapsed();
+                    execution_times.push(time_diff);
                 }
 
-                time_diffs
+                execution_times
             });
 
-            results.push(thread);
+            thread_handles.push(thread);
         }
 
-        let mut all_diffs = Vec::new();
-        for result in results {
-            all_diffs.push(result.join().unwrap());
+        let mut all_execution_times = Vec::new();
+        for thread in thread_handles {
+            all_execution_times.push(thread.join().unwrap());
         }
-        let total_duration = SystemTime::now().duration_since(start_time).unwrap();
 
+        let total_execution_time = start_time.elapsed();
 
-        let mut time_diff_max = Duration::from_secs(0);
-        let mut time_sum_diff = Duration::from_secs(0);
-        for time_diffs in all_diffs {
-            time_diff_max = time_diffs.iter().fold(time_diff_max, |acc, cur| max(acc, *cur));
-            time_sum_diff = time_diffs.iter().fold(time_sum_diff, |acc, cur| acc + *cur);
+        let mut max_execution_time = Duration::from_secs(0);
+        let mut sum_execution_time = Duration::from_secs(0);
+        for time_diffs in all_execution_times {
+            max_execution_time = time_diffs.iter().fold(max_execution_time, |acc, cur| max(acc, *cur));
+            sum_execution_time = time_diffs.iter().fold(sum_execution_time, |acc, cur| acc + *cur);
         }
 
         println!("================= Summary =================\n\
@@ -473,73 +476,7 @@ mod demo {
                      Sum of Exection times:   \t{:?}\n\
                      Total Duration:          \t{:?}\n\
                      Aprox TPS:               \t{:?}",
-            time_diff_max, AGENT_CNT * OPERATIONS_CNT, time_sum_diff, total_duration, ((OPERATIONS_CNT * AGENT_CNT) / total_duration.as_secs())
-        );
-    }
-
-
-
-
-    #[test]
-    fn benchmark() {
-
-        const AGENT_CNT: u64 = 1;
-        const OPERATIONS_CNT: u64 = 5000;
-
-        let start_time = SystemTime::now();
-
-        let mut results = Vec::new();
-
-        for x in 0..AGENT_CNT {
-
-            let thread = thread::spawn(move || {
-                let mut time_diffs = Vec::new();
-
-                for y in 0..OPERATIONS_CNT {
-                    let time = SystemTime::now();
-//                    create_wallet(x, y);
-//                    add_record(x, y);
-//                    add_record_1(x, y);
-//                    get_record(x, y);
-//                    get_record_1(x, y);
-//                    add_record_tags(x, y);
-//                    add_record_tags_1(x, y);
-//                    add_record_tags_2(x, y);
-//                    update_record_tags(x, y);
-//                    update_record_tags_1(x, y);
-//                    delete_record_tags(x, y);
-                    delete_record_tags_1(x, y);
-                    let time_diff = SystemTime::now().duration_since(time).unwrap();
-                    time_diffs.push(time_diff);
-                }
-
-                time_diffs
-            });
-
-            results.push(thread);
-        }
-
-        let mut all_diffs = Vec::new();
-        for result in results {
-            all_diffs.push(result.join().unwrap());
-        }
-        let total_duration = SystemTime::now().duration_since(start_time).unwrap();
-
-
-        let mut time_diff_max = Duration::from_secs(0);
-        let mut time_sum_diff = Duration::from_secs(0);
-        for time_diffs in all_diffs {
-            time_diff_max = time_diffs.iter().fold(time_diff_max, |acc, cur| max(acc, *cur));
-            time_sum_diff = time_diffs.iter().fold(time_sum_diff, |acc, cur| acc + *cur);
-        }
-
-        println!("================= Summary =================\n\
-                     Max Execution Time:      \t{:?}\n\
-                     Operations Executed:     \t{:?}\n\
-                     Sum of Exection times:   \t{:?}\n\
-                     Total Duration:          \t{:?}\n\
-                     Aprox TPS:               \t{:?}",
-            time_diff_max, AGENT_CNT * OPERATIONS_CNT, time_sum_diff, total_duration, ((OPERATIONS_CNT * AGENT_CNT) / total_duration.as_secs())
+            max_execution_time, AGENT_CNT * OPERATIONS_CNT, sum_execution_time, total_execution_time, ((OPERATIONS_CNT * AGENT_CNT) / total_execution_time.as_secs())
         );
     }
 
@@ -550,15 +487,19 @@ mod demo {
 
         let mut actions: Vec<(&str, &(Fn(u64, u64) + Send + Sync + 'static))> = Vec::new();
         actions.push(("Create Wallet", &create_wallet));
+        actions.push(("Set Metadata", &set_metadata));
+        actions.push(("Get Metadata", &get_metadata));
         actions.push(("Add Record", &add_record));
         actions.push(("Add Record 1", &add_record_1));
         actions.push(("Get Record", &get_record));
         actions.push(("Get Record 1", &get_record_1));
+        actions.push(("Update Record Value", &update_record_value));
         actions.push(("Add Record Tags", &add_record_tags));
-        actions.push(("Add Record Tags 1", &add_record_tags_2));
+        actions.push(("Add Record Tags 1", &add_record_tags_1));
         actions.push(("Update Record Tags", &update_record_tags));
         actions.push(("Update Record Tags 1", &update_record_tags_1));
         actions.push(("Search Records", &search_records));
+        actions.push(("Search Records", &search_records_1));
         actions.push(("Search All Records", &search_all_records));
         actions.push(("Search All Records 1", &search_all_records_1));
         actions.push(("Delete Record Tags", &delete_record_tags));

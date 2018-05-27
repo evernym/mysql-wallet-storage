@@ -1,5 +1,6 @@
 pub mod statement;
 mod query_translator;
+mod query_translator_1;
 
 use utils::handle_store::HandleStore;
 use aurora_storage::statement::Statement;
@@ -390,15 +391,15 @@ impl<'a> AuroraStorage<'a> {
 
         let record: Record;
 
-        if options.fetch_type | options.fetch_tags {
+        if options.retrieve_type | options.retrieve_tags {
             let query = format!(
                 "SELECT {}, {} FROM items_1 i \
                     WHERE \
                         wallet_id = :wallet_id \
                         AND type = :type \
                         AND name = :name",
-                if options.fetch_value { "value" } else {"''"},
-                if options.fetch_tags { "tags" } else {"''"}
+                if options.retrieve_value { "value" } else {"''"},
+                if options.retrieve_tags { "tags" } else {"''"}
             );
 
             let mut result: QueryResult = check_result!(
@@ -421,8 +422,8 @@ impl<'a> AuroraStorage<'a> {
 
             record = Record::new(
                 check_result!(CString::new(id), ErrorCode::InvalidState),
-                if options.fetch_value {Some(db_value)} else {None},
-                if options.fetch_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
+                if options.retrieve_value {Some(db_value)} else {None},
+                if options.retrieve_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
                 Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
             );
         } else {
@@ -717,52 +718,7 @@ impl<'a> AuroraStorage<'a> {
     ///  * `TagDataTooLong` - Provided tag_name or tag_value exceed the size limit
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
-    pub fn add_record_tags_1(&self, type_: &str, id: &str, tags: &str) -> ErrorCode {
-
-        let result = {
-            self.write_pool.prep_exec(
-                        Statement::AddTags.as_str(),
-                        params!{
-                            "tags" => tags,
-                            "type" => type_,
-                            "name" => id,
-                            "wallet_id" => self.wallet_id
-                        }
-                )
-        };
-
-        let result: QueryResult = match result {
-            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
-            Err(_) => return ErrorCode::IOError,
-            Ok(result) => result,
-        };
-
-        ErrorCode::Success
-    }
-
-    ///
-    /// Adds tags for a record identified by type and id.
-    /// If tag with that name exists it will be updated.
-    ///
-    /// # Arguments
-    ///
-    ///  * `type_` - record type
-    ///  * `id` - record id (name)
-    ///  * `tag_names` - a map containing (tag_name: tag_value) pairs
-    ///
-    /// # Returns
-    ///
-    ///  * `ErrorCode`
-    ///
-    /// # ErrorCodes
-    ///
-    ///  * `Success` - Execution successful
-    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
-    ///  * `TagAlreadyExists` - Provided tag already exists in the DB
-    ///  * `TagDataTooLong` - Provided tag_name or tag_value exceed the size limit
-    ///  * `IOError` - Unexpected error occurred while communicating with the DB
-    ///
-    pub fn add_record_tags_2(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
+    pub fn add_record_tags_1(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
 
         let mut tag_name_value_paths: Vec<String> = Vec::new();
 
@@ -792,8 +748,8 @@ impl<'a> AuroraStorage<'a> {
                 )
         };
 
-        let result: QueryResult = match result {
-            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
+        match result {
+            Err(Error::MySqlError(err)) => return ErrorCode::InvalidStructure,
             Err(_) => return ErrorCode::IOError,
             Ok(result) => result,
         };
@@ -941,8 +897,8 @@ impl<'a> AuroraStorage<'a> {
                 )
         };
 
-        let result: QueryResult = match result {
-            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
+        match result {
+            Err(Error::MySqlError(err)) => return ErrorCode::InvalidStructure,
             Err(_) => return ErrorCode::IOError,
             Ok(result) => result,
         };
@@ -1081,8 +1037,8 @@ impl<'a> AuroraStorage<'a> {
                 )
         };
 
-        let result: QueryResult = match result {
-            Err(Error::MySqlError(err)) => {println!("{:?}", err); return ErrorCode::InvalidStructure},
+        match result {
+            Err(Error::MySqlError(err)) => return ErrorCode::InvalidStructure,
             Err(_) => return ErrorCode::IOError,
             Ok(result) => result,
         };
@@ -1192,6 +1148,62 @@ impl<'a> AuroraStorage<'a> {
     }
 
     ///
+    /// Performs a search defined by the user query and options.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - type of the record that we are searching for
+    ///  * `query_json` - query conditions specified in the form of a json
+    ///         {
+    ///             "tagName": "tagValue",
+    ///             $or: {
+    ///                 "tagName2": { $regex: 'pattern' },
+    ///                 "tagName3": { $gte: 123 },
+    ///             },
+    ///         }
+    ///  * `options_json` - options specifying what attributes ought to be fetched ex.
+    ///         {
+    ///             fetch_type: (optional, true by default)
+    ///             fetch_value: (optional, true by default)
+    ///             fetch_value: (optional, true by default)
+    ///         }
+    ///  * `search_handle_p` - output param - handle that will be used for accessing the search result
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> query | options
+    ///
+    pub fn search_records_1(&self, type_: &str, query_json: &str, options_json: &str, search_handle_p: *mut i32) -> ErrorCode {
+        let search_options: SearchOptions = check_result!(serde_json::from_str(options_json), ErrorCode::InvalidStructure);
+
+        // TODO: implement options.retrieve_total_count
+
+        if !search_options.retrieve_records { // && !search_options.retrieve_total_count {
+            return ErrorCode::InvalidStructure;
+        }
+
+        let wql = check_result!(query_translator_1::parse_from_json(&query_json), ErrorCode::InvalidStructure);
+        let (query, arguments) = check_result!(query_translator_1::wql_to_sql(self.wallet_id, type_, &wql, &search_options), ErrorCode::InvalidStructure);
+
+        let search_result: QueryResult = check_result!(
+            self.read_pool.prep_exec(query, arguments),
+            ErrorCode::IOError
+        );
+
+        let search_handle = self.searches.insert(Search::new(search_result));
+
+        unsafe { *search_handle_p = search_handle; }
+
+        ErrorCode::Success
+    }
+
+    ///
     /// Performs a search that grabs all records of a wallet with all attributes from the DB.
     ///
     /// # Arguments
@@ -1225,7 +1237,7 @@ impl<'a> AuroraStorage<'a> {
         ErrorCode::Success
     }
 
-     ///
+    ///
     /// Performs a search that grabs all records of a wallet with all attributes from the DB.
     ///
     /// # Arguments
@@ -1277,14 +1289,14 @@ impl<'a> AuroraStorage<'a> {
     ///  * `Success` - Execution successful
     ///  * `InvalidState` - Provided search handle does not exist, or parsing of data has gone wrong
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
-    ///  * `WalletItemNotFound` - Result set exhausted, no more records to fetch
+    ///  * `WalletNotFoundError` - Result set exhausted, no more records to fetch
     ///
     pub fn fetch_search_next_record(&self, search_handle: i32, record_handle_p: *mut i32) -> ErrorCode {
         let search = check_option!(self.searches.get(search_handle), ErrorCode::InvalidState);
 
         let mut search_result = check_result!(search.search_result.write(), ErrorCode::IOError);
 
-        let next_result = check_option!(search_result.next(), ErrorCode::WalletItemNotFound);
+        let next_result = check_option!(search_result.next(), ErrorCode::WalletNotFoundError);
 
         let row = check_result!(next_result, ErrorCode::IOError);
 
