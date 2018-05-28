@@ -28,19 +28,18 @@ phases:
       - printenv
       - export PROJECT_DIR="$PWD"
       - |
+        set -ex
+        set -o pipefail
         for goal in $MAKE_GOALS; do
-            /bin/bash -c "
-                set -xe
-                set -o pipefail
-                echo Making '$goal'
-                make -C devops $goal 2>&1 | tee /tmp/artifacts/logs/${goal}.out
-            "
+            echo Making '$goal'
+            make -C devops $goal 2>&1 | tee /tmp/artifacts/logs/${goal}.out
         done
   post_build:
     commands:
       - echo Build completed on `date`
       - echo Preparing artifacts
       - |
+        set -ex
         for art in $ARTIFACTS; do
             cp -vR -t /tmp/artifacts $art
         done
