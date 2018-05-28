@@ -20,6 +20,7 @@ impl Config {
                 Config {
                     config: json!(
                         {
+                            "db_name": "wallet",
                             "read_host": "localhost",
                             "write_host": "localhost",
                             "port": 3306
@@ -42,6 +43,7 @@ impl Config {
                 Config {
                     config: json!(
                         {
+                            "db_name": "wallet",
                             "read_host": "localhost",
                             "write_host": "localhost",
                             "port": 3306
@@ -64,6 +66,7 @@ impl Config {
                 Config {
                     config: json!(
                         {
+                            "db_name": "wallet",
                             "read_host": "localhost",
                             "write_host": "localhost",
                             "port": 3306
@@ -86,6 +89,7 @@ impl Config {
                 Config {
                     config: json!(
                         {
+                            "db_host": "wallet",
                             "read_host": "localhost",
                             "write_host": "localhost",
                             "port": 3306
