@@ -67,12 +67,12 @@ pipelineWrapper({
                     if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
                         stage("$osname: Archive artifacts") {
                             dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
-                                goals.each {
-                                    def _fname = "${osname}.${it}.out"
-                                    sh "mv '${it}.out' '$_fname'"
+                               utils.archiveArtifacts('.', '*.out') { fname, toArchive ->
+                                    def _fname = "${osname}.${fname}"
+                                    sh "mv '${fname}' '$_fname'"
                                     utils.truncateFile(_fname, "${_fname}.tail")
+                                    toArchive.add("${_fname}*")
                                 }
-                                archiveArtifacts artifacts: "${osname}.*.out*"
                             }
                         }
                     }
