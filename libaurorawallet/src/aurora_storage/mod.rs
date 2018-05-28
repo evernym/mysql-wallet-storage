@@ -22,6 +22,7 @@ fn default_false() -> bool {
 
 #[derive(Deserialize)]
 pub struct FetchOptions {
+    #[allow(dead_code)]
     #[serde(default="default_false", rename="retrieveType")]
     retrieve_type: bool,
 
