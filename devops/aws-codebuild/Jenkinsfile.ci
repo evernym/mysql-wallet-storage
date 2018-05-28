@@ -69,7 +69,7 @@ pipelineWrapper({
                         def artDir = awsCBHelper.buildCtx.projects[prTag]?.artifactsDir
 
                         if (artDir) {
-                            dir(artDir) {
+                            dir("$artDir/logs") {
                                 files = utils.shStdout("ls").tokenize()
                                 if (files) {
                                     files.each {
