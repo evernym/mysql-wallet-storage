@@ -48,7 +48,7 @@ DOCKER_NAME ?= evernym/aurora-wallet
 DOCKER_TAG ?=
 EXPORT_ENV += OSNAME RELEASE CARGO_TARGET_DIR CRATE_P_VERSION CARGO_LOGIN_TOKEN
 
-.PHONY: all test_dry test build pre_package clean
+.PHONY: all rust_version test_dry test build pre_package clean
 
 all: test_dry test package
 
@@ -72,23 +72,27 @@ CI_IMAGE_BASED_TARGETS = test_dry test build $(LIBS) package publish_crate clean
 
 $(patsubst %,image_%, $(CI_IMAGE_BASED_TARGETS)): image_ci
 
-test_dry: $(SRC_DIR)
-	echo "Running tests in dry mode (compile, but don't run tests)"
+
+rust_version:
+	cargo --version
 	rustc --version
+
+test_dry: $(SRC_DIR) rust_version
+	echo "Running tests in dry mode (compile, but don't run tests)"
 	cd $< && cargo clean && RUST_TEST_THREADS=1 RUST_BACKTRACE=1 cargo test $(CARGO_FLAGS) --no-run
 
-test: $(SRC_DIR)
+test: $(SRC_DIR) rust_version
 	echo "Running tests"
 	cd $< && cargo clean && RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test $(CARGO_FLAGS)
 
-build $(LIBS): $(SRC_DIR)
+build $(LIBS): $(SRC_DIR) rust_version
 	echo "Compiling the project"
 	cd $< && cargo clean && cargo build $(CARGO_FLAGS)
 
 pre_package: $(LIB_DYNAMIC)
 	rm -f $(LIB_TARGET_DIR)/$(LIBNAME)*$(SRC_VERSION)*.$(FPM_P_OUTPUT_TYPE)
 
-publish_crate: $(SRC_DIR)
+publish_crate: $(SRC_DIR) rust_version
 	echo "Publishing crate"
 ifneq ($(CARGO_LOGIN_TOKEN),)
 	cargo login $(CARGO_LOGIN_TOKEN)
