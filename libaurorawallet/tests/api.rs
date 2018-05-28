@@ -642,42 +642,41 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
     }
 
-//    # TODO change when enabling CLIENT_FOUND_ROWS
-//    #[test]
-//    fn test_add_duplicate_record_tags() {
-//        let handle = open_storage();
-//
-//        let type_ = CString::new("type1").unwrap();
-//        let id = CString::new(random_name()).unwrap();
-//        let value = vec![1, 2, 3, 4];
-//
-//        let tags_json_empty = CString::new(r##"{}"##).unwrap();
-//        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json_empty.as_ptr());
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
-//        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let mut record_handle = -1;
-//        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
-//        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let mut tags_json_p: *const c_char = ptr::null_mut();
-//        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
-//        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
-//        assert_eq!(tags_map, expected_tags_map);
-//
-//        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
-//        assert_eq!(err, ErrorCode::Success);
-//    }
+    #[test]
+    fn test_add_duplicate_record_tags() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+
+        let tags_json_empty = CString::new(r##"{}"##).unwrap();
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json_empty.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut record_handle = -1;
+        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut tags_json_p: *const c_char = ptr::null_mut();
+        let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
+        assert_eq!(err, ErrorCode::Success);
+
+        let expected_tags_map: HashMap<String, serde_json::Value> = serde_json::from_slice(tags_json.as_bytes()).unwrap();
+        let tags_map: HashMap<String, serde_json::Value> = serde_json::from_str(unsafe { CStr::from_ptr(tags_json_p) }.to_str().unwrap()).unwrap();
+        assert_eq!(tags_map, expected_tags_map);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
 
     #[test]
     fn test_add_tags_for_invalid_handle() {
@@ -798,52 +797,49 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
     }
 
-//    # TODO CLIENT_FOUND_ROWS
-//    #[test]
-//    fn test_delete_unknown_tags() {
-//        let handle = open_storage();
-//
-//        let type_ = CString::new("type1").unwrap();
-//        let id = CString::new(random_name()).unwrap();
-//        let value = vec![1, 2, 3, 4];
-//        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
-//
-//        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let tag_names = CString::new(r##"["tag11", "tag22", "~tag33"]"##).unwrap();
-//        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-//        assert_eq!(err, ErrorCode::Success);
-//
-//        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
-//        assert_eq!(err, ErrorCode::Success);
-//    }
+    #[test]
+    fn test_delete_unknown_tags() {
+        let handle = open_storage();
 
-//    # TODO CLIENT_FOUND_ROWS
-//    #[test]
-//    fn test_delete_tags_for_unknown_record() {
-//        let handle = open_storage();
-//
-//        let type_ = CString::new("type1").unwrap();
-//        let id = CString::new(random_name()).unwrap();
-//        let tag_names = CString::new(r##"["tag1", "tag2", "~tag3"]"##).unwrap();
-//
-//        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-//        assert_eq!(err, ErrorCode::WalletNotFoundError);
-//    }
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
 
-//    # TODO CLIENT_FOUND_ROWS
-//    #[test]
-//    fn test_delete_unknown_tags_invalid_handle() {
-//        let handle = -1;
-//
-//        let type_ = CString::new("type1").unwrap();
-//        let id = CString::new(random_name()).unwrap();
-//
-//        let tag_names = CString::new(r##"["tag11", "tag22", "~tag33"]"##).unwrap();
-//        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-//        assert_eq!(err, ErrorCode::InvalidState);
-//    }
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let tag_names = CString::new(r##"["tag11", "tag22", "~tag33"]"##).unwrap();
+        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_delete_tags_for_unknown_record() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let tag_names = CString::new(r##"["tag1", "tag2", "~tag3"]"##).unwrap();
+
+        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
+    }
+
+    #[test]
+    fn test_delete_unknown_tags_invalid_handle() {
+        let handle = -1;
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+
+        let tag_names = CString::new(r##"["tag11", "tag22", "~tag33"]"##).unwrap();
+        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidState);
+    }
 
     #[test]
     fn test_set_get_metadata() {
