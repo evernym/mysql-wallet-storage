@@ -64,15 +64,26 @@ pipelineWrapper({
                         ]
                     }
                 } finally {
-                    def _buildCtx = awsCBHelper.buildCtx.projects[prTag] ?: [:]
-                    if (_buildCtx?.artifactsDir) {
-                        stage("$osname: Archive artifacts") {
-                            utils.archiveArtifacts("${_buildCtx.artifactsDir}/logs", '*.out') { fpath, toArchive ->
-                                def _fpath = "${fpath}.${osname}"
-                                sh "mv '${fpath}' '$_fpath'"
-                                utils.truncateFile(_fpath, "${_fpath}.tail")
-                                toArchive.add("${_fpath}*")
+                    stage("$osname: Archive artifacts") {
+                        def files = []
+                        def artDir = awsCBHelper.buildCtx.projects[prTag]?.artifactsDir
+
+                        if (artDir) {
+                            dir(artDir) {
+                                files = utils.shStdout("ls").tokenize()
+                                if (files) {
+                                    files.each {
+                                        def fname = "${osname}.${it}"
+                                        sh "mv '${it}' '$fname'"
+                                        utils.truncateFile(fname, "${fname}.tail")
+                                    }
+                                    archiveArtifacts artifacts: "*"
+                                }
                             }
+                        }
+
+                        if (!files) {
+                            logger.info("No artifacts found")
                         }
                     }
                 }
