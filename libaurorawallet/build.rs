@@ -11,7 +11,7 @@ fn main() {
         let profile = env::var("PROFILE").unwrap();
         println!("profile={}", profile);
 
-        let indy_dir = env::var("INDY_DIR").unwrap_or(format!("..\\libindy\\target\\{}", profile));
+        let indy_dir = env::var("INDY_DIR").unwrap_or(format!("..\\..\\indy-sdk\\libindy\\target\\{}", profile));
         println!("indy_dir={}", indy_dir);
         let indy_dir = Path::new(indy_dir.as_str());
 
