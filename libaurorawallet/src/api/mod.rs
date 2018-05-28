@@ -25,6 +25,7 @@ macro_rules! c_char_to_str {
 
 #[derive(Deserialize)]
 struct StorageConfig {
+    db_name: String,
     read_host: String,
     write_host: String,
     port: u16,
@@ -48,7 +49,7 @@ pub extern "C" fn create_storage(name: *const c_char, config: *const c_char, cre
     let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidStructure);
     let metadata = c_char_to_str!(metadata);
 
-    let write_connection_string = format!("mysql://{}:{}@{}:{}/wallet", credentials.user, credentials.pass, config.write_host, config.port);
+    let write_connection_string = format!("mysql://{}:{}@{}:{}/{}", credentials.user, credentials.pass, config.write_host, config.port, config.db_name);
 
     let write_pool = check_option!(CONNECTIONS.get(&write_connection_string), ErrorCode::IOError);
 
@@ -63,7 +64,7 @@ pub extern "C" fn delete_storage(name: *const c_char, config: *const c_char, cre
     let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidStructure);
     let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidStructure);
 
-    let write_connection_string = format!("mysql://{}:{}@{}:{}/wallet", credentials.user, credentials.pass, config.write_host, config.port);
+    let write_connection_string = format!("mysql://{}:{}@{}:{}/{}", credentials.user, credentials.pass, config.write_host, config.port, config.db_name);
 
     let write_pool = check_option!(CONNECTIONS.get(&write_connection_string), ErrorCode::IOError);
 
@@ -82,8 +83,8 @@ pub extern "C" fn open_storage(name: *const c_char, config: *const c_char, _runt
     let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidStructure);
     let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidStructure);
 
-    let read_connection_string = format!("mysql://{}:{}@{}:{}/wallet", credentials.user, credentials.pass, config.read_host, config.port);
-    let write_connection_string = format!("mysql://{}:{}@{}:{}/wallet", credentials.user, credentials.pass, config.write_host, config.port);
+    let read_connection_string = format!("mysql://{}:{}@{}:{}/{}", credentials.user, credentials.pass, config.read_host, config.port, config.db_name);
+    let write_connection_string = format!("mysql://{}:{}@{}:{}/{}", credentials.user, credentials.pass, config.write_host, config.port, config.db_name);
 
     let read_pool = check_option!(CONNECTIONS.get(&read_connection_string), ErrorCode::IOError);
     let write_pool = check_option!(CONNECTIONS.get(&write_connection_string), ErrorCode::IOError);
