@@ -74,6 +74,7 @@ $(patsubst %,image_%, $(CI_IMAGE_BASED_TARGETS)): image_ci
 
 test_dry: $(SRC_DIR)
 	echo "Running tests in dry mode (compile, but don't run tests)"
+	rustc --version
 	cd $< && cargo clean && RUST_TEST_THREADS=1 RUST_BACKTRACE=1 cargo test $(CARGO_FLAGS) --no-run
 
 test: $(SRC_DIR)

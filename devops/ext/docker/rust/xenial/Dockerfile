@@ -3,7 +3,7 @@ FROM evernym/base:0.1.0-xenial
 
 ARG RUST_VERSION
 
-ENV RUST_VERSION=${RUST_VERSION:-1.25.0}
+ENV RUST_VERSION=${RUST_VERSION:-1.26.0}
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
@@ -15,4 +15,4 @@ RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path --default-tool
 
 # TODO CMD ENTRYPOINT ...
 
-ENV RUST_ENV_VERSION=0.1.0
+ENV RUST_ENV_VERSION=0.2.0
