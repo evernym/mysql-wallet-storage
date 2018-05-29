@@ -93,19 +93,21 @@ pipelineWrapper({
                         utils.truncateFile(it.path, "${it.path}.tail")
                     }
                 }
+            }
+        }
 
-                this.stage('Upload deb to Evernym repo') {
-                    evernymRepo.upload {
-                        repoDistr = 'agency_dev'
-                        packagePath = "$packageName*$debPVersion*.deb"
-                    }
-
-                    notifier.email {
-                        subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb v.$debPVersion was published"
-                        body = ("New debian package v.$debPVersion was built and published" +
-                            '\n\nCheck console output at $BUILD_URL to view the results.')
-                    }
+        stage('Upload deb to Evernym repo') {
+            dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}") {
+                evernymRepo.upload {
+                    repoDistr = 'agency_dev'
+                    delegate.packagePath = "$packageName*$debPVersion*.deb"
                 }
+            }
+
+            notifier.email {
+                subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb v.$debPVersion was published"
+                body = ("New debian package v.$debPVersion was built and published" +
+                    '\n\nCheck console output at $BUILD_URL to view the results.')
             }
         }
 
