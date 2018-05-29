@@ -1,7 +1,6 @@
 SHELL := /bin/bash
 
 # TODO
-# 	- fail in case of grep fail for set_docker_img_ver
 # 	- more fpm arguments
 #	- package-static with libname.a
 
@@ -18,7 +17,7 @@ SRC_VERSION ?= 0.1.0
 PRE_PACKAGE_GOALS ?=
 
 # TODO rename the variable, it's more generic than just getting image version
-docker_img_version = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
+docker_env_value = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
 
 # required for in-docker targets
 DOCKER_NAME ?=
@@ -76,14 +75,14 @@ package: _check_fpm_args $(PRE_PACKAGE_GOALS)
 # build oreder: https://github.com/docker/compose/issues/5228
 image_base:
 ifeq ($(BASE_DOCKER_VERSION),)
-	$(eval BASE_DOCKER_VERSION=$(call docker_img_version,'BASE_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/base/$(OSNAME)/Dockerfile))
+	$(eval BASE_DOCKER_VERSION=$(call docker_env_value,'BASE_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/base/$(OSNAME)/Dockerfile))
 endif
 	BASE_DOCKER_TAG_PREFIX=$(BASE_DOCKER_VERSION)- \
 		docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build base
 
 image_rust: image_base
 ifeq ($(RUST_DOCKER_VERSION),)
-	$(eval RUST_DOCKER_VERSION=$(call docker_img_version,'RUST_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/rust/$(OSNAME)/Dockerfile))
+	$(eval RUST_DOCKER_VERSION=$(call docker_env_value,'RUST_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/rust/$(OSNAME)/Dockerfile))
 endif
 	RUST_DOCKER_TAG_PREFIX=$(RUST_DOCKER_VERSION)- \
 		docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build rust

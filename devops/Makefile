@@ -57,11 +57,11 @@ include ext/Makefile
 export OSNAME
 
 image_ci_version:
-	echo $(call docker_img_version,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)
+	echo $(call docker_env_value,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)
 
 image_ci: image_rust
 ifeq ($(DOCKER_TAG),)
-	$(eval DOCKER_TAG=$(call docker_img_version,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)-$(OSNAME)-ci)
+	$(eval DOCKER_TAG=$(call docker_env_value,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)-$(OSNAME)-ci)
 endif
 	OSNAME=$(OSNAME) \
 	CI_DOCKER_NAME=$(DOCKER_NAME) \
@@ -71,7 +71,6 @@ endif
 CI_IMAGE_BASED_TARGETS = test_dry test build $(LIBS) package publish_crate clean
 
 $(patsubst %,image_%, $(CI_IMAGE_BASED_TARGETS)): image_ci
-
 
 rust_version:
 	cargo --version
