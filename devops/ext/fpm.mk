@@ -20,8 +20,9 @@ ifdef FPM_P_NAME
 FPM_ARGS += --name $(FPM_P_NAME)
 endif
 
-FPM_P_VERSION ?= $(SRC_VERSION)
+ifdef FPM_P_VERSION
 FPM_ARGS += --version $(FPM_P_VERSION)
+endif
 
 ifdef FPM_P_DEPENDS
 FPM_ARGS += $(patsubst %,--depends "%", $(FPM_P_DEPENDS))

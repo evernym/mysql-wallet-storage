@@ -12,11 +12,8 @@ endif
 
 # TODO make it as Simply expanded variables (":=")
 PROJECT_NAME ?= $(notdir $(PROJECT_DIR))
-# TODO not sure that it is needed, used only in fpm.mk
-SRC_VERSION ?= 0.1.0
 PRE_PACKAGE_GOALS ?=
 
-# TODO rename the variable, it's more generic than just getting image version
 docker_env_value = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
 
 # required for in-docker targets
@@ -55,7 +52,7 @@ FPM = fpm
 
 # list of conditionally (using '?=') defined variables that
 # should be passed to in-docker re-run
-EXPORT_ENV += OSNAME PROJECT_NAME SRC_VERSION
+EXPORT_ENV += OSNAME PROJECT_NAME
 
 export $(EXPORT_ENV)
 
