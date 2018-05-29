@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS `items` (
     `type` VARCHAR(64) NOT NULL,
     `name` VARCHAR(1024) NOT NULL,
     `value` LONGBLOB NOT NULL,
-    `tags` JSON,
+    `tags` JSON NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `ux_items_wallet_id_type_name` (`wallet_id`, `type`, `name`),
     CONSTRAINT `fk_items_wallet_id` FOREIGN KEY (`wallet_id`)
