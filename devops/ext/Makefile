@@ -92,7 +92,7 @@ endif
 	$(DOCKER) run --rm -t -u $(DOCKER_UID) \
 		-v $(PROJECT_DIR):/tmp/$(PROJECT_NAME) \
 		$(DOCKER_NAME):$(DOCKER_TAG) \
-		/bin/bash -c \
+		/bin/bash -cl \
 			'MAKEFLAGS="$(MAKEFLAGS)" $(foreach var,$(EXPORT_ENV),$(var)="$($(var))") \
 			$(MAKE) -C /tmp/$(PROJECT_NAME)/$(ROOT_MK_REL_DIR) -f $(ROOT_MK_REL_PATH) $*'
 
