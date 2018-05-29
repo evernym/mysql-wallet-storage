@@ -4,11 +4,16 @@ This folder provides makefile based API to help with devops tasks automation. Ta
 - [Makefile](Makefile) defines pattern rule `%_in_docker` to run any target inside docker container and provides a set of other generally useful targets
 - [docker](docker) folder holds docker related routine
 
+## Requirements
+
+- make
+- docker
+- docker-compose
 
 ## Docker
 
 This module provides a set of dockerfiles based on ubuntu `xenial` and `centos7`. They have an hierarchy:
-- `base` docker image includes generally useful packages and `fpm` along with `rvm` and `ruby` as well. Notes:
+- `base` docker image includes generally useful packages and `fpm` along with `rvm` and `ruby`. Notes:
   - consider to use shell in login mode if you need `fpm` (`rvm` and `ruby`) available in the `$PATH`
   - consider to add all non-root users that will be using rvm to `rvm` group
 - `rust` docker image is based on the `base` image and adds `rust`. Supported arguments:
@@ -16,15 +21,9 @@ This module provides a set of dockerfiles based on ubuntu `xenial` and `centos7`
 
 ## Makefile
 
-### Requirements
-
-- make
-- docker
-- docker-compose
-
 ### Targets
 
-- `%_in_docker` re-runs make for the matched target in docker `$(DOCKER_NAME):$(DOCKER_TAG)`. Requires target `image_%` to be defined and expects that it builds necessary docker image. Environment variables `DOCKER_NAME` and `DOCKER_TAG` should be defined as well
+- `%_in_docker` re-runs make for the matched target `%` inside `$(DOCKER_NAME):$(DOCKER_TAG)` docker image. Requires target `image_%` to be defined and expects that it builds necessary docker image. Environment variables `DOCKER_NAME` and `DOCKER_TAG` should be defined as well
 - `package` creates a package from the source code using [fpm][a1feb9f1] tool. Could be configured by `FPM_*` environment variables
 - `image_base` builds docker image with generally useful packages and `fpm` installed
 - `image_rust` builds docker image with `rust` installed
@@ -58,7 +57,7 @@ Variables to config packaing using [fpm][a1feb9f1] tool:
   - `FPM_P_LICENSE`: value for fpm's `--license` option. Default: not set
   - `FPM_P_DESCRIPTION`: value for fpm's `--description` option. Default: not set
   - `FPM_ARGS`: string with any fpm arguments to add to the end of the fpm command line. Default: not set
-  - ... (please refer to [fpm.mk](ext/fpm.mk) for more details about fpm related environment variables)
+  - ... (please refer to [fpm.mk](fpm.mk) for more details about fpm related environment variables)
 
   [3c28cd3e]: https://github.com/jordansissel/fpm/wiki "fpm wiki"
 
