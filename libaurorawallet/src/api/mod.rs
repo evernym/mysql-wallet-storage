@@ -249,6 +249,7 @@ pub extern "C" fn search_records(storage_handle: i32, type_p: *const c_char, que
     storage.search_records(type_, query_json, options_json, search_handle_p)
 }
 
+#[no_mangle]
 pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut i32) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 

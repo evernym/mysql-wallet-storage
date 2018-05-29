@@ -80,7 +80,7 @@ mod chaned_perf_test {
     }
 
     const THREAD_CNT: u64 = 1;
-    const OPERATIONS_CNT: u64 = 10000;
+    const OPERATIONS_CNT: u64 = 2000;
     const ITEM_TYPE: &'static str = "demo-type";
 
     ///
@@ -451,6 +451,10 @@ mod chaned_perf_test {
         }
 
         let total_execution_time = start_time.elapsed();
+        let mut total_execution_time_in_secs = total_execution_time.as_secs();
+        if total_execution_time_in_secs == 0 {
+            total_execution_time_in_secs = 1;
+        }
 
         let mut max_execution_time = Duration::from_secs(0);
         let mut sum_execution_time = Duration::from_secs(0);
@@ -465,7 +469,7 @@ mod chaned_perf_test {
                      Sum of Exection times:   \t{:?}\n\
                      Total Duration:          \t{:?}\n\
                      Aprox TPS:               \t{:?}",
-                 max_execution_time, THREAD_CNT * OPERATIONS_CNT, sum_execution_time, total_execution_time, ((OPERATIONS_CNT * THREAD_CNT) / total_execution_time.as_secs())
+                 max_execution_time, THREAD_CNT * OPERATIONS_CNT, sum_execution_time, total_execution_time, ((OPERATIONS_CNT * THREAD_CNT) / total_execution_time_in_secs)
         );
     }
 
