@@ -39,51 +39,34 @@ pipelineWrapper({
                     logger.info("CI docker image tag: $ciImageTag")
                 }
 
-                try {
-                    awsCBHelper.build() {
-                        projectTag = prTag
+                awsCBHelper.build() {
+                    projectTag = prTag
 
-                        // env and build spec
-                        imageTag = ciImageTag
-                        buildspec = 'devops/aws-codebuild/buildspec.yml'
-                        envv = [
-                            [name: 'OSNAME', value: "$osname"],
-                            [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-                        ]
+                    // env and build spec
+                    imageTag = ciImageTag
+                    buildspec = 'devops/aws-codebuild/buildspec.yml'
+                    envv = [
+                        [name: 'OSNAME', value: "$osname"],
+                        [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
+                    ]
 
-                        // build spec for env image
-                        envBuildSrc = ['devops'] // TODO make more accurate
-                        envBuildCmds = [
-                            'export PROJECT_DIR=$PWD',
-                            'make -C devops image_ci'
-                        ]
-                        envBuildEnvv = [
-                            [name: 'OSNAME', value: "$osname"],
-                            [name: 'DOCKER_NAME', value: "$awsCBHelper.buildCtx.projectName"],
-                            [name: 'DOCKER_TAG', value: "$ciImageTag"],
-                        ]
-                    }
-                } finally {
-                    stage("$osname: Archive artifacts") {
-                        def files = []
-                        def artDir = awsCBHelper.buildCtx.projects[prTag]?.artifactsDir
+                    // build spec for env image
+                    envBuildSrc = ['devops'] // TODO make more accurate
+                    envBuildCmds = [
+                        'export PROJECT_DIR=$PWD',
+                        'make -C devops image_ci'
+                    ]
+                    envBuildEnvv = [
+                        [name: 'OSNAME', value: "$osname"],
+                        [name: 'DOCKER_NAME', value: "$awsCBHelper.buildCtx.projectName"],
+                        [name: 'DOCKER_TAG', value: "$ciImageTag"],
+                    ]
 
-                        if (artDir) {
-                            dir("$artDir/logs") {
-                                files = utils.shStdout("ls").tokenize()
-                                if (files) {
-                                    files.each {
-                                        def fname = "${osname}.${it}"
-                                        sh "mv '${it}' '$fname'"
-                                        utils.truncateFile(fname, "${fname}.tail")
-                                    }
-                                    archiveArtifacts artifacts: "*"
-                                }
+                    onArtifacts = {
+                        stage("$osname: Archive artifacts") {
+                            utils.archiveArtifacts("logs/*.out*", true) {
+                                utils.truncateFile(it, "${it}.tail")
                             }
-                        }
-
-                        if (!files) {
-                            logger.info("No artifacts found")
                         }
                     }
                 }
