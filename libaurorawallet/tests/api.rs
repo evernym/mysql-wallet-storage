@@ -52,6 +52,18 @@ mod high_casees {
         CString::new(serde_json::to_string(&map).unwrap()).unwrap()
     }
 
+    fn search_options(retrieve_records: bool, retrieve_total_count: bool, retrieve_type: bool, retrieve_value: bool, retrieve_tags: bool) -> CString {
+        let mut map = HashMap::new();
+
+        map.insert("retrieveRecords", retrieve_records);
+        map.insert("retrieveTotalCount", retrieve_total_count);
+        map.insert("retrieveType", retrieve_type);
+        map.insert("retrieveValue", retrieve_value);
+        map.insert("retrieveTags", retrieve_tags);
+
+        CString::new(serde_json::to_string(&map).unwrap()).unwrap()
+    }
+
     /** Storage CREATE and DELETE Tests */
 
     #[test]
@@ -249,7 +261,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
         let value = vec![1, 2, 3, 4];
         let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let options_json = fetch_options(true, true);
         let mut record_handle = -1;
         let mut id_p: *const c_char = ptr::null_mut();
         let mut value_p: *const u8 = ptr::null_mut();
@@ -720,7 +732,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let mut record_handle = -1;
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": false}"##).unwrap();
+        let options_json = fetch_options(true, false);
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
@@ -751,7 +763,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let mut record_handle = -1;
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": false}"##).unwrap();
+        let options_json = fetch_options(true, false);
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
@@ -808,7 +820,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let mut record_handle = -1;
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let options_json = fetch_options(true, true);
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
@@ -883,7 +895,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let mut record_handle = -1;
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let options_json = fetch_options(true, true);
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
@@ -942,7 +954,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let mut record_handle = -1;
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let options_json = fetch_options(true, true);
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
@@ -1040,7 +1052,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let mut record_handle = -1;
-        let options_json = CString::new(r##"{"retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let options_json = fetch_options(true, true);
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::Success);
 
@@ -1167,10 +1179,11 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
     }
 
-     /** Search Record Tests */
+    /** Search Record Tests */
 
     #[test]
     fn test_search_records() {
+
         let handle = open_storage();
 
         let type_ = CString::new(random_name()).unwrap();
@@ -1202,12 +1215,17 @@ mod high_casees {
         let query_json = serde_json::to_string(&query_json).unwrap();
         let query_json = CString::new(query_json).unwrap();
 
-        let options_json = CString::new(r##"{"retrieveType": false, "retrieveValue": true, "retrieveTags": true, "retrieveRecords": true}"##).unwrap();
+        let options_json = search_options(true, true, false, true, true);
 
         let mut search_handle: i32 = -1;
 
         let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
         assert_eq!(err, ErrorCode::Success);
+
+        let mut total_count = 0;
+        let err = api::get_search_total_count(handle, search_handle, &mut total_count);
+        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(total_count, 1);
 
         let mut record_handle = -1;
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
@@ -1260,14 +1278,14 @@ mod high_casees {
     }
 
     #[test]
-    fn test_search_records_number_of_records() {
+    fn test_search_records_number_of_records_with_count_only_count() {
 
-        let num_of_records: i32 = 5;
+        let num_of_records = 5;
 
         let handle = open_storage();
         let mut record_ids: Vec<CString> = Vec::new();
 
-        let type_ = CString::new("type_test_search_records_number_of_records").unwrap();
+        let type_ = CString::new("type_test_search_records_number_of_records_only_count").unwrap();
 
         // -- Add records --
         for _i in 0..num_of_records {
@@ -1295,15 +1313,152 @@ mod high_casees {
         let query_json = serde_json::to_string(&query_json).unwrap();
         let query_json = CString::new(query_json).unwrap();
 
-        let options_json = CString::new(r##"{"retirieveType": true, "retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let options_json = search_options(false, true, true, true, true);
 
         let mut search_handle: i32 = -1;
-
         let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
         assert_eq!(err, ErrorCode::Success);
 
-        let mut record_handle = -1;
+        let mut total_count = 0;
+        let err = api::get_search_total_count(handle, search_handle, &mut total_count);
+        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(total_count, num_of_records);
 
+        let mut record_handle = -1;
+        for _i in 0..num_of_records {
+            let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+            assert_eq!(err, ErrorCode::InvalidState);
+        }
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::InvalidState);
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::InvalidState);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        for id in record_ids {
+            let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+        }
+    }
+    #[test]
+    fn test_search_records_number_of_records_with_count() {
+
+        let num_of_records = 5;
+
+        let handle = open_storage();
+        let mut record_ids: Vec<CString> = Vec::new();
+
+        let type_ = CString::new("type_test_search_records_number_of_records_with_count").unwrap();
+
+        // -- Add records --
+        for _i in 0..num_of_records {
+            let id = CString::new(random_name()).unwrap();
+            let value = vec![1, 2, 3, 4];
+            let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+
+            let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+
+            record_ids.push(id);
+        }
+
+        // -- Search Records --
+        let query_json = json!({
+            "tag1": "value1",
+            "tag2": "value2",
+            "~tag3": "value3",
+            "$not": {
+                "tag1": "value11",
+                "tag2": "value22",
+                "~tag3": "value33",
+            }
+        });
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+
+        let options_json = search_options(true, true, true, true, true);
+
+        let mut search_handle: i32 = -1;
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut total_count = 0;
+        let err = api::get_search_total_count(handle, search_handle, &mut total_count);
+        assert_eq!(err, ErrorCode::Success);
+        assert_eq!(total_count, num_of_records);
+
+        let mut record_handle = -1;
+        for _i in 0..num_of_records {
+            let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+            assert_eq!(err, ErrorCode::Success);
+        }
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
+
+        let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::WalletNotFoundError);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        for id in record_ids {
+            let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+        }
+    }
+
+    #[test]
+    fn test_search_records_number_of_records_without_count() {
+
+        let num_of_records = 5;
+
+        let handle = open_storage();
+        let mut record_ids: Vec<CString> = Vec::new();
+
+        let type_ = CString::new("type_test_search_records_number_of_records_without_count").unwrap();
+
+        // -- Add records --
+        for _i in 0..num_of_records {
+            let id = CString::new(random_name()).unwrap();
+            let value = vec![1, 2, 3, 4];
+            let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+
+            let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+            assert_eq!(err, ErrorCode::Success);
+
+            record_ids.push(id);
+        }
+
+        // -- Search Records --
+        let query_json = json!({
+            "tag1": "value1",
+            "tag2": "value2",
+            "~tag3": "value3",
+            "$not": {
+                "tag1": "value11",
+                "tag2": "value22",
+                "~tag3": "value33",
+            }
+        });
+        let query_json = serde_json::to_string(&query_json).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+
+        let options_json = search_options(true, false, true, true, true);
+
+        let mut search_handle: i32 = -1;
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let mut total_count = 0;
+        let err = api::get_search_total_count(handle, search_handle, &mut total_count);
+        assert_eq!(err, ErrorCode::InvalidState);
+
+        let mut record_handle = -1;
         for _i in 0..num_of_records {
             let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
             assert_eq!(err, ErrorCode::Success);
