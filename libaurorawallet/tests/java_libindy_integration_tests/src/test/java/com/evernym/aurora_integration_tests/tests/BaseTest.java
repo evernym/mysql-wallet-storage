@@ -1,4 +1,11 @@
+package com.evernym.aurora_integration_tests.tests;
+
+import com.evernym.aurora_integration_tests.main.AuroraPluggableStorage;
+import org.testng.annotations.BeforeSuite;
+
 public class BaseTest {
+
+    protected String TYPE = "aurora";
 
     protected static final String POOL = "Pool1";
 
@@ -14,5 +21,10 @@ public class BaseTest {
             "        \"pass\": \"wallet\"" +
             "    }" +
             "}";
+
+    @BeforeSuite(alwaysRun = true)
+    public void init() {
+        AuroraPluggableStorage.api.aurora_storage_init();
+    }
 
 }
