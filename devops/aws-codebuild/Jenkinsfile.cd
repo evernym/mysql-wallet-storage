@@ -98,16 +98,21 @@ pipelineWrapper({
         }
 
         stage('Upload deb to Evernym repo') {
+            String debName
+
             dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}") {
+                debName = utils.shStdout("ls $packageName*$debPVersion*.deb")
+
+                logger.info("Uploading debian package '$debName' to evernym repo")
                 evernymRepo.upload {
                     repoDistr = 'agency_dev'
-                    delegate.packagePath = "$packageName*$debPVersion*.deb"
+                    packagePath = debName
                 }
             }
 
             notifier.email {
-                subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb v.$debPVersion was published"
-                body = ("New debian package v.$debPVersion was built and published" +
+                subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb '$debName' was published"
+                body = ("New debian package '$debName' was built and published" +
                     '\n\nCheck console output at $BUILD_URL to view the results.')
             }
         }
