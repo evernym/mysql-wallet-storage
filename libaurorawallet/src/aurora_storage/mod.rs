@@ -314,7 +314,7 @@ impl<'a> AuroraStorage<'a> {
                 Err(Error::MySqlError(err)) => {
                     match err.code {
                         1062 => return ErrorCode::RecordAlreadyExists,
-                        3140 => return ErrorCode::InvalidStructure,
+                        3140 => return ErrorCode::InvalidStructure, // Invalid JSON
                         _ => return ErrorCode::IOError,
                     };
                 },
@@ -522,7 +522,7 @@ impl<'a> AuroraStorage<'a> {
     pub fn add_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
 
         if tags.is_empty() {
-            return ErrorCode::InvalidStructure;
+            return ErrorCode::Success;
         }
 
         let mut tag_name_value_paths: Vec<String> = Vec::new();
@@ -556,7 +556,7 @@ impl<'a> AuroraStorage<'a> {
         let result = match result {
             Err(Error::MySqlError(err)) => {
                 match err.code {
-                    1064 => return ErrorCode::InvalidStructure,
+                    1064 => return ErrorCode::InvalidStructure, // Invalid JSON
                     _ => return ErrorCode::IOError,
                 };
             },
@@ -610,7 +610,7 @@ impl<'a> AuroraStorage<'a> {
         let result = match result {
             Err(Error::MySqlError(err)) => {
                 match err.code {
-                    3140 => return ErrorCode::InvalidStructure,
+                    3140 => return ErrorCode::InvalidStructure, // Invalid JSON
                     _ => return ErrorCode::IOError,
                 };
             },
@@ -648,7 +648,7 @@ impl<'a> AuroraStorage<'a> {
     pub fn delete_record_tags(&self, type_: &str, id: &str, tag_names: &Vec<String>) -> ErrorCode {
 
         if tag_names.is_empty() {
-            return ErrorCode::InvalidStructure;
+            return ErrorCode::Success;
         }
 
         let mut tag_name_paths: Vec<String> = Vec::new();
@@ -683,7 +683,7 @@ impl<'a> AuroraStorage<'a> {
         let result = match result {
             Err(Error::MySqlError(err)) => {
                 match err.code {
-                    1064 => return ErrorCode::InvalidStructure,
+                    1064 => return ErrorCode::InvalidStructure, // Invalid JSON
                     _ => return ErrorCode::IOError,
                 };
             },

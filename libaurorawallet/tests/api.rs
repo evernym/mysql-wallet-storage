@@ -857,7 +857,7 @@ mod high_casees {
         assert_eq!(err, ErrorCode::Success);
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json_empty.as_ptr());
-        assert_eq!(err, ErrorCode::InvalidStructure);
+        assert_eq!(err, ErrorCode::Success);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1111,7 +1111,7 @@ mod high_casees {
 
         let tag_names = CString::new("[]").unwrap();
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-        assert_eq!(err, ErrorCode::InvalidStructure);
+        assert_eq!(err, ErrorCode::Success);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
