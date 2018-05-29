@@ -40,6 +40,7 @@ FPM_P_LICENSE := Apache License 2.0
 FPM_P_VENDOR := Evernym
 FPM_P_DESCRIPTION := indy-sdk plugged wallet for AWS Aurora writen in Rust
 FPM_P_NAME = $(LIBNAME)
+FPM_P_VERSION ?= $(SRC_VERSION)
 FPM_P_OUTPUT_DIR = $(LIB_TARGET_DIR)
 FPM_ARGS = $(LIB_DYNAMIC)=/usr/lib/
 
