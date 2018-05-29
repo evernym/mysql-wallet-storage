@@ -64,8 +64,9 @@ pipelineWrapper({
 
                     onArtifacts = {
                         this.stage("$osname: Archive artifacts") {
-                            utils.archiveArtifacts("logs/*.out*", true) {
-                                utils.truncateFile(it.path, "${it.path}.tail")
+                            utils.archiveArtifacts("logs/*.out*") {
+                                truncate = true
+                                allowEmptyArchive = true
                             }
                         }
                     }
