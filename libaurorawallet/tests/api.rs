@@ -52,13 +52,6 @@ mod high_casees {
         CString::new(serde_json::to_string(&map).unwrap()).unwrap()
     }
 
-    /** Storage OPEN Tests */
-
-    #[test]
-    fn test_open() {
-        open_storage();
-    }
-
     /** Storage CREATE and DELETE Tests */
 
     #[test]
@@ -81,6 +74,169 @@ mod high_casees {
 
         let err = api::delete_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_create_bad_config_format() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new("..").unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let metadata = CString::new(random_string(512)).unwrap();
+
+        let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_create_bad_credentials_format() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let credentials = CString::new("...").unwrap();
+        let metadata = CString::new(random_string(512)).unwrap();
+
+        let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_create_bad_data_in_config() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(r#"{"key": "value"}"#).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let metadata = CString::new(random_string(512)).unwrap();
+
+        let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_create_bad_data_in_credentials() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let credentials = CString::new(r#"{"key": "value"}"#).unwrap();
+        let metadata = CString::new(random_string(512)).unwrap();
+
+        let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_delete_invalid_wallet_name() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+
+        let err = api::delete_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidState);
+    }
+
+    #[test]
+    fn test_delete_bad_config_format() {
+        let name = CString::new(random_name()).unwrap();
+        let bad_config = CString::new("..").unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+
+        let err = api::delete_storage(name.as_ptr(), bad_config.as_ptr(), credentials.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_delete_bad_credentials_format() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let bad_credentials = CString::new("..").unwrap();
+
+        let err = api::delete_storage(name.as_ptr(), config.as_ptr(), bad_credentials.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_delete_bad_data_in_config() {
+        let name = CString::new(random_name()).unwrap();
+        let bad_config = CString::new(r#"{"key": "value"}"#).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+
+        let err = api::delete_storage(name.as_ptr(), bad_config.as_ptr(), credentials.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_delete_bad_data_in_credentials() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let bad_credentials = CString::new(r#"{"key": "value"}"#).unwrap();
+
+        let err = api::delete_storage(name.as_ptr(), config.as_ptr(), bad_credentials.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+
+    }
+
+    /** Storage OPEN Tests */
+
+    #[test]
+    fn test_open() {
+        open_storage();
+    }
+
+    #[test]
+    fn test_open_invalid_wallet_name() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let mut handle: i32 = -1;
+
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::InvalidState);
+    }
+
+    #[test]
+    fn test_open_bad_config_format() {
+        let name = CString::new(random_name()).unwrap();
+        let bad_config = CString::new("..").unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let mut handle: i32 = -1;
+
+        let err = api::open_storage(name.as_ptr(), bad_config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_open_bad_credentials_format() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let bad_credentials = CString::new("..").unwrap();
+        let mut handle: i32 = -1;
+
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), bad_credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_open_bad_data_in_config() {
+        let name = CString::new(random_name()).unwrap();
+        let bad_config = CString::new(r#"{"key": "value"}"#).unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let mut handle: i32 = -1;
+
+        let err = api::open_storage(name.as_ptr(), bad_config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_open_bad_data_in_credentials() {
+        let name = CString::new(random_name()).unwrap();
+        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
+        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
+        let bad_credentials = CString::new(r#"{"key": "value"}"#).unwrap();
+        let mut handle: i32 = -1;
+
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), bad_credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+
     }
 
     /** Storage ADD_RECORD, GET_RECORD, DELETE_RECORD Tests */
@@ -509,6 +665,32 @@ mod high_casees {
     }
 
     #[test]
+    fn test_add_record_with_tags_invalid_format() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new("...").unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_add_record_with_tags_invalid_format_1() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##""'''{"key": "value"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
     fn test_delete_unknown() {
         let handle = open_storage();
 
@@ -643,6 +825,45 @@ mod high_casees {
     }
 
     #[test]
+    fn test_add_record_tags_invalid_format() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+
+        let tags_json_empty = CString::new(r##"{}"##).unwrap();
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json_empty.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let tags_json = CString::new(r##"{"'''tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_add_record_tags_empty_tags() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+
+        let tags_json_empty = CString::new(r##"{}"##).unwrap();
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json_empty.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json_empty.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
     fn test_add_duplicate_record_tags() {
         let handle = open_storage();
 
@@ -738,6 +959,45 @@ mod high_casees {
     }
 
     #[test]
+    fn test_update_record_tags_same_value() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_update_record_tags_invalid_format() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let new_tags_json = CString::new("...").unwrap();
+        let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), new_tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
     fn test_update_record_tag_unknown_record() {
         let handle = open_storage();
 
@@ -818,6 +1078,46 @@ mod high_casees {
     }
 
     #[test]
+    fn test_delete_tags_invalid_format_json_parsing_error() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let tag_names = CString::new(r##"["'tag11", "tag22", "~tag33"]"##).unwrap();
+        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_delete_tags_empty_tag_list() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let value = vec![1, 2, 3, 4];
+        let tags_json = CString::new("{}").unwrap();
+
+        let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let tag_names = CString::new("[]").unwrap();
+        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+
+        let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
     fn test_delete_tags_for_unknown_record() {
         let handle = open_storage();
 
@@ -840,6 +1140,8 @@ mod high_casees {
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
         assert_eq!(err, ErrorCode::InvalidState);
     }
+
+    /** Storage METADATA Tests */
 
     #[test]
     fn test_set_get_metadata() {
@@ -946,6 +1248,9 @@ mod high_casees {
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
         assert_eq!(err, ErrorCode::WalletNotFoundError);
 
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
         // -- Delete records
         let err = api::delete_record(handle, type_.as_ptr(), id_1.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -1009,6 +1314,9 @@ mod high_casees {
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
         assert_eq!(err, ErrorCode::WalletNotFoundError);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
 
         for id in record_ids {
             let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
@@ -1473,6 +1781,9 @@ mod high_casees {
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
         assert_eq!(err, ErrorCode::WalletNotFoundError);
 
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
         for id in record_ids {
             let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
             assert_eq!(err, ErrorCode::Success);
@@ -1503,6 +1814,15 @@ mod high_casees {
         let mut record_handle: i32 = -1;
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
+        assert_eq!(err, ErrorCode::InvalidState);
+    }
+
+    #[test]
+    fn free_invalid_search_handle() {
+        let handle = open_storage();
+        let search_handle: i32 = -1;
+
+        let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::InvalidState);
     }
 }

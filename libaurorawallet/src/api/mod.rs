@@ -1,18 +1,13 @@
 use utils::handle_store::HandleStore;
-use utils::multi_pool::{MultiPool, StorageCredentials, StorageConfig};
 use errors::error_code::ErrorCode;
 use aurora_storage::{AuroraStorage};
-use aurora_storage::statement::Statement;
 use libc::c_char;
 use std::ffi::CStr;
 use std::slice;
 use serde_json;
 use std::collections::HashMap;
 
-// TODO
-//  - Move create/open/delete logic from api file into aurora_storage file
-//  - Modify tests to use prepare/cleanup
-//  - Change the way we are connecting to the DB - OptsBuilder /  flag
+// TODO: Modify tests to use prepare/cleanup
 
 macro_rules! c_char_to_str {
     ($x: expr) => {
@@ -25,54 +20,37 @@ macro_rules! c_char_to_str {
 
 lazy_static! {
     static ref STORAGES: HandleStore<AuroraStorage<'static>> = HandleStore::new();
-    static ref CONNECTIONS: MultiPool = MultiPool::new();
 }
 
 #[no_mangle]
 pub extern "C" fn create_storage(name: *const c_char, config: *const c_char, credentials: *const c_char, metadata: *const c_char) -> ErrorCode {
     let name = c_char_to_str!(name);
-    let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidStructure);
-    let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidStructure);
+    let config = c_char_to_str!(config);
+    let credentials = c_char_to_str!(credentials);
     let metadata = c_char_to_str!(metadata);
 
-    let write_pool = check_option!(CONNECTIONS.get(false, &config, &credentials), ErrorCode::IOError);
-
-    check_result!(write_pool.prep_exec(Statement::InsertWallet.as_str(), params!{name, metadata}), ErrorCode::IOError);
-
-    ErrorCode::Success
+    AuroraStorage::create_storage(&name, &config, &credentials, &metadata)
 }
 
 #[no_mangle]
 pub extern "C" fn delete_storage(name: *const c_char, config: *const c_char, credentials: *const c_char) -> ErrorCode {
     let name = c_char_to_str!(name);
-    let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidStructure);
-    let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidStructure);
+    let config = c_char_to_str!(config);
+    let credentials = c_char_to_str!(credentials);
 
-    let write_pool = check_option!(CONNECTIONS.get(false, &config, &credentials), ErrorCode::IOError);
-
-    let result = check_result!(write_pool.prep_exec(Statement::DeleteWallet.as_str(), params!{name}), ErrorCode::IOError);
-
-    if result.affected_rows() != 1 {
-        return ErrorCode::InvalidState;
-    }
-
-    ErrorCode::Success
+    AuroraStorage::delete_storage(&name, &config, &credentials)
 }
 
 #[no_mangle]
 pub extern "C" fn open_storage(name: *const c_char, config: *const c_char, _runtime_config: *const c_char, credentials: *const c_char, handle_p: *mut i32) -> ErrorCode {
     let name = c_char_to_str!(name);
-    let config: StorageConfig = check_result!(serde_json::from_str(c_char_to_str!(config)), ErrorCode::InvalidStructure);
-    let credentials: StorageCredentials = check_result!(serde_json::from_str(c_char_to_str!(credentials)), ErrorCode::InvalidStructure);
+    let config = c_char_to_str!(config);
+    let credentials = c_char_to_str!(credentials);
 
-    let read_pool = check_option!(CONNECTIONS.get(true, &config, &credentials), ErrorCode::IOError);
-    let write_pool = check_option!(CONNECTIONS.get(false, &config, &credentials), ErrorCode::IOError);
-
-    let mut result = check_result!(read_pool.prep_exec(Statement::GetWalletID.as_str(), params!{name}), ErrorCode::IOError);
-    let wallet_id: u64 = check_option!(check_result!(check_option!(result.next(), ErrorCode::InvalidState), ErrorCode::IOError).get(0), ErrorCode::InvalidState);
-
-    let storage = AuroraStorage::new(wallet_id, read_pool, write_pool);
-    let handle = STORAGES.insert(storage);
+    let handle = match AuroraStorage::open_storage(&name, &config, &credentials) {
+        Ok(storage) => STORAGES.insert(storage),
+        Err(err) => return err
+    };
 
     unsafe { *handle_p = handle; }
 

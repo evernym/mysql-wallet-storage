@@ -1,8 +1,6 @@
-pub mod statement;
 mod query_translator;
-
 use utils::handle_store::HandleStore;
-use aurora_storage::statement::Statement;
+use utils::multi_pool::{MultiPool, StorageCredentials, StorageConfig};
 
 use std::sync::{RwLock, Arc};
 use mysql::{Pool, QueryResult, Error};
@@ -17,8 +15,6 @@ fn default_true() -> bool {
 fn default_false() -> bool {
     false
 }
-
-// TODO: Update documentation strings with new error codes
 
 #[derive(Deserialize, Debug)]
 pub struct FetchOptions {
@@ -74,6 +70,10 @@ impl Record {
     }
 }
 
+lazy_static! {
+    static ref CONNECTIONS: MultiPool = MultiPool::new();
+}
+
 pub struct AuroraStorage<'a> {
     wallet_id: u64,
     records: HandleStore<Record>,
@@ -86,6 +86,141 @@ pub struct AuroraStorage<'a> {
 impl<'a> AuroraStorage<'a> {
     pub fn new(wallet_id: u64, read_pool: Arc<Pool>, write_pool: Arc<Pool>) -> Self {
         Self{wallet_id, records: HandleStore::new(), searches: HandleStore::new(), metadata: HandleStore::new(), read_pool, write_pool}
+    }
+
+    ///
+    /// Creates a wallet with the given name in the DB specified in the config.
+    ///
+    /// # Arguments
+    ///
+    ///  * `name` - name of the wallet to be created
+    ///  * `config` - json containing information like db_host, db_port, db_name
+    ///  * `credentials` - json containing information about user and password for db access
+    ///  * `metadata` - additional data that wil be stored along with the wallet
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `InvalidStructure` -  Invalid structure of the JSON arguments -> config | credentials
+    ///  * `WalletAlreadyExistsError` - Wallet with the provided name already exists in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn create_storage(name: &str, config: &str, credentials: &str, metadata: &str) -> ErrorCode {
+
+        let config: StorageConfig = check_result!(serde_json::from_str(config), ErrorCode::InvalidStructure);
+        let credentials: StorageCredentials = check_result!(serde_json::from_str(credentials), ErrorCode::InvalidStructure);
+
+        let write_pool = check_option!(CONNECTIONS.get(false, &config, &credentials), ErrorCode::IOError);
+
+         let result = write_pool.prep_exec(
+                        "INSERT INTO wallets(name, metadata) VALUES (:name, :metadata)",
+                         params!{
+                            name,
+                            metadata
+                         }
+         );
+
+        match result {
+                Err(Error::MySqlError(err)) => {
+                    match err.code {
+                        1062 => return ErrorCode::WalletAlreadyExistsError,
+                        _ => return ErrorCode::IOError,
+                    };
+                },
+                Err(_) => return ErrorCode::IOError,
+                Ok(result) => result,
+        };
+
+        ErrorCode::Success
+    }
+
+    ///
+    /// Opens a wallet with the given name in the DB specified in the config.
+    ///
+    /// # Arguments
+    ///
+    ///  * `name` - name of the wallet to be created
+    ///  * `config` - json containing information like db_host, db_port, db_name
+    ///  * `credentials` - json containing information about user and password for db access
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `InvalidStructure` -  Invalid structure of the JSON arguments -> config | credentials
+    ///  * `InvalidState` - No wallet with the given name found in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn open_storage(name: &str, config: &str, credentials: &str) -> Result<Self, ErrorCode> {
+
+        let config: StorageConfig = check_result!(serde_json::from_str(config), Err(ErrorCode::InvalidStructure));
+        let credentials: StorageCredentials = check_result!(serde_json::from_str(credentials), Err(ErrorCode::InvalidStructure));
+
+        let read_pool = check_option!(CONNECTIONS.get(true, &config, &credentials), Err(ErrorCode::IOError));
+        let write_pool = check_option!(CONNECTIONS.get(false, &config, &credentials), Err(ErrorCode::IOError));
+
+        let mut result = check_result!(
+                            read_pool.prep_exec(
+                                "SELECT id FROM wallets WHERE name = :name",
+                                params!{
+                                    name
+                                 }
+                            ), Err(ErrorCode::IOError)
+        );
+
+        let wallet_id: u64 = check_option!(check_result!(check_option!(result.next(), Err(ErrorCode::InvalidState)), Err(ErrorCode::IOError)).get(0), Err(ErrorCode::InvalidState));
+
+        Ok(AuroraStorage::new(wallet_id, read_pool, write_pool))
+    }
+
+    ///
+    /// Deletes a wallet with the given name in the DB specified in the config.
+    ///
+    /// # Arguments
+    ///
+    ///  * `name` - name of the wallet to be created
+    ///  * `config` - json containing information like db_host, db_port, db_name
+    ///  * `credentials` - json containing information about user and password for db access
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `InvalidStructure` -  Invalid structure of the JSON arguments -> config | credentials
+    ///  * `InvalidState` - Wallet with the provided name does not exist in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
+    pub fn delete_storage(name: &str, config: &str, credentials: &str) -> ErrorCode {
+
+        let config: StorageConfig = check_result!(serde_json::from_str(config), ErrorCode::InvalidStructure);
+        let credentials: StorageCredentials = check_result!(serde_json::from_str(credentials), ErrorCode::InvalidStructure);
+
+        let write_pool = check_option!(CONNECTIONS.get(false, &config, &credentials), ErrorCode::IOError);
+
+        let result = check_result!(
+                        write_pool.prep_exec(
+                            "DELETE FROM wallets WHERE name = :name",
+                             params!{
+                                name
+                             }
+                        ), ErrorCode::IOError
+        );
+
+        if result.affected_rows() != 1 {
+            return ErrorCode::InvalidState;
+        }
+
+        ErrorCode::Success
     }
 
     ///
@@ -102,7 +237,7 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `InvalidRecordHandle` - Provided record handle does not exist
+    ///  * `InvalidState` - Provided record handle does not exist
     ///
     pub fn free_record(&self, record_handle: i32) -> ErrorCode {
         if self.records.remove(record_handle) {
@@ -127,7 +262,7 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `InvalidSearchHandle` - Provided search handle does not exist
+    ///  * `InvalidState` - Provided search handle does not exist
     ///
     pub fn free_search(&self, search_handle: i32) -> ErrorCode {
         if self.searches.remove(search_handle) {
@@ -156,13 +291,14 @@ impl<'a> AuroraStorage<'a> {
     ///
     ///  * `Success` - Execution successful
     ///  * `RecordAlreadExists` - Record with the provided type and id already exist in the DB
+    ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tags
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn add_record(&self, type_: &str, id: &str, value: &Vec<u8>, tags: &str) -> ErrorCode {
 
         let result = {
             self.write_pool.prep_exec(
-                        Statement::InsertRecord.as_str(),
+                        "INSERT INTO items (type, name, value, tags, wallet_id) VALUE (:type, :name, :value, :tags, :wallet_id)",
                         params!{
                             "type" => type_,
                             "name" => id,
@@ -177,13 +313,13 @@ impl<'a> AuroraStorage<'a> {
                 Err(Error::MySqlError(err)) => {
                     match err.code {
                         1062 => return ErrorCode::RecordAlreadyExists,
-                        1406 => return ErrorCode::InvalidStructure,
+                        3140 => return ErrorCode::InvalidStructure,
                         _ => return ErrorCode::IOError,
                     };
                 },
                 Err(_) => return ErrorCode::IOError,
                 Ok(result) => result,
-            };
+        };
 
         ErrorCode::Success
     }
@@ -205,9 +341,10 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> options
+    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
-    ///  * `InvalidEncoding` - Invalid encoding of a provided/fetched string
+    ///  * `InvalidState` - Invalid encoding of a provided/fetched string
     ///
     pub fn fetch_record(&self, type_: &str, id: &str, options: &str, record_handle_p: *mut i32) -> ErrorCode {
         let options: FetchOptions = check_result!(serde_json::from_str(options), ErrorCode::InvalidStructure);
@@ -216,11 +353,12 @@ impl<'a> AuroraStorage<'a> {
 
         if options.retrieve_value | options.retrieve_tags {
             let query = format!(
-                "SELECT {}, {} FROM items i \
-                    WHERE \
-                        wallet_id = :wallet_id \
-                        AND type = :type \
-                        AND name = :name",
+                "SELECT {}, {} \
+                 FROM items i \
+                 WHERE \
+                    wallet_id = :wallet_id \
+                    AND type = :type \
+                    AND name = :name",
                 if options.retrieve_value { "value" } else {"''"},
                 if options.retrieve_tags { "tags" } else {"''"}
             );
@@ -249,7 +387,8 @@ impl<'a> AuroraStorage<'a> {
                 if options.retrieve_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
                 Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
             );
-        } else {
+        }
+        else {
             record = Record::new(
                 check_result!(CString::new(id), ErrorCode::InvalidState),
                 None,
@@ -295,13 +434,13 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn delete_record(&self, type_: &str, id: &str) -> ErrorCode {
         let result: QueryResult = check_result!(
             self.write_pool.prep_exec(
-                Statement::DeleteRecord.as_str(),
+                "DELETE FROM items WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
                 params! {
                     "type" => type_,
                     "name" => id,
@@ -334,13 +473,13 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
+    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn update_record_value(&self, type_: &str, id: &str, value: &Vec<u8>) -> ErrorCode {
         let result: QueryResult = check_result!(
             self.write_pool.prep_exec(
-                Statement::UpdateRecordValue.as_str(),
+                "UPDATE items SET value = :value WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
                     params!{
                         "value" => value,
                         "type" => type_,
@@ -351,29 +490,8 @@ impl<'a> AuroraStorage<'a> {
             ErrorCode::IOError
         );
 
-        // When performing updates MySQL return only the rows it has changed as affected_rows.
-        // If the value provided for the UPDATE is the same as the one already in the DB MySQL will ignore that row.
-        // Code below is checking if the user provided the same value as the one that is in the DB,
-        // or if the record doesn't exist.
         if result.affected_rows() != 1 {
-            let mut result: QueryResult = check_result!(
-                self.read_pool.prep_exec(
-                   Statement::CheckRecordExists.as_str(),
-                     params!{
-                        "type" => type_,
-                        "name" => id,
-                        "wallet_id" => self.wallet_id
-                     }
-                ),
-                ErrorCode::IOError
-            );
-
-            let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
-            let found_rows: u64 = check_option!(row.get(0), ErrorCode::WalletNotFoundError);
-
-            if found_rows != 1 {
-                return ErrorCode::WalletNotFoundError;
-            }
+            return ErrorCode::WalletNotFoundError;
         }
 
         ErrorCode::Success
@@ -396,12 +514,15 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
-    ///  * `TagAlreadyExists` - Provided tag already exists in the DB
-    ///  * `TagDataTooLong` - Provided tag_name or tag_value exceed the size limit
+    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tags
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn add_record_tags(&self, type_: &str, id: &str, tags: &HashMap<String, serde_json::Value>) -> ErrorCode {
+
+        if tags.is_empty() {
+            return ErrorCode::InvalidStructure;
+        }
 
         let mut tag_name_value_paths: Vec<String> = Vec::new();
 
@@ -413,11 +534,11 @@ impl<'a> AuroraStorage<'a> {
         let tag_name_value_paths = tag_name_value_paths.join(",");
 
         let query = format!("UPDATE items \
-                            SET tags = JSON_SET(tags, {}) \
-                            WHERE type = :type \
-                            AND name = :name \
-                            AND wallet_id = :wallet_id",
-                            tag_name_value_paths
+                             SET tags = JSON_SET(tags, {}) \
+                             WHERE type = :type \
+                             AND name = :name \
+                             AND wallet_id = :wallet_id",
+                             tag_name_value_paths
         );
 
         let result = {
@@ -432,7 +553,12 @@ impl<'a> AuroraStorage<'a> {
         };
 
         let result = match result {
-            Err(Error::MySqlError(_)) => return ErrorCode::InvalidStructure,
+            Err(Error::MySqlError(err)) => {
+                match err.code {
+                    1064 => return ErrorCode::InvalidStructure,
+                    _ => return ErrorCode::IOError,
+                };
+            },
             Err(_) => return ErrorCode::IOError,
             Ok(result) => result,
         };
@@ -446,7 +572,8 @@ impl<'a> AuroraStorage<'a> {
 
     ///
     /// Updates tags of a record identified by type and id.
-    /// This function will replace all tags with new.
+    ///
+    /// `WARNING`: Performs a destructive update by replacing old JSON doc with a new one.
     ///
     /// # Arguments
     ///
@@ -461,15 +588,15 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
-    ///  * `UnknownTag` - Tag name specified in the map does not exist in the DB
+    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tags
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn update_record_tags(&self, type_: &str, id: &str, tags: &str) -> ErrorCode {
 
         let result = {
             self.write_pool.prep_exec(
-                        Statement::UpdateTags.as_str(),
+                        "UPDATE items SET tags = :tags WHERE type = :type AND name = :name AND wallet_id = :wallet_id",
                         params!{
                             "tags" => tags,
                             "type" => type_,
@@ -480,7 +607,12 @@ impl<'a> AuroraStorage<'a> {
         };
 
         let result = match result {
-            Err(Error::MySqlError(_)) => return ErrorCode::InvalidStructure,
+            Err(Error::MySqlError(err)) => {
+                match err.code {
+                    3140 => return ErrorCode::InvalidStructure,
+                    _ => return ErrorCode::IOError,
+                };
+            },
             Err(_) => return ErrorCode::IOError,
             Ok(result) => result,
         };
@@ -508,11 +640,15 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `UnknownRecord` - Record with the provided type and id does not exist in the DB
-    ///  * `UnknownTag` - Tag name specified in the list does not exist in the DB
+    ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tag_names
+    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn delete_record_tags(&self, type_: &str, id: &str, tag_names: &Vec<String>) -> ErrorCode {
+
+        if tag_names.is_empty() {
+            return ErrorCode::InvalidStructure;
+        }
 
         let mut tag_name_paths: Vec<String> = Vec::new();
 
@@ -544,7 +680,12 @@ impl<'a> AuroraStorage<'a> {
         };
 
         let result = match result {
-            Err(Error::MySqlError(_)) => return ErrorCode::InvalidStructure,
+            Err(Error::MySqlError(err)) => {
+                match err.code {
+                    1064 => return ErrorCode::InvalidStructure,
+                    _ => return ErrorCode::IOError,
+                };
+            },
             Err(_) => return ErrorCode::IOError,
             Ok(result) => result,
         };
@@ -556,10 +697,24 @@ impl<'a> AuroraStorage<'a> {
         ErrorCode::Success
     }
 
+    ///
+    /// Gets wallet metadata.
+    ///
+    /// # Returns
+    ///
+    ///  * `Result<(Arc<CString>, i32), ErrorCode>` - metadata content or ErrorCode
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `InvalidState` - Invalid encoding of a provided/fetched string
+    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
     pub fn get_metadata(&self) -> Result<(Arc<CString>, i32), ErrorCode> {
         let mut result: QueryResult = check_result!(
             self.read_pool.prep_exec(
-                Statement::GetMetadata.as_str(),
+                "SELECT metadata FROM wallets WHERE id = :wallet_id",
                 params! {
                     "wallet_id" => self.wallet_id,
                 }
@@ -577,10 +732,26 @@ impl<'a> AuroraStorage<'a> {
         Ok((metadata, handle))
     }
 
+    ///
+    /// Sets wallet metadata.
+    ///
+    /// # Arguments
+    ///
+    ///  * `metadata` - metadata to be stored
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///
     pub fn set_metadata(&self, metadata: &str) -> ErrorCode {
         check_result!(
             self.write_pool.prep_exec(
-                Statement::SetMetadata.as_str(),
+                "UPDATE wallets SET metadata = :metadata WHERE id = :wallet_id",
                 params! {
                     "wallet_id" => self.wallet_id,
                     "metadata" => metadata,
@@ -592,6 +763,22 @@ impl<'a> AuroraStorage<'a> {
         ErrorCode::Success
     }
 
+    ///
+    /// Removes a metadata handle, thus removing the referenced object from memory.
+    ///
+    /// # Arguments
+    ///
+    ///  * `metadata_handle` - unique identifier of wallets metadata
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `InvalidState` - Provided metadata handle does not exist
+    ///
     pub fn free_metadata(&self, metadata_handle: i32) -> ErrorCode {
         if self.metadata.remove(metadata_handle) {
             ErrorCode::Success
@@ -638,7 +825,7 @@ impl<'a> AuroraStorage<'a> {
 
         // TODO: implement options.retrieve_total_count
 
-        if !search_options.retrieve_records { // && !search_options.retrieve_total_count {
+        if !search_options.retrieve_records {
             return ErrorCode::InvalidStructure;
         }
 
@@ -676,7 +863,7 @@ impl<'a> AuroraStorage<'a> {
     pub fn search_all_records(&self, search_handle_p: *mut i32) -> ErrorCode {
          let search_result: QueryResult = check_result!(
             self.read_pool.prep_exec(
-                Statement::GetAllRecords.as_str(),
+                "SELECT type, name, value, tags FROM items WHERE wallet_id = :wallet_id",
                 params! {
                     "wallet_id" => self.wallet_id,
                 }
