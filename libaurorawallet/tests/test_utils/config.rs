@@ -22,7 +22,8 @@ impl Config {
                         {
                             "read_host": "localhost",
                             "write_host": "localhost",
-                            "port": 3306
+                            "port": 3306,
+                            "db_name": "wallet"
                         }
                     ).to_string(),
                     runtime_config: json!(
@@ -44,7 +45,8 @@ impl Config {
                         {
                             "read_host": "localhost",
                             "write_host": "localhost",
-                            "port": 3306
+                            "port": 3306,
+                            "db_name": "wallet"
                         }
                     ).to_string(),
                     runtime_config: json!(
@@ -66,7 +68,8 @@ impl Config {
                         {
                             "read_host": "localhost",
                             "write_host": "localhost",
-                            "port": 3306
+                            "port": 3306,
+                            "db_name": "wallet"
                         }
                     ).to_string(),
                     runtime_config: json!(
@@ -88,7 +91,9 @@ impl Config {
                         {
                             "read_host": "localhost",
                             "write_host": "localhost",
-                            "port": 3306
+                            "port": 3306,
+                            "db_name": "wallet"
+
                         }
                     ).to_string(),
                     runtime_config: json!(

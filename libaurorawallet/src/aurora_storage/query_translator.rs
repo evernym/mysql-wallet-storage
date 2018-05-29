@@ -3,6 +3,7 @@ use serde_json;
 use mysql::Value;
 
 use aurora_storage::SearchOptions;
+use errors::error_code::ErrorCode;
 
 #[derive(Debug)]
 pub enum Operator {
@@ -77,20 +78,20 @@ impl string::ToString for Operator {
     }
 }
 
-pub fn parse_from_json(json: &str) -> Option<Operator> {
+pub fn parse_from_json(json: &str) -> Result<Operator, ErrorCode> {
     let parsed_json = match serde_json::from_str(json) {
         Ok(value) => value,
-        Err(_) => return None
+        Err(_) => return Err(ErrorCode::InvalidStructure)
     };
 
     if let serde_json::Value::Object(map) = parsed_json {
         parse(map)
     } else {
-        None
+        Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn parse(map: serde_json::Map<String, serde_json::Value>) -> Option<Operator> {
+fn parse(map: serde_json::Map<String, serde_json::Value>) -> Result<Operator, ErrorCode> {
     let mut operators: Vec<Operator> = Vec::new();
 
     for (key, value) in map.into_iter() {
@@ -99,10 +100,10 @@ fn parse(map: serde_json::Map<String, serde_json::Value>) -> Option<Operator> {
     }
 
     let top_operator = Operator::And(operators);
-    Some(top_operator.optimise())
+    Ok(top_operator.optimise())
 }
 
-fn parse_operator(key: String, value: serde_json::Value) -> Option<Operator> {
+fn parse_operator(key: String, value: serde_json::Value) -> Result<Operator, ErrorCode> {
     match (&*key, value) {
         ("$or", serde_json::Value::Array(values)) => {
             let mut operators: Vec<Operator> = Vec::new();
@@ -112,38 +113,38 @@ fn parse_operator(key: String, value: serde_json::Value) -> Option<Operator> {
                     let suboperator = parse(map)?;
                     operators.push(suboperator);
                 } else {
-                    return None;
+                    return Err(ErrorCode::InvalidStructure);
                 }
             }
 
-            Some(Operator::Or(operators))
+            Ok(Operator::Or(operators))
         },
         ("$not", serde_json::Value::Object(map)) => {
             let operator = parse(map)?;
-            Some(Operator::Not(Box::new(operator)))
+            Ok(Operator::Not(Box::new(operator)))
         },
-        (_, serde_json::Value::String(value)) => Some(Operator::Eq(key, value)),
+        (_, serde_json::Value::String(value)) => Ok(Operator::Eq(key, value)),
         (_, serde_json::Value::Object(map)) => {
             if map.len() == 1 {
                 let (operator_name, value) = map.into_iter().next().unwrap();
                 parse_single_operator(operator_name, key, value)
             } else {
-                None
+                Err(ErrorCode::InvalidStructure)
             }
         },
-        (_, _) => None
+        (_, _) => Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn parse_single_operator(operator_name: String, key: String, value: serde_json::Value) -> Option<Operator> {
+fn parse_single_operator(operator_name: String, key: String, value: serde_json::Value) -> Result<Operator, ErrorCode> {
     match (&*operator_name, value) {
-        ("$neq", serde_json::Value::String(s)) => Some(Operator::Neq(key, s)),
-        ("$gt", serde_json::Value::String(s)) => Some(Operator::Gt(key, s)),
-        ("$gte", serde_json::Value::String(s)) => Some(Operator::Gte(key, s)),
-        ("$lt", serde_json::Value::String(s)) => Some(Operator::Lt(key, s)),
-        ("$lte", serde_json::Value::String(s)) => Some(Operator::Lte(key, s)),
-        ("$like", serde_json::Value::String(s)) => Some(Operator::Like(key, s)),
-        ("$regex", serde_json::Value::String(s)) => Some(Operator::Regex(key, s)),
+        ("$neq", serde_json::Value::String(s)) => Ok(Operator::Neq(key, s)),
+        ("$gt", serde_json::Value::String(s)) => Ok(Operator::Gt(key, s)),
+        ("$gte", serde_json::Value::String(s)) => Ok(Operator::Gte(key, s)),
+        ("$lt", serde_json::Value::String(s)) => Ok(Operator::Lt(key, s)),
+        ("$lte", serde_json::Value::String(s)) => Ok(Operator::Lte(key, s)),
+        ("$like", serde_json::Value::String(s)) => Ok(Operator::Like(key, s)),
+        ("$regex", serde_json::Value::String(s)) => Ok(Operator::Regex(key, s)),
         ("$in", serde_json::Value::Array(values)) => {
             let mut target_values: Vec<String> = Vec::new();
 
@@ -151,27 +152,27 @@ fn parse_single_operator(operator_name: String, key: String, value: serde_json::
                 if let serde_json::Value::String(s) = v {
                     target_values.push(String::from(s));
                 } else {
-                    return None;
+                    return Err(ErrorCode::InvalidStructure);
                 }
             }
 
-            Some(Operator::In(key, target_values))
+            Ok(Operator::In(key, target_values))
         },
-        (_, _) => None
+        (_, _) => Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn operator_to_sql(op: &Operator, arguments: &mut Vec<Value>) -> Option<String> {
+fn operator_to_sql(op: &Operator, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     match *op {
-        Operator::Eq(ref tag_name, ref target_value) => Some(eq_to_sql(tag_name, target_value, arguments)),
-        Operator::Neq(ref tag_name, ref target_value) => Some(neq_to_sql(tag_name, target_value, arguments)),
+        Operator::Eq(ref tag_name, ref target_value) => Ok(eq_to_sql(tag_name, target_value, arguments)),
+        Operator::Neq(ref tag_name, ref target_value) => Ok(neq_to_sql(tag_name, target_value, arguments)),
         Operator::Gt(ref tag_name, ref target_value) => gt_to_sql(tag_name, target_value, arguments),
         Operator::Gte(ref tag_name, ref target_value) => gte_to_sql(tag_name, target_value, arguments),
         Operator::Lt(ref tag_name, ref target_value) => lt_to_sql(tag_name, target_value, arguments),
         Operator::Lte(ref tag_name, ref target_value) => lte_to_sql(tag_name, target_value, arguments),
         Operator::Like(ref tag_name, ref target_value) => like_to_sql(tag_name, target_value, arguments),
         Operator::Regex(ref tag_name, ref target_value) => regex_to_sql(tag_name, target_value, arguments),
-        Operator::In(ref tag_name, ref target_values) => Some(in_to_sql(tag_name, target_values, arguments)),
+        Operator::In(ref tag_name, ref target_values) => Ok(in_to_sql(tag_name, target_values, arguments)),
         Operator::And(ref suboperators) => and_to_sql(suboperators, arguments),
         Operator::Or(ref suboperators) => or_to_sql(suboperators, arguments),
         Operator::Not(ref suboperator) => not_to_sql(suboperator, arguments),
@@ -179,163 +180,140 @@ fn operator_to_sql(op: &Operator, arguments: &mut Vec<Value>) -> Option<String> 
 }
 
 fn eq_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> String {
-    match tag_name.chars().next().unwrap_or('\0') {
-        '~' => {
-            arguments.push(tag_name[1..].into());
-            arguments.push(tag_value.into());
-            "(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value = ?))".to_string()
-        },
-        _ => {
-            arguments.push(tag_name.into());
-            arguments.push(tag_value.into());
-            "(i.id in (SELECT item_id FROM tags_encrypted WHERE name = ? AND value = ?))".to_string()
-        }
-    }
+
+    let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
+    arguments.push(tag_value.into());
+    format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) = ?)", tag_path)
 }
 
 fn neq_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> String {
+
+    let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
+    arguments.push(tag_value.into());
+    format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) != ?)", tag_path)
+}
+
+fn gt_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     match tag_name.chars().next().unwrap_or('\0') {
         '~' => {
-            arguments.push(tag_name[1..].into());
+            let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
             arguments.push(tag_value.into());
-            "(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value != ?))".to_string()
+            Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) > ?)", tag_path))
         },
-        _ => {
-            arguments.push(tag_name.into());
-            arguments.push(tag_value.into());
-            "(i.id in (SELECT item_id FROM tags_encrypted WHERE name = ? AND value != ?))".to_string()
-        }
+        _ => Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn gt_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Option<String> {
+fn gte_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     match tag_name.chars().next().unwrap_or('\0') {
         '~' => {
-            arguments.push(tag_name[1..].into());
+            let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
             arguments.push(tag_value.into());
-            Some("(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value > ?))".to_string())
+            Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) >= ?)", tag_path))
         },
-        _ => None
+        _ => Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn gte_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Option<String> {
+fn lt_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     match tag_name.chars().next().unwrap_or('\0') {
         '~' => {
-            arguments.push(tag_name[1..].into());
+            let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
             arguments.push(tag_value.into());
-            Some("(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value >= ?))".to_string())
+            Ok(format!("JSON_UNQUOTE(JSON_EXTRACT(tags, {})) < ?)", tag_path))
         },
-        _ => None
+        _ => Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn lt_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Option<String> {
+fn lte_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     match tag_name.chars().next().unwrap_or('\0') {
         '~' => {
-            arguments.push(tag_name[1..].into());
+            let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
             arguments.push(tag_value.into());
-            Some("(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value < ?))".to_string())
+            Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) <= ?)", tag_path))
         },
-        _ => None
+        _ => Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn lte_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Option<String> {
-    match tag_name.chars().next().unwrap_or('\0') {
-        '~' => {
-            arguments.push(tag_name[1..].into());
-            arguments.push(tag_value.into());
-            Some("(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value <= ?))".to_string())
-        },
-        _ => None
-    }
-}
-
-fn like_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Option<String> {
+fn like_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
    match tag_name.chars().next().unwrap_or('\0') {
         '~' => {
-            arguments.push(tag_name[1..].into());
+            let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
             arguments.push(tag_value.into());
-            Some("(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value LIKE ?))".to_string())
+            Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) LIKE ?)", tag_path))
         },
-        _ => None
+        _ => Err(ErrorCode::InvalidStructure)
     }
 }
 
-fn regex_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Option<String> {
+fn regex_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     match tag_name.chars().next().unwrap_or('\0') {
         '~' => {
-            arguments.push(tag_name[1..].into());
+
+            let tag_path = format!(r#"'$."{}"'"#, tag_name);
+
             arguments.push(tag_value.into());
-            Some("(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value REGEXP ?))".to_string())
+            Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) REGEXP ?)", tag_path))
         },
-        _ => None
+        _ => Err(ErrorCode::InvalidStructure)
     }
 }
 
 fn in_to_sql(tag_name: &String, tag_values: &Vec<String>, arguments: &mut Vec<Value>) -> String {
-    let mut in_string = String::new();
-    match tag_name.chars().next().unwrap_or('\0') {
-        '~' => {
-            in_string.push_str("(i.id in (SELECT item_id FROM tags_plaintext WHERE name = ? AND value IN (");
-            arguments.push(tag_name[1..].into());
 
-            for (index, tag_value) in tag_values.iter().enumerate() {
-                in_string.push_str("?");
-                arguments.push(tag_value.into());
-                if index < tag_values.len() - 1 {
-                    in_string.push(',');
-                }
+    let tag_path = format!(r#"'$."{}"'"#, tag_name);
+    let mut in_string = format!("JSON_UNQUOTE(JSON_EXTRACT(tags, {})) IN (", tag_path);
 
-            }
+    for (index, tag_value) in tag_values.iter().enumerate() {
+        in_string.push_str("?");
+        if index < tag_values.len() - 1 {
+            in_string.push(',');
+        }
+        else {
+            in_string.push(')');
+        }
 
-            in_string + ")))"
-        },
-        _ => {
-            in_string.push_str("(i.id in (SELECT item_id FROM tags_encrypted WHERE name = ? AND value IN (");
-            arguments.push(tag_name.into());
-            let index_before_last = tag_values.len() - 2;
-
-            for (index, tag_value) in tag_values.iter().enumerate() {
-                in_string.push_str("?");
-                arguments.push(tag_value.into());
-                if index <= index_before_last {
-                    in_string.push(',');
-                }
-            }
-
-            in_string + ")))"
-        },
+        arguments.push(tag_value.into());
     }
+
+    in_string
 }
 
-fn and_to_sql(suboperators: &[Operator], arguments: &mut Vec<Value>) -> Option<String> {
+fn and_to_sql(suboperators: &[Operator], arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     join_operators(suboperators, " AND ", arguments)
 }
 
-fn or_to_sql(suboperators: &[Operator], arguments: &mut Vec<Value>) -> Option<String> {
+fn or_to_sql(suboperators: &[Operator], arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     join_operators(suboperators, " OR ", arguments)
 }
 
-fn not_to_sql(suboperator: &Operator, arguments: &mut Vec<Value>) -> Option<String> {
+fn not_to_sql(suboperator: &Operator, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     let suboperator_string = operator_to_sql(suboperator, arguments);
 
     match suboperator_string {
-        Some(suboperator_string) => Some("NOT (".to_string() + &suboperator_string + ")"),
-        None => return None
+        Ok(suboperator_string) => Ok("NOT (".to_string() + &suboperator_string + ")"),
+        Err(err) => return Err(err)
     }
 }
 
-fn join_operators(operators: &[Operator], join_str: &str, arguments: &mut Vec<Value>) -> Option<String> {
+fn join_operators(operators: &[Operator], join_str: &str, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     let mut s = String::new();
     s.push('(');
     for (index, operator) in operators.iter().enumerate() {
         let operator_string = operator_to_sql(operator, arguments);
 
         match operator_string {
-            Some(operator_string) => s.push_str(&operator_string),
-            None => return None
+            Ok(operator_string) => s.push_str(&operator_string),
+            Err(err) => return Err(err)
         }
 
         if index < operators.len() - 1 {
@@ -343,37 +321,25 @@ fn join_operators(operators: &[Operator], join_str: &str, arguments: &mut Vec<Va
         }
     }
     s.push(')');
-    Some(s)
+    Ok(s)
 }
 
-// Translates Wallet Query Language to SQL
-// WQL input is provided as a reference to a top level Operator
-// Result is a tuple of query string and query arguments
-pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &SearchOptions) -> Option<(String, Vec<Value>)> {
+pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &SearchOptions) -> Result<(String, Vec<Value>), ErrorCode> {
     let mut arguments: Vec<Value> = Vec::new();
     let query_condition = match operator_to_sql(wql, &mut arguments) {
-        Some(query_condition) => query_condition,
-        None => return None
+        Ok(query_condition) => query_condition,
+        Err(err) => return Err(err)
     };
 
     let query_string = format!(
-        "SELECT {}, i.name, {}, {} FROM items i WHERE {} AND i.type = ? AND i.wallet_id = ?;",
-        if options.retrieve_type { "i.type" } else {"NULL"},
-        if options.retrieve_value { "i.value" } else {"NULL"},
-        if options.retrieve_tags {
-            "CONCAT(\
-                '{', \
-                CONCAT_WS(\
-                    ',', \
-                    (select group_concat(concat(json_quote(name), ':', json_quote(value))) from tags_encrypted WHERE item_id = i.id), \
-                    (select group_concat(concat(json_quote(concat('~', name)), ':', json_quote(value))) from tags_plaintext WHERE item_id = i.id)\
-                ), \
-            '}') tags"
-        } else {"NULL"},
+        "SELECT {}, name, {}, {} FROM items WHERE {} AND type = ? AND wallet_id = ?;",
+        if options.retrieve_type { "type" } else {"NULL"},
+        if options.retrieve_value { "value" } else {"NULL"},
+        if options.retrieve_tags { "tags" } else {"NULL"},
         query_condition
     );
 
     arguments.push(type_.into());
     arguments.push(wallet_id.into());
-    Some((query_string, arguments))
+    Ok((query_string, arguments))
 }
