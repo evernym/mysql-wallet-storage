@@ -22,9 +22,11 @@ public class BaseTest {
             "    }" +
             "}";
 
+
+    String optionsFull = "{\"retrieveType\":true, \"retrieveValue\":true, \"retrieveTags\":true}";
+
     @BeforeSuite(alwaysRun = true)
     public void init() {
         AuroraPluggableStorage.api.aurora_storage_init();
     }
-
 }
