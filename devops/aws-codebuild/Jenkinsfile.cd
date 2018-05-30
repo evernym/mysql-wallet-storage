@@ -26,6 +26,7 @@ pipelineWrapper({
             checkout scm
         }
 
+        def evernymRepo = evLibrary.EvernymRepo.new(this)
         def utils = evLibrary.Utils.new(this)
         def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet')
         def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)

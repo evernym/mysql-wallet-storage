@@ -6,7 +6,7 @@ build = "build.rs"
 
 [lib]
 name = "aurorastorage"
-crate-type = ["dylib", "rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 serde = "1.0"
