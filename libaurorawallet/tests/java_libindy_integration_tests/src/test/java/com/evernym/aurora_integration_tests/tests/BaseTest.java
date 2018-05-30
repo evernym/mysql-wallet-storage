@@ -33,13 +33,13 @@ public class BaseTest {
         CONFIG = "{" +
                 "   \"read_host\": \"" + props.getProperty("config.read_host.ip") + "\"," +
                 "   \"write_host\": \"" + props.getProperty("config.write_host.ip") + "\"," +
-                "   \"port\": " + props.getProperty("config.read_host.port") +
+                "   \"port\": " + props.getProperty("config.port") +
                 "}";
         CREDENTIALS = "{" +
                 "    \"key\": \"" + props.getProperty("credentials.key") + "\"," +
                 "    \"storage_credentials\": {" +
-                "        \"user\": \"" + props.getProperty("credentials.read_host.username") + "\"," +
-                "        \"pass\": \"" + props.getProperty("credentials.read_host.password") + "\"" +
+                "        \"user\": \"" + props.getProperty("credentials.username") + "\"," +
+                "        \"pass\": \"" + props.getProperty("credentials.password") + "\"" +
                 "    }" +
                 "}";
     }
