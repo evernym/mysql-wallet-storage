@@ -29,12 +29,12 @@ pub enum ErrorCode {
     /// <summary>
     /// Requested entity id isn't present in wallet.
     /// </summary>
-    WalletNotFoundError = 204,
+    WalletItemNotFound = 212,
 
     /// <summary>
     /// Entity already exists in the wallet.
     /// </summary>
-    RecordAlreadyExists = 208,
+    WalletItemAlreadyExists = 213,
 }
 
 macro_rules! check_result {

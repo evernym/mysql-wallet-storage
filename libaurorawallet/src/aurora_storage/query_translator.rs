@@ -307,20 +307,24 @@ fn not_to_sql(suboperator: &Operator, arguments: &mut Vec<Value>) -> Result<Stri
 
 fn join_operators(operators: &[Operator], join_str: &str, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
     let mut s = String::new();
-    s.push('(');
-    for (index, operator) in operators.iter().enumerate() {
-        let operator_string = operator_to_sql(operator, arguments);
 
-        match operator_string {
-            Ok(operator_string) => s.push_str(&operator_string),
-            Err(err) => return Err(err)
-        }
+    if !operators.is_empty() {
+        s.push('(');
+        for (index, operator) in operators.iter().enumerate() {
+            let operator_string = operator_to_sql(operator, arguments);
 
-        if index < operators.len() - 1 {
-            s.push_str(join_str);
+            match operator_string {
+                Ok(operator_string) => s.push_str(&operator_string),
+                Err(err) => return Err(err)
+            }
+
+            if index < operators.len() - 1 {
+                s.push_str(join_str);
+            }
         }
+        s.push(')');
     }
-    s.push(')');
+
     Ok(s)
 }
 
@@ -332,11 +336,28 @@ pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &SearchO
     };
 
     let query_string = format!(
-        "SELECT {}, name, {}, {} FROM items WHERE {} AND type = ? AND wallet_id = ?;",
+        "SELECT {}, name, {}, {} FROM items WHERE {} type = ? AND wallet_id = ?",
         if options.retrieve_type { "type" } else {"NULL"},
         if options.retrieve_value { "value" } else {"NULL"},
         if options.retrieve_tags { "tags" } else {"NULL"},
-        query_condition
+        if !query_condition.is_empty() {query_condition + " AND"} else {"".to_string()}
+    );
+
+    arguments.push(type_.into());
+    arguments.push(wallet_id.into());
+    Ok((query_string, arguments))
+}
+
+pub fn wql_to_sql_count(wallet_id: u64, type_: &str, wql: &Operator) -> Result<(String, Vec<Value>), ErrorCode> {
+    let mut arguments: Vec<Value> = Vec::new();
+    let query_condition = match operator_to_sql(wql, &mut arguments) {
+        Ok(query_condition) => query_condition,
+        Err(err) => return Err(err)
+    };
+
+    let query_string = format!(
+        "SELECT count(*) FROM items i WHERE {} i.type = ? AND i.wallet_id = ?",
+        if !query_condition.is_empty() {query_condition + " AND"} else {"".to_string()}
     );
 
     arguments.push(type_.into());
