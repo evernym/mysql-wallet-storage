@@ -19,8 +19,6 @@ public class BaseTest {
     protected static String CREDENTIALS;
 
 
-    String optionsFull = "{\"retrieveType\":true, \"retrieveValue\":true, \"retrieveTags\":true}";
-
     @BeforeSuite(alwaysRun = true)
     public void init() throws IOException {
 
