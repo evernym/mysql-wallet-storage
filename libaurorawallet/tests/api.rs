@@ -670,7 +670,7 @@ mod high_casees {
         assert_eq!(tags_map, expected_tags_map);
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::RecordAlreadyExists);
+        assert_eq!(err, ErrorCode::WalletItemAlreadyExists);
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
@@ -710,7 +710,7 @@ mod high_casees {
         let id = CString::new(random_name()).unwrap();
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
     }
 
     /** Storage UPDATE_RECORD_VALUE Tests */
@@ -798,7 +798,7 @@ mod high_casees {
         let new_value = vec![1, 2, 3, 4];
 
         let err = api::update_record_value(handle, type_.as_ptr(), id.as_ptr(), new_value.as_ptr(), new_value.len());
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
     }
 
     /** Storage ADD_RECORD_TAGS Tests */
@@ -932,7 +932,7 @@ mod high_casees {
         let tags_json = CString::new(r##"{"tag1": "value1", "tag2": "value2", "~tag3": "value3"}"##).unwrap();
 
         let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
     }
 
     /** Storage UPDATE_RECORD_TAGS Tests */
@@ -1018,7 +1018,7 @@ mod high_casees {
 
         let tags_json = CString::new(r##"{"~tag1": "value1"}"##).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
     }
 
     #[test]
@@ -1138,7 +1138,7 @@ mod high_casees {
         let tag_names = CString::new(r##"["tag1", "tag2", "~tag3"]"##).unwrap();
 
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
     }
 
     #[test]
@@ -1260,11 +1260,11 @@ mod high_casees {
 
         // No more records in the result set
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         // After the iterator is exhausted search handle is invalidated
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
@@ -1398,10 +1398,10 @@ mod high_casees {
         }
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
@@ -1465,10 +1465,10 @@ mod high_casees {
         }
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
@@ -1931,10 +1931,10 @@ mod high_casees {
         }
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         let err = api::fetch_search_next_record(handle, search_handle, &mut record_handle);
-        assert_eq!(err, ErrorCode::WalletNotFoundError);
+        assert_eq!(err, ErrorCode::WalletItemNotFound);
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
