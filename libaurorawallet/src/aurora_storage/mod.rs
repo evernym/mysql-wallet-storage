@@ -47,6 +47,7 @@ pub struct SearchOptions {
     pub retrieve_tags: bool,
 }
 
+#[derive(Debug)]
 pub struct Search<'a> {
     pub search_result: Option<RwLock<QueryResult<'a>>>,
     pub total_count: Option<usize>,
@@ -317,7 +318,7 @@ impl<'a> AuroraStorage<'a> {
         match result {
                 Err(Error::MySqlError(err)) => {
                     match err.code {
-                        1062 => return ErrorCode::RecordAlreadyExists,
+                        1062 => return ErrorCode::WalletItemAlreadyExists,
                         3140 => return ErrorCode::InvalidStructure, // Invalid JSON
                         _ => return ErrorCode::IOError,
                     };
@@ -347,7 +348,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     ///  * `Success` - Execution successful
     ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> options
-    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `WalletItemNotFound` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///  * `InvalidState` - Invalid encoding of a provided/fetched string
     ///
@@ -380,7 +381,7 @@ impl<'a> AuroraStorage<'a> {
                 ErrorCode::IOError
             );
 
-            let row = check_result!(check_option!(result.next(), ErrorCode::WalletNotFoundError), ErrorCode::IOError);
+            let row = check_result!(check_option!(result.next(), ErrorCode::WalletItemNotFound), ErrorCode::IOError);
 
             // These 2 values cannot be NULL.
             let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::IOError);
@@ -456,7 +457,7 @@ impl<'a> AuroraStorage<'a> {
         );
 
         if result.affected_rows() != 1 {
-            return ErrorCode::WalletNotFoundError;
+            return ErrorCode::WalletItemNotFound;
         }
 
         ErrorCode::Success
@@ -496,7 +497,7 @@ impl<'a> AuroraStorage<'a> {
         );
 
         if result.affected_rows() != 1 {
-            return ErrorCode::WalletNotFoundError;
+            return ErrorCode::WalletItemNotFound;
         }
 
         ErrorCode::Success
@@ -569,7 +570,7 @@ impl<'a> AuroraStorage<'a> {
         };
 
         if result.affected_rows() != 1 {
-            return ErrorCode::WalletNotFoundError;
+            return ErrorCode::WalletItemNotFound;
         }
 
         ErrorCode::Success
@@ -623,7 +624,7 @@ impl<'a> AuroraStorage<'a> {
         };
 
         if result.affected_rows() != 1 {
-            return ErrorCode::WalletNotFoundError;
+            return ErrorCode::WalletItemNotFound;
         }
 
         ErrorCode::Success
@@ -696,7 +697,7 @@ impl<'a> AuroraStorage<'a> {
         };
 
         if result.affected_rows() != 1 {
-            return ErrorCode::WalletNotFoundError;
+            return ErrorCode::WalletItemNotFound;
         }
 
         ErrorCode::Success
@@ -713,7 +714,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     ///  * `Success` - Execution successful
     ///  * `InvalidState` - Invalid encoding of a provided/fetched string
-    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `WalletItemNotFound` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn get_metadata(&self) -> Result<(Arc<CString>, i32), ErrorCode> {
@@ -727,12 +728,12 @@ impl<'a> AuroraStorage<'a> {
             Err(ErrorCode::IOError)
         );
 
-        let row = check_result!(check_option!(result.next(), Err(ErrorCode::WalletNotFoundError)), Err(ErrorCode::IOError));
+        let row = check_result!(check_option!(result.next(), Err(ErrorCode::WalletItemNotFound)), Err(ErrorCode::IOError));
         let metadata: String = check_option!(row.get(0), Err(ErrorCode::IOError));
         let metadata = check_result!(CString::new(metadata), Err(ErrorCode::InvalidState));
 
         let handle = self.metadata.insert(metadata);
-        let metadata = check_option!(self.metadata.get(handle), Err(ErrorCode::WalletNotFoundError));
+        let metadata = check_option!(self.metadata.get(handle), Err(ErrorCode::WalletItemNotFound));
 
         Ok((metadata, handle))
     }
@@ -914,7 +915,7 @@ impl<'a> AuroraStorage<'a> {
     ///  * `Success` - Execution successful
     ///  * `InvalidState` - Provided search handle does not exist, or parsing of data has gone wrong
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
-    ///  * `WalletNotFoundError` - Result set exhausted, no more records to fetch
+    ///  * `WalletItemNotFound` - Result set exhausted, no more records to fetch
     ///
     pub fn fetch_search_next_record(&self, search_handle: i32, record_handle_p: *mut i32) -> ErrorCode {
         let search = check_option!(self.searches.get(search_handle), ErrorCode::InvalidState);
@@ -924,7 +925,7 @@ impl<'a> AuroraStorage<'a> {
             Some(ref search_result) => {
                 let mut search_result = check_result!(search_result.write(), ErrorCode::IOError);
 
-                let next_result = check_option!(search_result.next(), ErrorCode::WalletNotFoundError);
+                let next_result = check_option!(search_result.next(), ErrorCode::WalletItemNotFound);
 
                 let row = check_result!(next_result, ErrorCode::IOError);
 
