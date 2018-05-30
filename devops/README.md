@@ -60,13 +60,8 @@ CD pipeline stages:
 - `publish_crate` publishes the code to crates.io performing cargo `login`, `package` and `publish` commands
 - `image_ci` builds docker image with necessary environment for performing both CI and CD tasks
 - `image_ci_version` prints current version of the docker image (dockerfile) built by `image_ci` target
+- please refer to [ext/README.md](ext/README.md) for list of targets inherited from there
 
-Inherited from [ext](ext/Makefile):
-- `package` performs `deb` / `rpm` packaging using [fpm][349f7485] tool
-- `image_base` builds docker image with generally useful packages and `fpm` installed
-- `image_rust` builds docker image with `rust` installed
-
-  [349f7485]: https://github.com/jordansissel/fpm "fpm"
 
 Each target could be run in two ways - with or without `_in_docker` postfix: e.g. `test_in_docker` and `test`. In former case the target is run inside docker container (though it makes sense not for all targets), otherwise current host's environment is used.
 
@@ -80,23 +75,4 @@ Each target could be run in two ways - with or without `_in_docker` postfix: e.g
 - `CARGO_LOGIN_TOKEN`: token to perform `cargo login` during crate publishing. Default: not set
 - `DOCKER_NAME`: name of the image built by `image_ci` target. Default: `evernym/aurora-wallet`
 - `DOCKER_TAG`: tag of the image built by `image_ci` target. Default: `<VERSION>-$(OSNAME)-ci`, where `VERSION` is value of `CI_ENV_VERSION` environment variable in accordant dockerfile
-
-Inherited from [ext](ext/Makefile):
-- `DOCKER_UID`: `uid` of the user passed to `docker run` command. Default: resolved as `id -u`
-- `BASE_DOCKER_VERSION`: impacts the tag of the image built by `image_base` target. The tag is evaluated as: `$(BASE_DOCKER_VERSION)-$(OSNAME)`. Default: value of `BASE_ENV_VERSION` environment variable in accordant dockerfile
-- `RUST_DOCKER_VERSION`: impacts the tag of the image built by `image_rust` target. The tag is evaluated as: `$(RUST_DOCKER_VERSION)-$(OSNAME)`. Default: value of `RUST_ENV_VERSION` environment variable in accordant dockerfile
-- variables to config packaing using [fpm][349f7485] tool:
-  - (please refer to [fpm wiki][3c28cd3e] for more information about the fpm command line options)
-  - `FPM_P_NAME` (REQUIRED): value for fpm's `--name` option. Default: not set
-  - `FPM_P_VERSION`: value for fpm's `--version` option. Default: not set
-  - `FPM_P_INPUT_TYPE`: value for fpm's `--input-type` option. Default: `dir`
-  - `FPM_P_OUTPUT_TYPE`: value for fpm's `--output-type` option. Default: `deb` if `OSNAME=xenial`, `rpm` if `OSNAME=centos7`, otherwise - not set
-  - `FPM_P_OUTPUT_DIR`: value for fpm's `--package` option. Default: not set
-  - `FPM_P_MAINTAINER`: value for fpm's `--maintainer` option. Default: not set
-  - `FPM_P_URL`: value for fpm's `--url` option. Default: not set
-  - `FPM_P_LICENSE`: value for fpm's `--license` option. Default: not set
-  - `FPM_P_DESCRIPTION`: value for fpm's `--description` option. Default: not set
-  - `FPM_ARGS`: string with any fpm arguments to add to the end of the fpm command line. Default: not set
-  - ... (please refer to [fpm.mk](ext/fpm.mk) for more details about fpm related environment variables)
-
-  [3c28cd3e]: https://github.com/jordansissel/fpm/wiki "fpm wiki"
+- please refer to [ext/README.md](ext/README.md) for list of environment variables inherited from there
