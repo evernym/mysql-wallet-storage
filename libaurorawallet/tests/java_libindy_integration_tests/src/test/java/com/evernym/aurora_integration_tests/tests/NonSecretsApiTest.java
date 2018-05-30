@@ -1,16 +1,14 @@
 package com.evernym.aurora_integration_tests.tests;
 
-import com.evernym.aurora_integration_tests.main.non_secrets.WalletRecord;
-import com.evernym.aurora_integration_tests.main.non_secrets.WalletSearch;
-import org.hyperledger.indy.sdk.IOException;
 import org.hyperledger.indy.sdk.IndyException;
+import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
+import org.hyperledger.indy.sdk.non_secrets.WalletSearch;
 import org.hyperledger.indy.sdk.wallet.Wallet;
-import org.hyperledger.indy.sdk.wallet.WalletValueNotFoundException;
+import org.hyperledger.indy.sdk.wallet.WalletNotFoundException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.testng.Assert;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -31,25 +29,21 @@ public class NonSecretsApiTest extends BaseTest {
     String optionsEmpty = "{}";
     String optionsTags = "{\"retrieveTags\": true}";
 
-    @BeforeMethod(alwaysRun = true)
-    public void createAndOpenWallet() throws IndyException, ExecutionException, InterruptedException {
+    @Test (priority = 0)
+    public void createAndOpenWallet() throws Exception {
 
-        // create and open wallet
         Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
         wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
     }
 
-    @Test
-    public void integrationTestUsingNonSecretsApi() throws Exception {
-
-        /**
-         * add record
-         */
+    @Test (dependsOnMethods = "createAndOpenWallet", priority = 1)
+    public void addRecord() throws Exception {
         WalletRecord.add(wallet, type, id, value, tagsEmpty).get();
+    }
 
-        /**
-         * get record with options: retriveTags
-         */
+    @Test (dependsOnMethods = "addRecord", priority = 2)
+    public void getRecordWithTags() throws Exception {
+
         String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
 
         JSONObject actual = new JSONObject(recordJson);
@@ -61,38 +55,54 @@ public class NonSecretsApiTest extends BaseTest {
                 .put("tags", "{}");
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
+    }
 
-        /**
-         * update record value
-         */
+    @Test (dependsOnMethods = "addRecord", priority = 2)
+    public void getRecordWithoutTags() throws Exception {
+
+        String recordJson = WalletRecord.get(wallet, type, id, optionsEmpty).get();
+
+        JSONObject actual = new JSONObject(recordJson);
+
+        JSONObject expected = new JSONObject()
+                .put("id", id)
+                .putOpt("type", JSONObject.NULL)
+                .put("value", value)
+                .put("tags", JSONObject.NULL);
+
+        Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
+    }
+
+    @Test (dependsOnMethods = "addRecord", priority = 3)
+    public void updateRecordValue() throws Exception {
         WalletRecord.updateValue(wallet, type, id, value2).get();
 
-        expected = new JSONObject()
+        JSONObject expected = new JSONObject()
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", value2)
                 .put("tags", "{}");
 
         // get record with options: retriveTags
-        recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
-        actual = new JSONObject(recordJson);
+        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
+    }
 
+    @Test (dependsOnMethods = "updateRecordValue", priority = 4)
+    public void updateRecordTags() throws Exception {
 
-        /**
-         * update record tags
-         */
         WalletRecord.updateTags(wallet, type, id, tags).get();
-        expected = new JSONObject()
+        JSONObject expected = new JSONObject()
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", value2)
                 .put("tags", tags);
 
         // get record with options: retriveTags
-        recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
-        actual = new JSONObject(recordJson);
+        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
 
@@ -100,11 +110,11 @@ public class NonSecretsApiTest extends BaseTest {
         JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
         Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
                 "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
+    }
 
+    @Test (dependsOnMethods = "updateRecordTags", priority = 5)
+    public void searchRecords() throws Exception {
 
-        /**
-         * Search records
-         */
         WalletSearch search = WalletSearch.open(wallet, type, queryEmpty, optionsTags).get();
 
         String searchRecordsJson = search.fetchNextRecords(wallet, 1).get();
@@ -115,44 +125,51 @@ public class NonSecretsApiTest extends BaseTest {
 
         Assert.assertEquals(1, records.length());
 
-        actual = new JSONObject(records.get(0));
+        JSONObject expected = new JSONObject()
+                .put("id", id)
+                .putOpt("type", JSONObject.NULL)
+                .put("value", value2)
+                .put("tags", tags);
+        JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
+
+        JSONObject actual = new JSONObject(records.get(0));
         Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
 
-        actualTagsJson = new JSONObject(actual.getString("tags"));
+        JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
         Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
                 "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
 
         Assert.assertTrue(expected.similar(records.get(0)));
 
         search.close();
+    }
 
+    @Test (dependsOnMethods = "updateRecordTags", priority = 6)
+    public void deleteTags() throws Exception {
 
-        /**
-         * Delete record tags
-         */
         WalletRecord.deleteTags(wallet, type, id, "[\"tagName1\"]").get();
 
-        expected = new JSONObject()
+        JSONObject expected = new JSONObject()
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", value2)
                 .put("tags", tagsWithDeletedTag1);
 
         // get record with options: retriveTags
-        recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
-        actual = new JSONObject(recordJson);
+        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
 
-        expectedTagsJson = new JSONObject(expected.getString("tags"));
-        actualTagsJson = new JSONObject(actual.getString("tags"));
+        JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
+        JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
         Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
                 "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
+    }
 
+    @Test (dependsOnMethods = "updateRecordTags", priority = 7)
+    public void deleteRecord() throws Exception {
 
-        /**
-         * Delete record
-         */
         WalletRecord.delete(wallet, type, id).get();
 
         try {
@@ -160,28 +177,19 @@ public class NonSecretsApiTest extends BaseTest {
             Assert.assertTrue(false); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
-            Assert.assertTrue(e.getCause() instanceof WalletValueNotFoundException, "Expected Cause is WalletValueNotFoundException, actual is " + e.getCause().toString());
+            Assert.assertTrue(e.getCause() instanceof WalletNotFoundException, "Expected Cause is WalletNotFoundException, actual is " + e.getCause().toString());
         }
-
-
-        /**
-         * get record without options set (known problem due to default JSON tag names)
-         */
-        recordJson = WalletRecord.get(wallet, type, id, optionsEmpty).get();
-
-        actual = new JSONObject(recordJson);
-
-        expected = new JSONObject()
-                .put("id", id)
-                .putOpt("type", JSONObject.NULL)
-                .put("value", value)
-                .put("tags", JSONObject.NULL);
-
-        Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
-
     }
 
-    @AfterMethod (alwaysRun = true)
+    @Test (dependsOnMethods = "createAndOpenWallet", priority = 8)
+    public void deleteWallet() throws Exception {
+
+        Wallet.deleteWallet(walletName, CREDENTIALS).get();
+        // create wallet with same name as proof that delete was successful
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+    }
+
+    @AfterClass(alwaysRun = true)
     public void afterMethod() throws IndyException, InterruptedException, ExecutionException {
 
         Wallet.deleteWallet(walletName, CREDENTIALS).get();
