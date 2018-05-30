@@ -1,4 +1,4 @@
-FROM evernym/rust:0.1.0-xenial
+FROM evernym/rust:0.2.0-xenial
 # TODO LABEL maintainer="Name <email-address>"
 
 ARG u_id=1000
@@ -15,4 +15,4 @@ USER $u_name
 # TODO CMD ENTRYPOINT ...
 WORKDIR /home/$u_name
 
-ENV CI_ENV_VERSION=0.2.0
+ENV CI_ENV_VERSION=0.3.0

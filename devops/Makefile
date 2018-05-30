@@ -40,6 +40,7 @@ FPM_P_LICENSE := Apache License 2.0
 FPM_P_VENDOR := Evernym
 FPM_P_DESCRIPTION := indy-sdk plugged wallet for AWS Aurora writen in Rust
 FPM_P_NAME = $(LIBNAME)
+FPM_P_VERSION ?= $(SRC_VERSION)
 FPM_P_OUTPUT_DIR = $(LIB_TARGET_DIR)
 FPM_ARGS = $(LIB_DYNAMIC)=/usr/lib/
 
@@ -48,7 +49,7 @@ DOCKER_NAME ?= evernym/aurora-wallet
 DOCKER_TAG ?=
 EXPORT_ENV += OSNAME RELEASE CARGO_TARGET_DIR CRATE_P_VERSION CARGO_LOGIN_TOKEN
 
-.PHONY: all test_dry test build pre_package clean
+.PHONY: all rust_version test_dry test build pre_package clean
 
 all: test_dry test package
 
@@ -57,11 +58,11 @@ include ext/Makefile
 export OSNAME
 
 image_ci_version:
-	echo $(call docker_img_version,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)
+	echo $(call docker_env_value,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)
 
 image_ci: image_rust
 ifeq ($(DOCKER_TAG),)
-	$(eval DOCKER_TAG=$(call docker_img_version,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)-$(OSNAME)-ci)
+	$(eval DOCKER_TAG=$(call docker_env_value,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)-$(OSNAME)-ci)
 endif
 	OSNAME=$(OSNAME) \
 	CI_DOCKER_NAME=$(DOCKER_NAME) \
@@ -72,22 +73,26 @@ CI_IMAGE_BASED_TARGETS = test_dry test build $(LIBS) package publish_crate clean
 
 $(patsubst %,image_%, $(CI_IMAGE_BASED_TARGETS)): image_ci
 
-test_dry: $(SRC_DIR)
+rust_version:
+	cargo --version
+	rustc --version
+
+test_dry: $(SRC_DIR) rust_version
 	echo "Running tests in dry mode (compile, but don't run tests)"
 	cd $< && cargo clean && RUST_TEST_THREADS=1 RUST_BACKTRACE=1 cargo test $(CARGO_FLAGS) --no-run
 
-test: $(SRC_DIR)
+test: $(SRC_DIR) rust_version
 	echo "Running tests"
 	cd $< && cargo clean && RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test $(CARGO_FLAGS)
 
-build $(LIBS): $(SRC_DIR)
+build $(LIBS): $(SRC_DIR) rust_version
 	echo "Compiling the project"
 	cd $< && cargo clean && cargo build $(CARGO_FLAGS)
 
 pre_package: $(LIB_DYNAMIC)
 	rm -f $(LIB_TARGET_DIR)/$(LIBNAME)*$(SRC_VERSION)*.$(FPM_P_OUTPUT_TYPE)
 
-publish_crate: $(SRC_DIR)
+publish_crate: $(SRC_DIR) rust_version
 	echo "Publishing crate"
 ifneq ($(CARGO_LOGIN_TOKEN),)
 	cargo login $(CARGO_LOGIN_TOKEN)

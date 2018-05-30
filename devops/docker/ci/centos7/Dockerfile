@@ -1,4 +1,4 @@
-FROM evernym/rust:0.2.0-centos7
+FROM evernym/rust:0.3.0-centos7
 # TODO LABEL maintainer="Name <email-address>"
 
 ARG u_id=1000
@@ -16,4 +16,4 @@ USER $u_name
 # TODO CMD ENTRYPOINT ...
 WORKDIR /home/$u_name
 
-ENV CI_ENV_VERSION=0.2.0
+ENV CI_ENV_VERSION=0.3.0

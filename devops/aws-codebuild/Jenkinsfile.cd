@@ -70,50 +70,49 @@ pipelineWrapper({
             awsCBHelper.uploadSourceToS3()
         }
 
-        try {
-            awsCBHelper.build() {
-                projectTag = "ci-$osname"
+        awsCBHelper.build() {
+            projectTag = "ci-$osname"
 
-                // TODO shouldn't create/update CodeBuild project assuming that CI did this before
-                // and no changes in settings have appeared
+            // TODO shouldn't create/update CodeBuild project assuming that CI did this before
+            // and no changes in settings have appeared
 
-                // env and build spec
-                imageTag = ciImageTag
-                buildspec = 'devops/aws-codebuild/buildspec.yml'
-                envv = [
-                    [name: 'OSNAME', value: "$osname"],
-                    [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-                    [name: 'ARTIFACTS', value: 'libaurorawallet/target/release/libaurorastorage*.*'],
-                    [name: 'FPM_P_VERSION', value: debPVersion],
-                   // [name: 'CRATE_P_VERSION', value: cratePVersion],
-                ]
-            }
-        } finally {
-            if (awsCBHelper.buildCtx.projects[prTag]?.artifactsDir) {
-                stage("$osname: Archive logs artifacts") {
-                    dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}/logs") {
-                        goals.each {
-                            def _fname = "${osname}.${it}.out"
-                            sh "mv '${it}.out' '$_fname'"
-                            utils.truncateFile(_fname, "${_fname}.tail")
-                        }
-                        archiveArtifacts artifacts: "${osname}.*.out*"
+            // env and build spec
+            imageTag = ciImageTag
+            buildspec = 'devops/aws-codebuild/buildspec.yml'
+            envv = [
+                [name: 'OSNAME', value: "$osname"],
+                [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
+                [name: 'ARTIFACTS', value: 'libaurorawallet/target/release/libaurorastorage*.*'],
+                [name: 'FPM_P_VERSION', value: debPVersion],
+               // [name: 'CRATE_P_VERSION', value: cratePVersion],
+            ]
+
+            onArtifacts = {
+                this.stage("$osname: Archive logs") {
+                    utils.archiveArtifacts("logs/*.out*") {
+                        truncate = true
+                        allowEmptyArchive = true
                     }
                 }
             }
         }
 
         stage('Upload deb to Evernym repo') {
+            String debName
+
             dir("${awsCBHelper.buildCtx.projects[prTag].artifactsDir}") {
+                debName = utils.shStdout("ls $packageName*$debPVersion*.deb")
+
+                logger.info("Uploading debian package '$debName' to evernym repo")
                 evernymRepo.upload {
                     repoDistr = 'agency_dev'
-                    delegate.packagePath = "$packageName*$debPVersion*.deb"
+                    packagePath = debName
                 }
             }
 
             notifier.email {
-                subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb v.$debPVersion was published"
-                body = ("New debian package v.$debPVersion was built and published" +
+                subject = '$PROJECT_NAME - Build # $BUILD_NUMBER: ' + "new deb '$debName' was published"
+                body = ("New debian package '$debName' was built and published" +
                     '\n\nCheck console output at $BUILD_URL to view the results.')
             }
         }
