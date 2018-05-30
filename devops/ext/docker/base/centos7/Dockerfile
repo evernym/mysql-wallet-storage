@@ -9,11 +9,14 @@ RUN yum install -y \
         vim \
         git \
         procps \
-		autoconf \
-		automake \
-		g++ \
-		gcc \
-		make \
+        autoconf \
+        automake \
+        g++ \
+        gcc \
+        make \
+        pkgconfig \
+        zip \
+        unzip \
     && yum clean all
 
 # install ruby
@@ -44,4 +47,4 @@ RUN yum install -y \
 
 # TODO CMD ENTRYPOINT ...
 
-ENV BASE_ENV_VERSION=0.2.0
+ENV BASE_ENV_VERSION=0.3.0

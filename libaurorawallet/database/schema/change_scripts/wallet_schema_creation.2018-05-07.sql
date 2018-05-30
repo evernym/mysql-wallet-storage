@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS `items` (
     `type` VARCHAR(64) NOT NULL,
     `name` VARCHAR(1024) NOT NULL,
     `value` LONGBLOB NOT NULL,
+    `tags` JSON NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `ux_items_wallet_id_type_name` (`wallet_id`, `type`, `name`),
     CONSTRAINT `fk_items_wallet_id` FOREIGN KEY (`wallet_id`)
@@ -31,32 +32,3 @@ CREATE TABLE IF NOT EXISTS `items` (
         ON DELETE CASCADE
         ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-/*** Encrypted Tags Table - Holding Items Encrypted Tags. ***/
-
-CREATE TABLE IF NOT EXISTS `tags_encrypted` (
-    `name` VARCHAR(256) NOT NULL,
-    `value` VARCHAR(2816) NOT NULL,
-    `item_id` BIGINT NOT NULL,
-    PRIMARY KEY (`name`, `item_id`),
-    KEY `ix_tags_encrypted_name_value` (`name`, `value`),
-    CONSTRAINT `fk_tags_encrypted_item_id` FOREIGN KEY (`item_id`)
-        REFERENCES `items` (`id`)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-/*** PlainText Tags Table - Holding Items Unencrypted String Tags. ***/
-
-CREATE TABLE IF NOT EXISTS `tags_plaintext` (
-    `name` VARCHAR(256) NOT NULL,
-    `value` VARCHAR(2816) NOT NULL,
-    `item_id` BIGINT NOT NULL,
-    PRIMARY KEY (`name`, `item_id`),
-    KEY `ix_tags_plaintext_name_value` (`name`, `value`),
-    CONSTRAINT `fk_tags_plaintext_item_id` FOREIGN KEY (`item_id`)
-        REFERENCES `items` (`id`)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
