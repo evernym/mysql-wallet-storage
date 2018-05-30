@@ -4,6 +4,7 @@ FROM ubuntu:xenial
 # generally useful packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
+        apt-transport-https \
         curl \
         wget \
         vim \
