@@ -167,7 +167,30 @@ public class NonSecretsApiTest extends BaseTest {
                 "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
     }
 
-    @Test (dependsOnMethods = "updateRecordTags", priority = 7)
+    @Test (dependsOnMethods = "deleteTags", priority = 7)
+    public void addTags() throws Exception {
+
+        WalletRecord.addTags(wallet, type, id, "{\"tagName1\": \"str1\"}").get();
+
+        JSONObject expected = new JSONObject()
+                .put("id", id)
+                .putOpt("type", JSONObject.NULL)
+                .put("value", value2)
+                .put("tags", tags);
+
+        // get record with options: retriveTags
+        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        JSONObject actual = new JSONObject(recordJson);
+
+        Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
+
+        JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
+        JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
+        Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
+                "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
+    }
+
+    @Test (dependsOnMethods = "addTags", priority = 8)
     public void deleteRecord() throws Exception {
 
         WalletRecord.delete(wallet, type, id).get();
@@ -181,7 +204,7 @@ public class NonSecretsApiTest extends BaseTest {
         }
     }
 
-    @Test (dependsOnMethods = "createAndOpenWallet", priority = 8)
+    @Test (dependsOnMethods = "createAndOpenWallet", priority = 9)
     public void deleteWallet() throws Exception {
 
         Wallet.deleteWallet(walletName, CREDENTIALS).get();
