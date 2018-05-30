@@ -259,7 +259,8 @@ pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut 
 #[allow(unused_variables)]
 #[no_mangle]
 pub extern "C" fn get_search_total_count(storage_handle: i32, search_handle: i32, total_count_p: *mut usize) -> ErrorCode {
-    ErrorCode::InvalidState
+    let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
+    storage.get_search_total_count(search_handle, total_count_p)
 }
 
 #[no_mangle]

@@ -48,12 +48,16 @@ pub struct SearchOptions {
 }
 
 pub struct Search<'a> {
-    pub search_result: RwLock<QueryResult<'a>>,
+    pub search_result: Option<RwLock<QueryResult<'a>>>,
+    pub total_count: Option<usize>,
 }
 
 impl<'a> Search<'a> {
-    fn new(search_result: QueryResult<'a>) -> Self {
-        Self{ search_result: RwLock::new(search_result) }
+    fn new(search_result: Option<QueryResult<'a>>, total_count: Option<usize>) -> Self {
+        Self {
+            search_result: search_result.map(|result|{RwLock::new(result)}),
+            total_count: total_count
+        }
     }
 }
 
@@ -824,21 +828,34 @@ impl<'a> AuroraStorage<'a> {
     pub fn search_records(&self, type_: &str, query_json: &str, options_json: &str, search_handle_p: *mut i32) -> ErrorCode {
         let search_options: SearchOptions = check_result!(serde_json::from_str(options_json), ErrorCode::InvalidStructure);
 
-        // TODO: implement options.retrieve_total_count
-
-        if !search_options.retrieve_records {
-            return ErrorCode::InvalidStructure;
-        }
-
         let wql = check_result!(query_translator::parse_from_json(&query_json), ErrorCode::InvalidStructure);
-        let (query, arguments) = check_result!(query_translator::wql_to_sql(self.wallet_id, type_, &wql, &search_options), ErrorCode::InvalidStructure);
 
-        let search_result: QueryResult = check_result!(
-            self.read_pool.prep_exec(query, arguments),
-            ErrorCode::IOError
-        );
+        let total_count = if search_options.retrieve_total_count {
+            let (query, arguments) = check_result!(query_translator::wql_to_sql_count(self.wallet_id, type_, &wql), ErrorCode::InvalidStructure);
+            let mut result: QueryResult = check_result!(
+                self.read_pool.prep_exec(query, arguments),
+                ErrorCode::IOError
+            );
 
-        let search_handle = self.searches.insert(Search::new(search_result));
+            let row = check_result!(check_option!(result.next(), ErrorCode::IOError), ErrorCode::IOError);
+            let count: usize = check_option!(row.get(0), ErrorCode::IOError);
+
+            Some(count)
+
+        } else {None};
+
+        let records_result = if search_options.retrieve_records {
+            let (query, arguments) = check_result!(query_translator::wql_to_sql(self.wallet_id, type_, &wql, &search_options), ErrorCode::InvalidStructure);
+
+            let search_result: QueryResult = check_result!(
+                self.read_pool.prep_exec(query, arguments),
+                ErrorCode::IOError
+            );
+
+            Some(search_result)
+        } else {None};
+
+        let search_handle = self.searches.insert(Search::new(records_result, total_count));
 
         unsafe { *search_handle_p = search_handle; }
 
@@ -872,7 +889,7 @@ impl<'a> AuroraStorage<'a> {
             ErrorCode::IOError
         );
 
-        let search_handle = self.searches.insert(Search::new(search_result));
+        let search_handle = self.searches.insert(Search::new(Some(search_result), None));
 
         unsafe { *search_handle_p = search_handle; }
 
@@ -902,28 +919,62 @@ impl<'a> AuroraStorage<'a> {
     pub fn fetch_search_next_record(&self, search_handle: i32, record_handle_p: *mut i32) -> ErrorCode {
         let search = check_option!(self.searches.get(search_handle), ErrorCode::InvalidState);
 
-        let mut search_result = check_result!(search.search_result.write(), ErrorCode::IOError);
+        match search.search_result {
+            None => ErrorCode::InvalidState,
+            Some(ref search_result) => {
+                let mut search_result = check_result!(search_result.write(), ErrorCode::IOError);
 
-        let next_result = check_option!(search_result.next(), ErrorCode::WalletNotFoundError);
+                let next_result = check_option!(search_result.next(), ErrorCode::WalletNotFoundError);
 
-        let row = check_result!(next_result, ErrorCode::IOError);
+                let row = check_result!(next_result, ErrorCode::IOError);
 
-        let record_type: Option<String> = check_option!(row.get(0), ErrorCode::IOError);
-        let record_id: String = check_option!(row.get(1), ErrorCode::IOError);
-        let record_value: Option<Vec<u8>> = check_option!(row.get(2), ErrorCode::IOError);
-        let record_tags: Option<String> = check_option!(row.get(3), ErrorCode::IOError);
+                let record_type: Option<String> = check_option!(row.get(0), ErrorCode::IOError);
+                let record_id: String = check_option!(row.get(1), ErrorCode::IOError);
+                let record_value: Option<Vec<u8>> = check_option!(row.get(2), ErrorCode::IOError);
+                let record_tags: Option<String> = check_option!(row.get(3), ErrorCode::IOError);
 
-        let record = Record::new(
-            check_result!(CString::new(record_id), ErrorCode::InvalidState),
-            record_value,
-            if let Some(record_tags) = record_tags { Some(check_result!(CString::new(record_tags), ErrorCode::InvalidState)) } else { None },
-            if let Some(record_type) = record_type { Some(check_result!(CString::new(record_type), ErrorCode::InvalidState)) } else { None },
-        );
+                let record = Record::new(
+                    check_result!(CString::new(record_id), ErrorCode::InvalidState),
+                    record_value,
+                    if let Some(record_tags) = record_tags { Some(check_result!(CString::new(record_tags), ErrorCode::InvalidState)) } else { None },
+                    if let Some(record_type) = record_type { Some(check_result!(CString::new(record_type), ErrorCode::InvalidState)) } else { None },
+                );
 
-        let record_handle = self.records.insert(record);
+                let record_handle = self.records.insert(record);
 
-        unsafe { *record_handle_p = record_handle; }
+                unsafe { *record_handle_p = record_handle; }
 
-        ErrorCode::Success
+                ErrorCode::Success
+            }
+        }
+    }
+
+    ///
+    /// Fetches a total count of search result set
+    ///
+    /// # Arguments
+    ///
+    ///  * `search_handle` - unique identifier of a search request
+    ///  * `total_count_p` - output param - total count
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `InvalidState` - Provided search handle does not exist, or parsing of data has gone wrong
+    ///
+    pub fn get_search_total_count(&self, search_handle: i32, total_count_p: *mut usize) -> ErrorCode {
+        let search = check_option!(self.searches.get(search_handle), ErrorCode::InvalidState);
+
+        match search.total_count {
+            None => ErrorCode::InvalidState,
+            Some(total_count) => {
+                unsafe { *total_count_p = total_count };
+                ErrorCode::Success
+            }
+        }
     }
 }
