@@ -14,7 +14,19 @@ endif
 PROJECT_NAME ?= $(notdir $(PROJECT_DIR))
 PRE_PACKAGE_GOALS ?=
 
-docker_env_value = $(shell grep -oP '^ENV $(1)=\K.*' $(2))
+# based on https://stackoverflow.com/questions/10858261/abort-makefile-if-variable-not-set
+check_non_empty = $(if $(1),$(1),$(error $(2)))
+check_defined = $(if $(value $1),, $(error Undefined $1$(if $2,	($2))$(if $(value @), \
+                    required by target '$@')))
+
+docker_env_value = $(call check_non_empty,$(shell grep -oP '^ENV $(1)=\K.*' $(2)), \
+				   "Value for ENV $(1) not found in dockerfile $(2)")
+docker_from_tag = $(call check_non_empty,$(shell grep -oP '^FROM $(1):\K.*' $(2)), \
+					"Tag for FROM $(1) not found in dockerfile $(2)")
+docker_from_version = $(firstword $(subst -, ,$(call docker_from_tag,$(1),$(2))))
+
+BASE_DOCKERFILE_PATH = $(_THIS_MK_ABS_DIR)/docker/base/$(OSNAME)/Dockerfile.$(BASE_DOCKER_VERSION)
+RUST_DOCKERFILE_PATH = $(_THIS_MK_ABS_DIR)/docker/rust/$(OSNAME)/Dockerfile.$(RUST_DOCKER_VERSION)
 
 # required for in-docker targets
 DOCKER_NAME ?=
@@ -68,20 +80,20 @@ endif
 package: _check_fpm_args $(PRE_PACKAGE_GOALS)
 	$(FPM) $(FPM_ARGS)
 
+image_rust_base_version:
+	$(call check_defined,RUST_DOCKER_VERSION)
+	$(eval BASE_DOCKER_VERSION=$(call docker_from_version,'evernym/base',$(RUST_DOCKERFILE_PATH)))
+	echo $(BASE_DOCKER_VERSION)
+
 # TODO refactor that once compose provides support for images
 # build oreder: https://github.com/docker/compose/issues/5228
 image_base:
-ifeq ($(BASE_DOCKER_VERSION),)
-	$(eval BASE_DOCKER_VERSION=$(call docker_env_value,'BASE_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/base/$(OSNAME)/Dockerfile))
-endif
-	BASE_DOCKER_TAG_PREFIX=$(BASE_DOCKER_VERSION)- \
+	$(call check_defined,BASE_DOCKER_VERSION)
+	BASE_DOCKER_VERSION=$(BASE_DOCKER_VERSION) \
 		docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build base
 
-image_rust: image_base
-ifeq ($(RUST_DOCKER_VERSION),)
-	$(eval RUST_DOCKER_VERSION=$(call docker_env_value,'RUST_ENV_VERSION',$(_THIS_MK_ABS_DIR)/docker/rust/$(OSNAME)/Dockerfile))
-endif
-	RUST_DOCKER_TAG_PREFIX=$(RUST_DOCKER_VERSION)- \
+image_rust: image_rust_base_version image_base
+	RUST_DOCKER_VERSION=$(RUST_DOCKER_VERSION) \
 		docker-compose -f $(_THIS_MK_ABS_DIR)/docker/docker-compose.yml build rust
 
 %_in_docker: image_%
