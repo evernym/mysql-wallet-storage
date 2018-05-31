@@ -4,6 +4,7 @@ import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.non_secrets.WalletSearch;
 import org.hyperledger.indy.sdk.wallet.Wallet;
+import org.hyperledger.indy.sdk.wallet.WalletItemNotFoundException;
 import org.hyperledger.indy.sdk.wallet.WalletNotFoundException;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -13,7 +14,7 @@ import org.testng.annotations.Test;
 
 import java.util.concurrent.ExecutionException;
 
-public class NonSecretsApiTestPositive extends BaseTest {
+public class NonSecretsApiPositiveTest extends BaseTest {
 
     private String walletName = "testWallet" + System.currentTimeMillis();
     private Wallet wallet = null;
@@ -200,7 +201,7 @@ public class NonSecretsApiTestPositive extends BaseTest {
             Assert.assertTrue(false); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
-            Assert.assertTrue(e.getCause() instanceof WalletNotFoundException, "Expected Cause is WalletNotFoundException, actual is " + e.getCause().toString());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Expected Cause is WalletItemNotFoundException, actual is " + e.getCause().toString());
         }
     }
 
