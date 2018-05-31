@@ -47,6 +47,8 @@ FPM_ARGS = $(LIB_DYNAMIC)=/usr/lib/
 # docker related variables
 DOCKER_NAME ?= evernym/aurora-wallet
 DOCKER_TAG ?=
+CI_DOCKERFILE_PATH = docker/ci/$(OSNAME)/Dockerfile
+
 EXPORT_ENV += OSNAME RELEASE CARGO_TARGET_DIR CRATE_P_VERSION CARGO_LOGIN_TOKEN
 
 .PHONY: all rust_version test_dry test build pre_package clean
@@ -57,12 +59,16 @@ include ext/Makefile
 
 export OSNAME
 
-image_ci_version:
-	echo $(call docker_env_value,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)
+image_ci_base_version:
+	$(eval RUST_DOCKER_VERSION=$(call docker_from_version,'evernym/rust',$(CI_DOCKERFILE_PATH)))
+	echo $(RUST_DOCKER_VERSION)
 
-image_ci: image_rust
+image_ci_version:
+	echo $(call docker_env_value,'CI_ENV_VERSION',$(CI_DOCKERFILE_PATH))
+
+image_ci: image_ci_base_version image_rust
 ifeq ($(DOCKER_TAG),)
-	$(eval DOCKER_TAG=$(call docker_env_value,'CI_ENV_VERSION',docker/ci/$(OSNAME)/Dockerfile)-$(OSNAME)-ci)
+	$(eval DOCKER_TAG=$(call docker_env_value,'CI_ENV_VERSION',$(CI_DOCKERFILE_PATH))-$(OSNAME)-ci)
 endif
 	OSNAME=$(OSNAME) \
 	CI_DOCKER_NAME=$(DOCKER_NAME) \
