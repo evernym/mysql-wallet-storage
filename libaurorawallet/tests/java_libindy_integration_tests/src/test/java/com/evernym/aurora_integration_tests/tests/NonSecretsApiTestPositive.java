@@ -13,7 +13,7 @@ import org.testng.annotations.Test;
 
 import java.util.concurrent.ExecutionException;
 
-public class NonSecretsApiTest extends BaseTest {
+public class NonSecretsApiTestPositive extends BaseTest {
 
     private String walletName = "testWallet" + System.currentTimeMillis();
     private Wallet wallet = null;
