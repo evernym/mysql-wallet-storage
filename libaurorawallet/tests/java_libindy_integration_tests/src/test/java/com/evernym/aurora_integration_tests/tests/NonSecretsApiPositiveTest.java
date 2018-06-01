@@ -133,14 +133,13 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("tags", tags);
         JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
 
-        JSONObject actual = new JSONObject(records.get(0));
+        JSONObject actual = (JSONObject) records.get(0);
         Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
+        Assert.assertEquals(expected.getString("id"), actual.getString("id"), "id is as expected");
 
         JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
         Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
                 "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
-
-        Assert.assertTrue(expected.similar(records.get(0)));
 
         search.close();
     }
