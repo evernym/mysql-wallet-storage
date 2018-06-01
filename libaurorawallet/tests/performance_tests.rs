@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime};
 
 pub mod test_utils;
 use test_utils::api_requests::api_requests;
-use test_utils::helper_functions::{get_random_item_value, generate_predefinied_tags, get_predefined_tag_names};
+use test_utils::helper_functions::{get_random_record_value, generate_predefinied_tags, get_predefined_tag_names};
 use test_utils::config::{Config, ConfigType};
 
 extern crate mysql;
@@ -26,31 +26,31 @@ const THREADS_CNT: u64 = 10;
     /// # Arguments
     ///
     ///  * `wallet_cnt` - wallet count per thread
-    ///  * `items_per_wallet_cnt` - number of items per wallet (can be 0)
-    ///  * `tags_per_item_cnt` - number of tags per item (can be 0)
+    ///  * `records_per_wallet_cnt` - number of records per wallet (can be 0)
+    ///  * `tags_per_record_cnt` - number of tags per record (can be 0)
     ///
     ///
-    fn populate_database(wallet_cnt: u64, item_per_wallet_cnt: u64, tags_per_item_cnt: u64) {
+    fn populate_database(wallet_cnt: u64, record_per_wallet_cnt: u64, tags_per_record_cnt: u64) {
         println!("Start populating DB....");
         let mut results = Vec::new();
 
         for a in 1..THREADS_CNT+1 {
 
             let thread = thread::spawn(move || {
-                let item_value = get_random_item_value();
+                let record_value = get_random_record_value();
 
                 for w in 1..wallet_cnt/THREADS_CNT+1 {
                     let wallet_name = format!("wallet_name_{}_{}", a, w);
                     api_requests::create_wallet(&wallet_name);
 
-                    if item_per_wallet_cnt != 0 {
-                        for i in 1..item_per_wallet_cnt + 1 {
-                            let item_id = format!("item_id_{}_{}_{}", a, w, i);
+                    if record_per_wallet_cnt != 0 {
+                        for i in 1..record_per_wallet_cnt + 1 {
+                            let record_id = format!("record_id_{}_{}_{}", a, w, i);
                             let mut tags: String = "{}".to_string();
-                            if tags_per_item_cnt != 0 {
-                                 tags = generate_predefinied_tags(tags_per_item_cnt);
+                            if tags_per_record_cnt != 0 {
+                                 tags = generate_predefinied_tags(tags_per_record_cnt);
                             }
-                                api_requests::add_record(&wallet_name, &item_id, &item_value, &tags);
+                                api_requests::add_record(&wallet_name, &record_id, &record_value, &tags);
                             }
                         }
                 }
@@ -87,88 +87,76 @@ const THREADS_CNT: u64 = 10;
     ///  * `action` - enum that represents which specific api call should be executed
     ///     Can take any value defined in `Action` enum
     ///  * `wallet_cnt` - wallet count per thread
-    ///  * `items_per_wallet_cnt` - number of items per wallet (can be 0)
-    ///  * `tags_per_item_cnt` - number of tags per item (can be 0)
+    ///  * `records_per_wallet_cnt` - number of records per wallet (can be 0)
+    ///  * `tags_per_record_cnt` - number of tags per record (can be 0)
     ///
     ///
 
-    fn execute_action(action: &Action, number_of_threads: u64, wallet_cnt: u64, items_per_wallet_cnt: u64, tags_per_item_cnt: u64){
+    fn execute_action(action: &Action, thread_number: u64, wallet_number_per_thread: u64, records_per_wallet_cnt: u64, tags_per_record_cnt: u64){
+        let wallet_name = format!("wallet_name_{}_{}", thread_number, wallet_number_per_thread);
+        let mut record_id;
         match action {
             &Action::AddWallet =>{
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
                 api_requests::create_wallet(&wallet_name);
             },
             &Action::DeleteWallet =>{
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
                 api_requests::delete_wallet(&wallet_name);
             }
             &Action::AddRecord => {
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
-                let item_value = get_random_item_value();
-                    for i in 1..items_per_wallet_cnt + 1 {
-                        let item_id = format!("item_id_{}_{}_{}", number_of_threads, wallet_cnt, i);
+                let record_value = get_random_record_value();
+                    for i in 1..records_per_wallet_cnt + 1 {
+                        record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
                         let mut tags: String = "{}".to_string();
-                        if tags_per_item_cnt != 0 {
-                             tags = generate_predefinied_tags(tags_per_item_cnt);
+                        if tags_per_record_cnt != 0 {
+                             tags = generate_predefinied_tags(tags_per_record_cnt);
                         }
-                        api_requests::add_record(&wallet_name, &item_id, &item_value, &tags);
+                        api_requests::add_record(&wallet_name, &record_id, &record_value, &tags);
                     }
             },
             &Action::GetRecord =>{
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
-                for i in 1..items_per_wallet_cnt+1 {
-                    let item_id = format!("item_id_{}_{}_{}", number_of_threads, wallet_cnt, i);
-                    let item = api_requests::get_record_with_details(&wallet_name, &item_id);
-
+                for i in 1..records_per_wallet_cnt+1 {
+                    record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                    api_requests::get_record_with_details(&wallet_name, &record_id);
                 }
             },
             &Action::DeleteRecord =>{
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
-                for i in 1..items_per_wallet_cnt+1 {
-                    let item_id = format!("item_id_{}_{}_{}", number_of_threads, wallet_cnt, i);
-                    api_requests::delete_record(&wallet_name, &item_id);
-
+                for i in 1..records_per_wallet_cnt+1 {
+                    record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                    api_requests::delete_record(&wallet_name, &record_id);
                 }
             },
             &Action::UpdateRecordValue =>{
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
-                let new_item_value = get_random_item_value();
-                for i in 1..items_per_wallet_cnt + 1 {
-                    let item_id = format!("item_id_{}_{}_{}", number_of_threads, wallet_cnt, i);
-                    api_requests::update_record_value(&wallet_name, &item_id, &new_item_value);
+                let new_record_value = get_random_record_value();
+                for i in 1..records_per_wallet_cnt + 1 {
+                    record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                    api_requests::update_record_value(&wallet_name, &record_id, &new_record_value);
                 }
             },
             &Action::AddRecordTags =>{
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
-                    for i in 1..items_per_wallet_cnt + 1 {
-                        let item_id = format!("item_id_{}_{}_{}", number_of_threads, wallet_cnt, i);
-                        if tags_per_item_cnt != 0 {
-                            let mut tags: String = generate_predefinied_tags(tags_per_item_cnt);
-                            api_requests::add_record_tags(&wallet_name, &item_id,  &tags);
+                    for i in 1..records_per_wallet_cnt + 1 {
+                        record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                        if tags_per_record_cnt != 0 {
+                            let mut tags: String = generate_predefinied_tags(tags_per_record_cnt);
+                            api_requests::add_record_tags(&wallet_name, &record_id,  &tags);
                         }
-
                     }
             }
             &Action::UpdateRecordTags =>{
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
-                    for i in 1..items_per_wallet_cnt + 1 {
-                        let item_id = format!("item_id_{}_{}_{}", number_of_threads, wallet_cnt, i);
-                        if tags_per_item_cnt != 0 {
-                            let mut tags: String = generate_predefinied_tags(tags_per_item_cnt);
-                            api_requests::update_record_tags(&wallet_name, &item_id,  &tags);
+                    for i in 1..records_per_wallet_cnt + 1 {
+                        record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                        if tags_per_record_cnt != 0 {
+                            let mut tags: String = generate_predefinied_tags(tags_per_record_cnt);
+                            api_requests::update_record_tags(&wallet_name, &record_id,  &tags);
                         }
-
                     }
             },
             &Action::DeleteRecordTags => {
-                let wallet_name = format!("wallet_name_{}_{}", number_of_threads, wallet_cnt);
-                    for i in 1..items_per_wallet_cnt + 1 {
-                        let item_id = format!("item_id_{}_{}_{}", number_of_threads, wallet_cnt, i);
-                        if tags_per_item_cnt != 0 {
-                            let mut tags: Vec<String> = get_predefined_tag_names(tags_per_item_cnt);
-                            api_requests::delete_record_tags(&wallet_name, &item_id,  &tags);
+                    for i in 1..records_per_wallet_cnt + 1 {
+                        record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                        if tags_per_record_cnt != 0 {
+                            let mut tags: Vec<String> = get_predefined_tag_names(tags_per_record_cnt);
+                            api_requests::delete_record_tags(&wallet_name, &record_id,  &tags);
                         }
-
                     }
             }
 
@@ -183,12 +171,12 @@ const THREADS_CNT: u64 = 10;
     /// # Arguments
     ///
     ///  * `wallet_cnt` - wallet count per thread
-    ///  * `items_per_wallet_cnt` - number of items per wallet (can be 0)
-    ///  * `tags_per_item_cnt` - number of tags per item (can be 0)
+    ///  * `records_per_wallet_cnt` - number of records per wallet (can be 0)
+    ///  * `tags_per_record_cnt` - number of tags per record (can be 0)
     ///  * `action` - enum that represents which specific api call should be executed
     ///     Can take any value defined in `Action` enum
     ///
-    fn send_requests(mut wallet_cnt: u64, mut items_per_wallet_cnt: u64, mut tags_per_item_cnt: u64, action: &'static Action) {
+    fn send_requests(mut wallet_cnt: u64, mut records_per_wallet_cnt: u64, mut tags_per_record_cnt: u64, action: &'static Action) {
 
         let start_time = SystemTime::now();
 
@@ -201,7 +189,7 @@ const THREADS_CNT: u64 = 10;
                 let time = SystemTime::now();
                 for w  in 1..(wallet_cnt/THREADS_CNT)+1{
                     let time = SystemTime::now();
-                    execute_action(&action, a, w, items_per_wallet_cnt, tags_per_item_cnt);
+                    execute_action(&action, a, w, records_per_wallet_cnt, tags_per_record_cnt);
                     let time_diff = SystemTime::now().duration_since(time).unwrap();
                     execution_times.push(time_diff);
                 }
@@ -223,12 +211,12 @@ const THREADS_CNT: u64 = 10;
         if wallet_cnt == 0{
             wallet_cnt = 1;
         }
-        if items_per_wallet_cnt == 0{
-            items_per_wallet_cnt = 1;
+        if records_per_wallet_cnt == 0{
+            records_per_wallet_cnt = 1;
         }
 
-        if tags_per_item_cnt == 0{
-            tags_per_item_cnt = 1;
+        if tags_per_record_cnt == 0{
+            tags_per_record_cnt = 1;
         }
 
 
@@ -245,7 +233,7 @@ const THREADS_CNT: u64 = 10;
                      Sum of Exection times:   \t{:?}\n\
                      Total Duration:          \t{:?}\n\
                      Aprox TPS:               \t{:?}",
-                 max_execution_time, THREADS_CNT * wallet_cnt * items_per_wallet_cnt * tags_per_item_cnt, sum_execution_time, total_execution_time, ((THREADS_CNT * wallet_cnt * items_per_wallet_cnt * tags_per_item_cnt) / total_execution_time_in_secs)
+                 max_execution_time, THREADS_CNT * wallet_cnt * records_per_wallet_cnt * tags_per_record_cnt, sum_execution_time, total_execution_time, ((THREADS_CNT * wallet_cnt * records_per_wallet_cnt * tags_per_record_cnt) / total_execution_time_in_secs)
         );
 }
 

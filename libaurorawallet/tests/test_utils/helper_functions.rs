@@ -13,7 +13,7 @@ pub fn random_name() -> String {
     random_string(10)
 }
 
-pub fn get_random_item_value() -> Vec<u8> {
+pub fn get_random_record_value() -> Vec<u8> {
     let mut rng = rand::thread_rng();
     let range = Range::new(0, 255);
     let vals: Vec<u8> = (0..300).map(|_| range.ind_sample(&mut rng)).collect();
