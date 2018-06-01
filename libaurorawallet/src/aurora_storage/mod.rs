@@ -117,7 +117,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     pub fn create_storage(name: &str, config: &str, credentials: &str, metadata: &str) -> ErrorCode {
 
-        trace!("Creating Storage -> name: {}, config: {}, credentials: {}, metadata: {}", name, config, credentials, metadata);
+        trace!("Creating Storage -> name: {}, metadata: {}", name, metadata);
 
         let config: StorageConfig = check_result!(serde_json::from_str(config), ErrorCode::InvalidStructure);
         let credentials: StorageCredentials = check_result!(serde_json::from_str(credentials), ErrorCode::InvalidStructure);
@@ -174,7 +174,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     pub fn open_storage(name: &str, config: &str, credentials: &str) -> Result<Self, ErrorCode> {
 
-        trace!("Opening Storage -> name: {}, config: {}, credentials: {}", name, config, credentials);
+        trace!("Opening Storage -> name: {}", name);
 
         let config: StorageConfig = check_result!(serde_json::from_str(config), Err(ErrorCode::InvalidStructure));
         let credentials: StorageCredentials = check_result!(serde_json::from_str(credentials), Err(ErrorCode::InvalidStructure));
@@ -220,7 +220,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     pub fn delete_storage(name: &str, config: &str, credentials: &str) -> ErrorCode {
 
-        trace!("Deleting Storage -> name: {}, config: {}, credentials: {}", name, config, credentials);
+        trace!("Deleting Storage -> name: {}", name);
 
         let config: StorageConfig = check_result!(serde_json::from_str(config), ErrorCode::InvalidStructure);
         let credentials: StorageCredentials = check_result!(serde_json::from_str(credentials), ErrorCode::InvalidStructure);
