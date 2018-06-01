@@ -43,8 +43,8 @@ impl Config {
                 Config {
                     config: json!(
                         {
-                            "read_host": "localhost",
-                            "write_host": "localhost",
+                            "read_host": "wallet.cow5nksk7vuq.us-west-2.rds.amazonaws.com",
+                            "write_host": "wallet.cow5nksk7vuq.us-west-2.rds.amazonaws.com",
                             "port": 3306,
                             "db_name": "wallet"
                         }
@@ -56,8 +56,8 @@ impl Config {
                     ).to_string(),
                     credentials: json!(
                         {
-                            "user": "wallet",
-                            "pass": "wallet"
+                            "user": "root",
+                            "pass": "NDyZBhCQNZgWLZKLNCnXwq3r"
                         }
                     ).to_string()
                 }
