@@ -112,7 +112,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     ///  * `Success` - Execution successful
     ///  * `InvalidStructure` -  Invalid structure of the JSON arguments -> config | credentials
-    ///  * `AlreadyExistsError` - Wallet with the provided name already exists in the DB
+    ///  * `WalletAlreadyExistsError` - Wallet with the provided name already exists in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn create_storage(name: &str, config: &str, credentials: &str, metadata: &str) -> ErrorCode {
@@ -133,7 +133,7 @@ impl<'a> AuroraStorage<'a> {
         match result {
                 Err(Error::MySqlError(err)) => {
                     match err.code {
-                        1062 => return ErrorCode::AlreadyExistsError,
+                        1062 => return ErrorCode::WalletAlreadyExistsError,
                         _ => return ErrorCode::IOError,
                     };
                 },

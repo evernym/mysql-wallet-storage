@@ -24,7 +24,7 @@ pub enum ErrorCode {
     /// <summary>
     /// Attempt to create wallet with name used for another exists wallet
     /// </summary>
-    AlreadyExistsError = 203,
+    WalletAlreadyExistsError = 203,
 
     /// <summary>
     /// Requested entity id isn't present in wallet.
