@@ -323,7 +323,7 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `RecordAlreadExists` - Record with the provided type and id already exist in the DB
+    ///  * `ItemAlreadyExists` - Record with the provided type and id already exist in the DB
     ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tags
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
@@ -348,7 +348,7 @@ impl<'a> AuroraStorage<'a> {
                 Err(Error::MySqlError(err)) => {
                     warn!("MySQL Error while executing query. Err Code: {}", err.code);
                     match err.code {
-                        1062 => return ErrorCode::WalletItemAlreadyExists,
+                        1062 => return ErrorCode::ItemAlreadyExists,
                         3140 => return ErrorCode::InvalidStructure, // Invalid JSON
                         _ => return ErrorCode::IOError,
                     };
@@ -383,7 +383,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     ///  * `Success` - Execution successful
     ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> options
-    ///  * `WalletItemNotFound` - Record with the provided type and id does not exist in the DB
+    ///  * `ItemNotFound` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///  * `InvalidState` - Invalid encoding of a provided/fetched string
     ///
@@ -395,51 +395,41 @@ impl<'a> AuroraStorage<'a> {
 
         let record: Record;
 
-        if options.retrieve_value | options.retrieve_tags {
-            let query = format!(
-                "SELECT {}, {} \
-                 FROM items i \
-                 WHERE \
-                    wallet_id = :wallet_id \
-                    AND type = :type \
-                    AND name = :name",
-                if options.retrieve_value { "value" } else {"''"},
-                if options.retrieve_tags { "tags" } else {"''"}
-            );
+        let query = format!(
+            "SELECT {}, {} \
+             FROM items i \
+             WHERE \
+                wallet_id = :wallet_id \
+                AND type = :type \
+                AND name = :name",
+            if options.retrieve_value { "value" } else {"''"},
+            if options.retrieve_tags { "tags" } else {"''"}
+        );
 
-            let mut result: QueryResult = check_result!(
-                self.read_pool.prep_exec(
-                    &query,
-                    params!{
-                        "wallet_id" => self.wallet_id,
-                        "type" => type_,
-                        "name" => id
-                    }
-                ),
-                ErrorCode::IOError
-            );
+        let mut result: QueryResult = check_result!(
+            self.read_pool.prep_exec(
+                &query,
+                params!{
+                    "wallet_id" => self.wallet_id,
+                    "type" => type_,
+                    "name" => id
+                }
+            ),
+            ErrorCode::IOError
+        );
 
-            let row = check_result!(check_option!(result.next(), ErrorCode::WalletItemNotFound), ErrorCode::IOError);
+        let row = check_result!(check_option!(result.next(), ErrorCode::ItemNotFound), ErrorCode::IOError);
 
-            // These 2 values cannot be NULL.
-            let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::IOError);
-            let tags: String = check_option!(row.get(1), ErrorCode::IOError);
+        // These 2 values cannot be NULL.
+        let db_value: Vec<u8> = check_option!(row.get(0), ErrorCode::IOError);
+        let tags: String = check_option!(row.get(1), ErrorCode::IOError);
 
-            record = Record::new(
-                check_result!(CString::new(id), ErrorCode::InvalidState),
-                if options.retrieve_value {Some(db_value)} else {None},
-                if options.retrieve_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
-                Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
-            );
-        }
-        else {
-            record = Record::new(
-                check_result!(CString::new(id), ErrorCode::InvalidState),
-                None,
-                None,
-                Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
-            );
-        }
+        record = Record::new(
+            check_result!(CString::new(id), ErrorCode::InvalidState),
+            if options.retrieve_value {Some(db_value)} else {None},
+            if options.retrieve_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
+            Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
+        );
 
         let record_handle = self.records.insert(record);
 
@@ -483,7 +473,7 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `NotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn delete_record(&self, type_: &str, id: &str) -> ErrorCode {
@@ -504,7 +494,7 @@ impl<'a> AuroraStorage<'a> {
 
         if result.affected_rows() != 1 {
             warn!("Trying to delete a non existent record, type: {}, id: {}", type_, id);
-            return ErrorCode::WalletItemNotFound;
+            return ErrorCode::ItemNotFound;
         }
 
         trace!("Success Deleting Record with the type: {}, id: {}", type_, id);
@@ -528,7 +518,7 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `NotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn update_record_value(&self, type_: &str, id: &str, value: &Vec<u8>) -> ErrorCode {
@@ -550,7 +540,7 @@ impl<'a> AuroraStorage<'a> {
 
         if result.affected_rows() != 1 {
             warn!("Trying to update value of a non existent record, type: {}, id: {}", type_, id);
-            return ErrorCode::WalletItemNotFound;
+            return ErrorCode::ItemNotFound;
         }
 
         trace!("Success Updating Value of a record with the type: {}, id: {}", type_, id);
@@ -575,7 +565,7 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `NotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tags
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
@@ -635,7 +625,7 @@ impl<'a> AuroraStorage<'a> {
 
         if result.affected_rows() != 1 {
             warn!("Trying to add tags to a non existent record, type: {}, id: {}", type_, id);
-            return ErrorCode::WalletItemNotFound;
+            return ErrorCode::ItemNotFound;
         }
 
         trace!("Success Adding Tags for the record with the type: {}, id: {}", type_, id);
@@ -661,7 +651,7 @@ impl<'a> AuroraStorage<'a> {
     /// # ErrorCodes
     ///
     ///  * `Success` - Execution successful
-    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `NotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tags
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
@@ -698,7 +688,7 @@ impl<'a> AuroraStorage<'a> {
 
         if result.affected_rows() != 1 {
             warn!("Trying to update tags of a non existent record, type: {}, id: {}", type_, id);
-            return ErrorCode::WalletItemNotFound;
+            return ErrorCode::ItemNotFound;
         }
 
         trace!("Success Updating Tags for the record with the type: {}, id: {}", type_, id);
@@ -723,7 +713,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     ///  * `Success` - Execution successful
     ///  * `InvalidStructure` - Invalid structure of the JSON arguments -> tag_names
-    ///  * `WalletNotFoundError` - Record with the provided type and id does not exist in the DB
+    ///  * `NotFoundError` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn delete_record_tags(&self, type_: &str, id: &str, tag_names: &Vec<String>) -> ErrorCode {
@@ -782,7 +772,7 @@ impl<'a> AuroraStorage<'a> {
 
         if result.affected_rows() != 1 {
             warn!("Trying to delete tags of a non existent record, type: {}, id: {}", type_, id);
-            return ErrorCode::WalletItemNotFound;
+            return ErrorCode::ItemNotFound;
         }
 
         trace!("Success Deleting Tags for the record with the type: {}, id: {}", type_, id);
@@ -801,7 +791,7 @@ impl<'a> AuroraStorage<'a> {
     ///
     ///  * `Success` - Execution successful
     ///  * `InvalidState` - Invalid encoding of a provided/fetched string
-    ///  * `WalletItemNotFound` - Record with the provided type and id does not exist in the DB
+    ///  * `ItemNotFound` - Record with the provided type and id does not exist in the DB
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
     ///
     pub fn get_metadata(&self) -> Result<(Arc<CString>, i32), ErrorCode> {
@@ -818,12 +808,12 @@ impl<'a> AuroraStorage<'a> {
             Err(ErrorCode::IOError)
         );
 
-        let row = check_result!(check_option!(result.next(), Err(ErrorCode::WalletItemNotFound)), Err(ErrorCode::IOError));
+        let row = check_result!(check_option!(result.next(), Err(ErrorCode::ItemNotFound)), Err(ErrorCode::IOError));
         let metadata: String = check_option!(row.get(0), Err(ErrorCode::IOError));
         let metadata = check_result!(CString::new(metadata), Err(ErrorCode::InvalidState));
 
         let handle = self.metadata.insert(metadata);
-        let metadata = check_option!(self.metadata.get(handle), Err(ErrorCode::WalletItemNotFound));
+        let metadata = check_option!(self.metadata.get(handle), Err(ErrorCode::ItemNotFound));
 
         trace!("Success Getting Wallet Metadata");
 
@@ -1033,7 +1023,7 @@ impl<'a> AuroraStorage<'a> {
     ///  * `Success` - Execution successful
     ///  * `InvalidState` - Provided search handle does not exist, or parsing of data has gone wrong
     ///  * `IOError` - Unexpected error occurred while communicating with the DB
-    ///  * `WalletItemNotFound` - Result set exhausted, no more records to fetch
+    ///  * `ItemNotFound` - Result set exhausted, no more records to fetch
     ///
     pub fn fetch_search_next_record(&self, search_handle: i32, record_handle_p: *mut i32) -> ErrorCode {
 
@@ -1049,7 +1039,7 @@ impl<'a> AuroraStorage<'a> {
             Some(ref search_result) => {
                 let mut search_result = check_result!(search_result.write(), ErrorCode::IOError);
 
-                let next_result = check_option!(search_result.next(), ErrorCode::WalletItemNotFound);
+                let next_result = check_option!(search_result.next(), ErrorCode::ItemNotFound);
 
                 let row = check_result!(next_result, ErrorCode::IOError);
 
