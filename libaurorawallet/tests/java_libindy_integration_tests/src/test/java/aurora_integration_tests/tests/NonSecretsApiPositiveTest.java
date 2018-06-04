@@ -1,11 +1,10 @@
-package com.evernym.aurora_integration_tests.tests;
+package aurora_integration_tests.tests;
 
 import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.non_secrets.WalletSearch;
 import org.hyperledger.indy.sdk.wallet.Wallet;
 import org.hyperledger.indy.sdk.wallet.WalletItemNotFoundException;
-import org.hyperledger.indy.sdk.wallet.WalletNotFoundException;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.testng.Assert;
