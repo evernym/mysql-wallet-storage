@@ -81,7 +81,10 @@ impl string::ToString for Operator {
 pub fn parse_from_json(json: &str) -> Result<Operator, ErrorCode> {
     let parsed_json = match serde_json::from_str(json) {
         Ok(value) => value,
-        Err(_) => return Err(ErrorCode::InvalidStructure)
+        Err(err) => {
+            trace!("Search Query Translation Error: Could not parse JSON WQL Query because: {}", err);
+            return Err(ErrorCode::InvalidStructure)
+        }
     };
 
     if let serde_json::Value::Object(map) = parsed_json {
@@ -113,6 +116,7 @@ fn parse_operator(key: String, value: serde_json::Value) -> Result<Operator, Err
                     let suboperator = parse(map)?;
                     operators.push(suboperator);
                 } else {
+                    warn!("Search Query Translation Error: `$or` operator must be used with an array of JSON objects");
                     return Err(ErrorCode::InvalidStructure);
                 }
             }
@@ -129,10 +133,14 @@ fn parse_operator(key: String, value: serde_json::Value) -> Result<Operator, Err
                 let (operator_name, value) = map.into_iter().next().unwrap();
                 parse_single_operator(operator_name, key, value)
             } else {
+                warn!("Search Query Translation Error: `{}` must be used with a JSON object of length 1", key);
                 Err(ErrorCode::InvalidStructure)
             }
         },
-        (_, _) => Err(ErrorCode::InvalidStructure)
+        (_, _) => {
+            warn!("Search Query Translation Error: Unsupported value type for key: `{}`", key);
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -152,13 +160,17 @@ fn parse_single_operator(operator_name: String, key: String, value: serde_json::
                 if let serde_json::Value::String(s) = v {
                     target_values.push(String::from(s));
                 } else {
+                    warn!("Search Query Translation Error: `$in` operator must be used with an array of strings");
                     return Err(ErrorCode::InvalidStructure);
                 }
             }
 
             Ok(Operator::In(key, target_values))
         },
-        (_, _) => Err(ErrorCode::InvalidStructure)
+        (_, _) => {
+            warn!("Search Query Translation Error: Bad operator: {}", operator_name);
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -203,7 +215,10 @@ fn gt_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) 
             arguments.push(tag_value.into());
             Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) > ?)", tag_path))
         },
-        _ => Err(ErrorCode::InvalidStructure)
+        _ => {
+            warn!("Search Query Translation Error: Trying to use `gt` operator with a encrypted tag");
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -215,7 +230,10 @@ fn gte_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>)
             arguments.push(tag_value.into());
             Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) >= ?)", tag_path))
         },
-        _ => Err(ErrorCode::InvalidStructure)
+        _ => {
+            warn!("Search Query Translation Error: Trying to use `gte` operator with a encrypted tag");
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -227,7 +245,10 @@ fn lt_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) 
             arguments.push(tag_value.into());
             Ok(format!("JSON_UNQUOTE(JSON_EXTRACT(tags, {})) < ?)", tag_path))
         },
-        _ => Err(ErrorCode::InvalidStructure)
+        _ => {
+            warn!("Search Query Translation Error: Trying to use `lt` operator with a encrypted tag");
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -239,7 +260,10 @@ fn lte_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>)
             arguments.push(tag_value.into());
             Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) <= ?)", tag_path))
         },
-        _ => Err(ErrorCode::InvalidStructure)
+        _ => {
+            warn!("Search Query Translation Error: Trying to use `lte` operator with a encrypted tag");
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -251,7 +275,10 @@ fn like_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>
             arguments.push(tag_value.into());
             Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) LIKE ?)", tag_path))
         },
-        _ => Err(ErrorCode::InvalidStructure)
+        _ => {
+            warn!("Search Query Translation Error: Trying to use `like` operator with a encrypted tag");
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -264,7 +291,10 @@ fn regex_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value
             arguments.push(tag_value.into());
             Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) REGEXP ?)", tag_path))
         },
-        _ => Err(ErrorCode::InvalidStructure)
+        _ => {
+            warn!("Search Query Translation Error: Trying to use `regex` operator with a encrypted tag");
+            Err(ErrorCode::InvalidStructure)
+        }
     }
 }
 
@@ -329,6 +359,9 @@ fn join_operators(operators: &[Operator], join_str: &str, arguments: &mut Vec<Va
 }
 
 pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &SearchOptions) -> Result<(String, Vec<Value>), ErrorCode> {
+
+    trace!("Translating WQL to SQL Fetch Query -> type: {}, wql: {:?}, options: {:?}", type_, wql, options);
+
     let mut arguments: Vec<Value> = Vec::new();
     let query_condition = match operator_to_sql(wql, &mut arguments) {
         Ok(query_condition) => query_condition,
@@ -345,10 +378,16 @@ pub fn wql_to_sql(wallet_id: u64, type_: &str, wql: &Operator, options: &SearchO
 
     arguments.push(type_.into());
     arguments.push(wallet_id.into());
+
+    trace!("Success Translating WQL: {:?} to SQL Fetch Query -> query: {}, args: {:?}", wql, query_string, arguments);
+
     Ok((query_string, arguments))
 }
 
 pub fn wql_to_sql_count(wallet_id: u64, type_: &str, wql: &Operator) -> Result<(String, Vec<Value>), ErrorCode> {
+
+    trace!("Translating WQL to SQL Count Query -> type: {}, wql: {:?}", type_, wql);
+
     let mut arguments: Vec<Value> = Vec::new();
     let query_condition = match operator_to_sql(wql, &mut arguments) {
         Ok(query_condition) => query_condition,
@@ -362,5 +401,8 @@ pub fn wql_to_sql_count(wallet_id: u64, type_: &str, wql: &Operator) -> Result<(
 
     arguments.push(type_.into());
     arguments.push(wallet_id.into());
+
+    trace!("Success Translating WQL: {:?} to SQL Count Query -> query: {}, args: {:?}", wql, query_string, arguments);
+
     Ok((query_string, arguments))
 }

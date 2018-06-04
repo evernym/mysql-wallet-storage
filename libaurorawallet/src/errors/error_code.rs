@@ -40,7 +40,10 @@ pub enum ErrorCode {
 macro_rules! check_result {
     ($r: expr, $e: expr) => {
         match $r {
-            Err(_err) => return $e,
+            Err(err) => {
+                warn!("Error Occurred: {:?}", err);
+                return $e
+            },
             Ok(x) => x
         }
     }
