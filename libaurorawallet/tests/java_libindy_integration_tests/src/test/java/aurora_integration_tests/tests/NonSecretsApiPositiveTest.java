@@ -40,14 +40,14 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "addRecord", priority = 2)
     public void getRecordWithTags() throws Exception {
 
-        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, type, id, GET_OPTIONS_TAGS_ONLY).get();
 
         JSONObject actual = new JSONObject(recordJson);
 
         JSONObject expected = new JSONObject()
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
-                .put("value", value)
+                .put("value", JSONObject.NULL)
                 .put("tags", "{}");
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
@@ -56,14 +56,14 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "addRecord", priority = 2)
     public void getRecordWithoutTags() throws Exception {
 
-        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_EMPTY).get();
+        String recordJson = WalletRecord.get(wallet, type, id, GET_OPTIONS_EMPTY).get();
 
         JSONObject actual = new JSONObject(recordJson);
 
         JSONObject expected = new JSONObject()
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
-                .put("value", value)
+                .put("value", value) // value is returned by default
                 .put("tags", JSONObject.NULL);
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
@@ -76,11 +76,11 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         JSONObject expected = new JSONObject()
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
-                .put("value", value2)
+                .put("value", JSONObject.NULL)
                 .put("tags", "{}");
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, type, id, GET_OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
@@ -93,14 +93,12 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         JSONObject expected = new JSONObject()
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
-                .put("value", value2)
+                .put("value", JSONObject.NULL)
                 .put("tags", tags);
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, type, id, GET_OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
-
-        Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
 
         JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
         JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
@@ -111,7 +109,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "updateRecordTags", priority = 5)
     public void searchRecords() throws Exception {
 
-        WalletSearch search = WalletSearch.open(wallet, type, QUERY_EMPTY, OPTIONS_TAGS_ONLY).get();
+        WalletSearch search = WalletSearch.open(wallet, type, QUERY_EMPTY, SEARCH_OPTIONS_TAGS_ONLY).get();
 
         String searchRecordsJson = search.fetchNextRecords(wallet, 1).get();
 
@@ -129,7 +127,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
 
         JSONObject actual = (JSONObject) records.get(0);
-        Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
+
         Assert.assertEquals(expected.getString("id"), actual.getString("id"), "id is as expected");
 
         JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
@@ -151,10 +149,8 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("tags", tagsWithDeletedTag1);
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, type, id, GET_OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
-
-        Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
 
         JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
         JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
@@ -174,10 +170,8 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("tags", tags);
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, type, id, GET_OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
-
-        Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
 
         JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
         JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
@@ -191,7 +185,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         WalletRecord.delete(wallet, type, id).get();
 
         try {
-            WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
+            WalletRecord.get(wallet, type, id, GET_OPTIONS_TAGS_ONLY).get();
             Assert.assertTrue(false); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());

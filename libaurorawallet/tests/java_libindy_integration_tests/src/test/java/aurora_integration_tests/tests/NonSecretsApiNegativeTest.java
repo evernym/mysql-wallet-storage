@@ -114,9 +114,9 @@ public class NonSecretsApiNegativeTest extends BaseTest {
                 {missingPort, expectedErrorClassWithMessage, "missingPort"},
                 {missingDBName, expectedErrorClassWithMessage, "missingDBName"},
                 {wrongPort, expectedErrorClassWithMessage2, "wrongPort"},
-                {wrongDBName, expectedErrorClassWithMessage2, "wrongDBName"},
-                {wrongReadHost, expectedErrorClassWithMessage2, "wrongReadHost"},
-                {wrongWriteHost, expectedErrorClassWithMessage2, "wrongWriteHost"}
+                {wrongDBName, expectedErrorClassWithMessage2, "wrongDBName"}
+                //,{wrongReadHost, expectedErrorClassWithMessage2, "wrongReadHost"}
+                //,{wrongWriteHost, expectedErrorClassWithMessage2, "wrongWriteHost"}
         };
         return toReturn;
     }
@@ -157,7 +157,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
 
         // try to get non-existing record
         try {
-            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_EMPTY).get();
+            String recordJson = WalletRecord.get(wallet, type, id2, GET_OPTIONS_EMPTY).get();
             Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
@@ -166,7 +166,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
 
         // try to get non-existing record
         try {
-            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_ALL).get();
+            String recordJson = WalletRecord.get(wallet, type, id2, GET_OPTIONS_ALL).get();
             Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
@@ -175,7 +175,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
 
         // try to get non-existing record
         try {
-            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_TAGS_ONLY).get();
+            String recordJson = WalletRecord.get(wallet, type, id2, GET_OPTIONS_TAGS_ONLY).get();
             Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
@@ -183,7 +183,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         }
 
         try {
-            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_TYPE_ONLY).get();
+            String recordJson = WalletRecord.get(wallet, type, id2, GET_OPTIONS_TYPE_ONLY).get();
             Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
@@ -192,7 +192,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
 
         // try to get non-existing record
         try {
-            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_VALUE_ONLY).get();
+            String recordJson = WalletRecord.get(wallet, type, id2, GET_OPTIONS_VALUE_ONLY).get();
             Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
@@ -206,9 +206,9 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         Object[][] toReturn = {
                 // jsonOptions, scenario
                 {"\"\"", "emptyString"},
-                {OPTIONS_ALL.substring(1), "noCloseBracket"},
-                {OPTIONS_ALL.substring(0, OPTIONS_ALL.length()-1), "noOpenBracket"},
-                {OPTIONS_ALL.substring(1, OPTIONS_ALL.length()-1), "noOpenNoCloseBracket"},
+                {GET_OPTIONS_ALL.substring(1), "noCloseBracket"},
+                {GET_OPTIONS_ALL.substring(0, GET_OPTIONS_ALL.length()-1), "noOpenBracket"},
+                {GET_OPTIONS_ALL.substring(1, GET_OPTIONS_ALL.length()-1), "noOpenNoCloseBracket"},
                 {"{retrieveTags: true, retrieveValue: true, retrieveType: true}", "noDoubleQuotes"}
         };
         return toReturn;

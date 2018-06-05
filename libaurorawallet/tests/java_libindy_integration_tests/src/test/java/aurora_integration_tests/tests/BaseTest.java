@@ -21,11 +21,25 @@ public class BaseTest {
     protected static final String TAGS_EMPTY = "{}";
 
 
-    protected static final String OPTIONS_EMPTY = "{}";
-    protected static final String OPTIONS_ALL = "{\"retrieveTags\": true, \"retrieveValue\": true, \"retrieveType\": true}";
-    protected static final String OPTIONS_TAGS_ONLY = "{\"retrieveTags\": true}";
-    protected static final String OPTIONS_VALUE_ONLY = "{\"retrieveValue\": true}";
-    protected static final String OPTIONS_TYPE_ONLY = "{\"retrieveType\": true}";
+    protected static final String GET_OPTIONS_EMPTY = "{}";
+    protected static final String GET_OPTIONS_ALL = "{\"retrieveTags\": true, \"retrieveValue\": true, \"retrieveType\": true}";
+    protected static final String GET_OPTIONS_TAGS_ONLY = "{\"retrieveTags\": true, \"retrieveValue\": false, \"retrieveType\": false}";
+    protected static final String GET_OPTIONS_VALUE_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": true, \"retrieveType\": false}";
+    protected static final String GET_OPTIONS_TYPE_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": false, \"retrieveType\": true}";
+
+    protected static final String SEARCH_OPTIONS_EMPTY = "{}";
+    protected static final String SEARCH_OPTIONS_ALL = "{\"retrieveTags\": true, \"retrieveValue\": true, \"retrieveType\": true, " +
+                                                            "\"retrieveTotalCount\": true, \"retrieveRecords\": true}";
+    protected static final String SEARCH_OPTIONS_TAGS_ONLY = "{\"retrieveTags\": true, \"retrieveValue\": false, \"retrieveType\": false, " +
+                                                            "\"retrieveTotalCount\": false, \"retrieveRecords\": true}";
+    protected static final String SEARCH_OPTIONS_VALUE_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": true, \"retrieveType\": false, " +
+                                                            "\"retrieveTotalCount\": false, \"retrieveRecords\": true}";
+    protected static final String SEARCH_OPTIONS_TYPE_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": false, \"retrieveType\": true, " +
+                                                            "\"retrieveTotalCount\": false, \"retrieveRecords\": true}";
+    protected static final String SEARCH_OPTIONS_TOTAL_COUNT_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": false, \"retrieveType\": false, " +
+                                                            "\"retrieveTotalCount\": true, \"retrieveRecords\": false}";
+    protected static final String SEARCH_OPTIONS_RECORDS_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": false, \"retrieveType\": false, " +
+                                                            "\"retrieveTotalCount\": false, \"retrieveRecords\": true}";
 
     protected static String CONFIG;
     protected static String CREDENTIALS;
