@@ -3,8 +3,8 @@ package aurora_integration_tests.tests;
 import org.hyperledger.indy.sdk.IOException;
 import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.InvalidStructureException;
-import org.hyperledger.indy.sdk.wallet.Wallet;
-import org.hyperledger.indy.sdk.wallet.WalletInputException;
+import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
+import org.hyperledger.indy.sdk.wallet.*;
 import org.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
@@ -17,6 +17,12 @@ public class NonSecretsApiNegativeTest extends BaseTest {
 
     private String walletName = "testWallet" + System.currentTimeMillis();
     private Wallet wallet = null;
+
+    String type = "TestType";
+    String id = "RecordId";
+    String id2 = "RecordId2";
+    String value = "RecordValue";
+    String value2 = "RecordValue2";
 
 
     @DataProvider()
@@ -139,10 +145,300 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         }
     }
 
-    @AfterMethod(alwaysRun = true)
-    public void afterMethod() throws IndyException, InterruptedException, ExecutionException {
+    @Test
+    public void getNonExistingKey() throws IndyException, ExecutionException, InterruptedException {
 
-        try{Wallet.deleteWallet(walletName, CREDENTIALS).get();}
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        // try to get non-existing record
+        try {
+            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_EMPTY).get();
+            Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        // try to get non-existing record
+        try {
+            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_ALL).get();
+            Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        // try to get non-existing record
+        try {
+            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_TAGS_ONLY).get();
+            Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        try {
+            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_TYPE_ONLY).get();
+            Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        // try to get non-existing record
+        try {
+            String recordJson = WalletRecord.get(wallet, type, id2, OPTIONS_VALUE_ONLY).get();
+            Assert.assertTrue(false, "This line should not be reached but actual result is: " + recordJson);
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+
+    @DataProvider(name = "badFormatOptionsJson")
+    private Object[][] badFormatOptionsJson() {
+        Object[][] toReturn = {
+                // jsonOptions, scenario
+                {"\"\"", "emptyString"},
+                {OPTIONS_ALL.substring(1), "noCloseBracket"},
+                {OPTIONS_ALL.substring(0, OPTIONS_ALL.length()-1), "noOpenBracket"},
+                {OPTIONS_ALL.substring(1, OPTIONS_ALL.length()-1), "noOpenNoCloseBracket"},
+                {"{retrieveTags: true, retrieveValue: true, retrieveType: true}", "noDoubleQuotes"}
+        };
+        return toReturn;
+    }
+
+    @Test (dataProvider = "badFormatOptionsJson")
+    public void getKeyWithBadFormatForOptionsJson (String optionsJson, String scenario) throws IndyException, ExecutionException, InterruptedException {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        // try to get item with bad format options json
+        try {
+            String recordJson = WalletRecord.get(wallet, type, id2, optionsJson).get();
+            Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached but actual result is: " + recordJson);
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test
+    public void updateNonExistingKey() throws IndyException, ExecutionException, InterruptedException {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        // try to update non-existing record value
+        try {
+            WalletRecord.updateValue(wallet, type, id2, "new_value").get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        // try to update non-existing record tags
+        try {
+            WalletRecord.updateTags(wallet, type, id2, "{\"tag1\": \"value1\"}").get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+    }
+
+
+    @Test
+    public void deleteNonExistingKey() throws IndyException, ExecutionException, InterruptedException {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        // try to delete non-existing record value
+        try {
+            WalletRecord.delete(wallet, type, id2).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test
+    public void deleteTagFromNonExistingKey() throws IndyException, ExecutionException, InterruptedException {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        // try to delete tag for non-existing item
+        try {
+            WalletRecord.deleteTags(wallet, type, id2, "[\"tag1\"]").get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+
+    @DataProvider(name = "badFormatTagsList")
+    private Object[][] badFormatTagsList() {
+        Object[][] toReturn = {
+                // jsonOptions, scenario
+                {"\"\"", "emptyString"},
+                {"[\"tag\", \"tag2\"", "noCloseBracket"},
+                {"\"tag\", \"tag2\"]", "noOpenBracket"},
+                {"\"tag\", \"tag2\"", "noOpenNoCloseBracket"},
+                {"[tag]", "noDoubleQuotesForTag"}
+        };
+        return toReturn;
+    }
+
+    @Test (dataProvider = "badFormatTagsList")
+    public void deleteTagWithBadFormatForTagsList(String jsonTagsList, String scenario) throws IndyException, ExecutionException, InterruptedException {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        // try to delete tags with bad format for tags list
+        try {
+            WalletRecord.deleteTags(wallet, type, id, jsonTagsList).get();
+            Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletDecodingException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test (dataProvider = "badFormatTagsList")
+    public void addTagWithBadFormatForTagsList(String jsonTagsList, String scenario) throws IndyException, ExecutionException, InterruptedException {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        // try to add tags with bad format for tags list
+        try {
+            WalletRecord.addTags(wallet, type, id, jsonTagsList).get();
+            Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletDecodingException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test
+    public void insertDuplicateKey() throws IndyException, ExecutionException, InterruptedException {
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        // add one record
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+
+        try {
+            WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletItemAlreadyExistsException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test
+    public void openAnOpenedWallet() throws IndyException, ExecutionException, InterruptedException {
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+
+        try {
+            Wallet.openWallet(walletName, null, CREDENTIALS).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletAlreadyOpenedException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test
+    public void openNonExistingWallet() {
+        try {
+            wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test
+    public void createWalletWithDuplicateName() throws IndyException, ExecutionException, InterruptedException {
+        Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        try {
+            Wallet.createWallet(POOL, walletName, TYPE, CONFIG, CREDENTIALS).get();
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletExistsException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test ()
+    public void deleteNonexistingWallet() throws Exception {
+
+        try {
+            Wallet.deleteWallet(walletName+"blabla", CREDENTIALS).get();
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof IOException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+
+    /**
+     * Cleanup method
+     */
+
+    @AfterMethod(alwaysRun = true)
+    public void afterMethod() {
+
+        try{
+            if(wallet != null) {
+                wallet.closeWallet().get();
+                wallet = null;
+            }
+            Wallet.deleteWallet(walletName, CREDENTIALS).get();
+        }
         catch(Exception e){}
     }
 }

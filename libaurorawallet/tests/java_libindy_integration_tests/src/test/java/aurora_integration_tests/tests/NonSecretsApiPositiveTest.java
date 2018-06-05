@@ -18,16 +18,12 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     private String walletName = "testWallet" + System.currentTimeMillis();
     private Wallet wallet = null;
 
+    String tags =  "{\"tagName1\":\"str1\",\"tagName2\":\"5\",\"tagName3\":\"12\"}";
+    String tagsWithDeletedTag1 =  "{\"tagName2\":\"5\",\"tagName3\":\"12\"}";
     String type = "TestType";
     String id = "RecordId";
     String value = "RecordValue";
     String value2 = "RecordValue2";
-    String tagsEmpty = "{}";
-    String tags =  "{\"tagName1\":\"str1\",\"tagName2\":\"5\",\"tagName3\":\"12\"}";
-    String tagsWithDeletedTag1 =  "{\"tagName2\":\"5\",\"tagName3\":\"12\"}";
-    String queryEmpty = "{}";
-    String optionsEmpty = "{}";
-    String optionsTags = "{\"retrieveTags\": true}";
 
     @Test (priority = 0)
     public void createAndOpenWallet() throws Exception {
@@ -38,13 +34,13 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
     @Test (dependsOnMethods = "createAndOpenWallet", priority = 1)
     public void addRecord() throws Exception {
-        WalletRecord.add(wallet, type, id, value, tagsEmpty).get();
+        WalletRecord.add(wallet, type, id, value, TAGS_EMPTY).get();
     }
 
     @Test (dependsOnMethods = "addRecord", priority = 2)
     public void getRecordWithTags() throws Exception {
 
-        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
 
         JSONObject actual = new JSONObject(recordJson);
 
@@ -60,7 +56,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "addRecord", priority = 2)
     public void getRecordWithoutTags() throws Exception {
 
-        String recordJson = WalletRecord.get(wallet, type, id, optionsEmpty).get();
+        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_EMPTY).get();
 
         JSONObject actual = new JSONObject(recordJson);
 
@@ -84,7 +80,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("tags", "{}");
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
@@ -101,7 +97,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("tags", tags);
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
@@ -115,7 +111,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "updateRecordTags", priority = 5)
     public void searchRecords() throws Exception {
 
-        WalletSearch search = WalletSearch.open(wallet, type, queryEmpty, optionsTags).get();
+        WalletSearch search = WalletSearch.open(wallet, type, QUERY_EMPTY, OPTIONS_TAGS_ONLY).get();
 
         String searchRecordsJson = search.fetchNextRecords(wallet, 1).get();
 
@@ -155,7 +151,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("tags", tagsWithDeletedTag1);
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
@@ -178,7 +174,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("tags", tags);
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, type, id, optionsTags).get();
+        String recordJson = WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertEquals(expected.getString("value"), actual.getString("value"), "Value is as expected");
@@ -195,7 +191,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         WalletRecord.delete(wallet, type, id).get();
 
         try {
-            WalletRecord.get(wallet, type, id, optionsTags).get();
+            WalletRecord.get(wallet, type, id, OPTIONS_TAGS_ONLY).get();
             Assert.assertTrue(false); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException type. Actaul type is: " + e.getClass());

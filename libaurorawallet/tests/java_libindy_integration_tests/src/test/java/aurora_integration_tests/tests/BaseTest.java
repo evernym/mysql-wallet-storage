@@ -17,6 +17,16 @@ public class BaseTest {
 
     protected static final String POOL = "Pool1";
 
+    protected static final String QUERY_EMPTY = "{}";
+    protected static final String TAGS_EMPTY = "{}";
+
+
+    protected static final String OPTIONS_EMPTY = "{}";
+    protected static final String OPTIONS_ALL = "{\"retrieveTags\": true, \"retrieveValue\": true, \"retrieveType\": true}";
+    protected static final String OPTIONS_TAGS_ONLY = "{\"retrieveTags\": true}";
+    protected static final String OPTIONS_VALUE_ONLY = "{\"retrieveValue\": true}";
+    protected static final String OPTIONS_TYPE_ONLY = "{\"retrieveType\": true}";
+
     protected static String CONFIG;
     protected static String CREDENTIALS;
 
@@ -36,9 +46,6 @@ public class BaseTest {
         CONFIG_WRITE_HOST       = props.getProperty("config.write_host");
         CONFIG_PORT             = props.getProperty("config.port");
         CONFIG_DB_NAME          = props.getProperty("config.db_name");
-
-
-
 
         CREDENTIALS_KEY         = props.getProperty("credentials.key");
         CREDENTIALS_USERNAME    = props.getProperty("credentials.username");
