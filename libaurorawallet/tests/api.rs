@@ -259,14 +259,8 @@ mod high_casees {
 
         let type_ = CString::new("type1").unwrap();
         let id = CString::new(random_name()).unwrap();
-        let value = vec![1, 2, 3, 4];
-        let tags_json = CString::new(r##"{}"##).unwrap();
         let options_json = fetch_options(false, false);
         let mut record_handle = -1;
-        let mut id_p: *const c_char = ptr::null_mut();
-        let mut value_p: *const u8 = ptr::null_mut();
-        let mut value_len_p = 0;
-        let mut tags_json_p: *const c_char = ptr::null_mut();
 
         let err = api::get_record(handle, type_.as_ptr(), id.as_ptr(), options_json.as_ptr(), &mut record_handle);
         assert_eq!(err, ErrorCode::ItemNotFound);
@@ -876,7 +870,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_add_record_tags_empty_tags() {
+    fn test_add_record_tags_empty_tags_record_exists() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -892,6 +886,18 @@ mod high_casees {
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_add_record_tags_empty_tags_record_does_not_exist() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+        let tags_json_empty = CString::new(r##"{}"##).unwrap();
+
+        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json_empty.as_ptr());
+        assert_eq!(err, ErrorCode::ItemNotFound);
     }
 
     #[test]
@@ -1129,7 +1135,7 @@ mod high_casees {
     }
 
     #[test]
-    fn test_delete_tags_empty_tag_list() {
+    fn test_delete_tags_empty_tag_list_record_exists() {
         let handle = open_storage();
 
         let type_ = CString::new("type1").unwrap();
@@ -1146,6 +1152,18 @@ mod high_casees {
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
+    }
+
+    #[test]
+    fn test_delete_tags_empty_tag_list_record_does_not_exist() {
+        let handle = open_storage();
+
+        let type_ = CString::new("type1").unwrap();
+        let id = CString::new(random_name()).unwrap();
+
+        let tag_names = CString::new("[]").unwrap();
+        let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::ItemNotFound);
     }
 
     #[test]

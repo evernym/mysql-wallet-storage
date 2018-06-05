@@ -574,8 +574,8 @@ impl<'a> AuroraStorage<'a> {
         trace!("Adding Record Tags -> type: {}, id: {}, tags:{:?}", type_, id, tags);
 
         if tags.is_empty() {
-            trace!("No tags to add. Returning Success.");
-            return ErrorCode::Success;
+            trace!("No tags to add. Checking if record exists...");
+            return self._check_if_record_exists(type_, id);
         }
 
         let mut tag_name_value_paths: Vec<String> = Vec::new();
@@ -721,8 +721,8 @@ impl<'a> AuroraStorage<'a> {
         trace!("Deleting Record Tags -> type: {}, id: {}, tag_names: {:?}", type_, id, tag_names);
 
         if tag_names.is_empty() {
-            trace!("No tags to delete. Returning Success.");
-            return ErrorCode::Success;
+            trace!("No tags to delete. Checking if record exists...");
+            return self._check_if_record_exists(type_, id);
         }
 
         let mut tag_name_paths: Vec<String> = Vec::new();
@@ -1100,5 +1100,43 @@ impl<'a> AuroraStorage<'a> {
                 ErrorCode::Success
             }
         }
+    }
+
+    ///
+    /// Helper method that checks if a record exists.
+    ///
+    /// # Arguments
+    ///
+    ///  * `type_` - record type
+    ///  * `id` - record id (name)
+    ///
+    /// # Returns
+    ///
+    ///  * `ErrorCode`
+    ///
+    /// # ErrorCodes
+    ///
+    ///  * `Success` - Execution successful
+    ///  * `IOError` - Unexpected error occurred while communicating with the DB
+    ///  * `ItemNotFound` - Record with provided `type_` and `id` does not exists
+    ///
+    fn _check_if_record_exists(&self, type_: &str, id: &str) -> ErrorCode {
+        let mut result = check_result!(
+            self.read_pool.prep_exec(
+                "SELECT 1 \
+                FROM items \
+                WHERE type = :type \
+                    AND name = :name \
+                    AND wallet_id = :wallet_id",
+                params!{
+                    "type" => type_,
+                    "name" => id,
+                    "wallet_id" => self.wallet_id
+                }),
+            ErrorCode::IOError);
+
+        check_result!(check_option!(result.next(), ErrorCode::ItemNotFound), ErrorCode::IOError);
+
+        return ErrorCode::Success;
     }
 }
