@@ -1,7 +1,9 @@
 extern crate rand;
 extern crate serde;
 extern crate serde_json;
+
 use std::collections::HashMap;
+
 use self::rand::{thread_rng, Rng};
 use self::rand::distributions::{Range, IndependentSample};
 
@@ -20,35 +22,7 @@ pub fn get_random_record_value() -> Vec<u8> {
     vals
 }
 
-pub fn generate_predefinied_tags(tags_count: u64) -> String{
-    let mut tags_list = HashMap::new();
-    for t in 0..tags_count {
-        let key: String;
-        let value: String = format!("value_{}", t+1);
-        if t % 2 == 0 {
-             key = format!("tag_{}", t+1);
-        }
-        else {
-            key = format!("~tag_{}", t+1);
-        }
-        tags_list.insert(key, value);
-    }
-    let tags = serde_json::to_string(&tags_list).unwrap();
-    tags
-}
-
-pub fn get_predefined_tag_names(tags_count: u64) -> Vec<String>{
-    let mut tag_names: Vec<String> = Vec::new();
-
-    for t in 0..tags_count {
-        let tag_name: String;
-        if t % 2 == 0 {
-             tag_name = format!("tag_{}", t+1);
-        }
-        else {
-            tag_name = format!("~tag_{}", t+1);
-        }
-        tag_names.push(tag_name);
-    }
-    tag_names
+pub fn get_hash_map_from_json_string(json_string: &str) -> HashMap<String, String>{
+    let map: HashMap<String, String> = serde_json::from_str(json_string).unwrap();
+    map
 }

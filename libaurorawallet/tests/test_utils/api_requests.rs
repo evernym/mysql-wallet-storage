@@ -1,4 +1,5 @@
 extern crate aurorastorage;
+extern crate serde_json;
 
 use aurorastorage::api as api;
 use aurorastorage::errors::error_code::ErrorCode;
@@ -12,6 +13,7 @@ pub mod api_requests {
     use super::*;
     use std::ptr;
     use std::os::raw::c_char;
+    use std::collections::HashMap;
 
     const RECORD_TYPE: &'static str = "test-type";
 
@@ -105,36 +107,58 @@ pub mod api_requests {
         assert_eq!(err, ErrorCode::Success);
     }
 
-    pub fn add_record_tags(wallet_name: &String, record_id: &String, tags: &String) {
+    pub fn add_record_tags(wallet_name: &String, record_id: &String, tags: &str) {
         let handle = open_storage(wallet_name);
         let record_id = CString::new(record_id.clone()).unwrap();
         let type_ = CString::new(RECORD_TYPE).unwrap();
-        let tags: String = format!(r##"{}"##, tags.clone());
         let tags_json = CString::new(tags).unwrap();
         let err = api::add_record_tags(handle, type_.as_ptr(), record_id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
     }
 
-    pub fn update_record_tags(wallet_name: &String, record_id: &String, tags: &String) {
+    pub fn update_record_tags(wallet_name: &String, record_id: &String, tags: &str) {
         let handle = open_storage(wallet_name);
         let record_id = CString::new(record_id.clone()).unwrap();
         let type_ = CString::new(RECORD_TYPE).unwrap();
-        let tags: String = format!(r##"{}"##, tags.clone());
         let tags_json = CString::new(tags).unwrap();
         let err = api::update_record_tags(handle, type_.as_ptr(), record_id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
     }
 
-    pub fn delete_record_tags(wallet_name: &String, record_id: &String, tags: &Vec<String>) {
+    pub fn delete_record_tags(wallet_name: &String, record_id: &String, tags: &str) {
         let handle = open_storage(wallet_name);
         let record_id = CString::new(record_id.clone()).unwrap();
         let type_ = CString::new(RECORD_TYPE).unwrap();
-        let tags: String = tags.join(",");
         let tags_json = CString::new(tags).unwrap();
         let err = api::delete_record_tags(handle, type_.as_ptr(), record_id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
+    }
+
+    pub fn search_records(wallet_name: &String, query_json: &str){
+        let handle = open_storage(wallet_name);
+        println!("Searching wallet: {}", wallet_name);
+        let type_ = CString::new(RECORD_TYPE).unwrap();
+        let query_json = CString::new(query_json).unwrap();
+        let options_json = CString::new(r##"{"retrieveRecords": true, "retrieveTotalCount": true, "retrieveType": true, "retrieveValue": true, "retrieveTags": true}"##).unwrap();
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    pub fn search_all_records(wallet_name: &String){
+        let handle = open_storage(wallet_name);
+        let mut search_handle: i32 = -1;
+
+        let err = api::search_all_records(handle, &mut search_handle);
+        assert_eq!(err, ErrorCode::Success);
+        let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 }

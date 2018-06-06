@@ -6,8 +6,10 @@ use std::time::{Duration, SystemTime};
 
 pub mod test_utils;
 use test_utils::api_requests::api_requests;
-use test_utils::helper_functions::{get_random_record_value, generate_predefinied_tags, get_predefined_tag_names};
+use test_utils::helper_functions::{get_random_record_value, get_hash_map_from_json_string,
+                                   random_string};
 use test_utils::config::{Config, ConfigType};
+use std::collections::HashMap;
 
 extern crate mysql;
 #[macro_use]
@@ -27,10 +29,10 @@ const THREADS_CNT: u64 = 10;
     ///
     ///  * `wallet_cnt` - wallet count per thread
     ///  * `records_per_wallet_cnt` - number of records per wallet (can be 0)
-    ///  * `tags_per_record_cnt` - number of tags per record (can be 0)
+    ///  * `predefined_tags_per_record_cnt` - number of tags per record (can be 0)
     ///
     ///
-    fn populate_database(wallet_cnt: u64, record_per_wallet_cnt: u64, tags_per_record_cnt: u64) {
+    fn populate_database(wallet_cnt: u64, records_per_wallet_cnt: u64, custom_tags_per_record_data: &'static str, percent_of_custom_tags_per_record: u64) {
         println!("Start populating DB....");
         let mut results = Vec::new();
 
@@ -42,17 +44,27 @@ const THREADS_CNT: u64 = 10;
                 for w in 1..wallet_cnt/THREADS_CNT+1 {
                     let wallet_name = format!("wallet_name_{}_{}", a, w);
                     api_requests::create_wallet(&wallet_name);
-
-                    if record_per_wallet_cnt != 0 {
-                        for i in 1..record_per_wallet_cnt + 1 {
+                    if records_per_wallet_cnt != 0 {
+                        for i in 1..records_per_wallet_cnt + 1 {
                             let record_id = format!("record_id_{}_{}_{}", a, w, i);
-                            let mut tags: String = "{}".to_string();
-                            if tags_per_record_cnt != 0 {
-                                 tags = generate_predefinied_tags(tags_per_record_cnt);
+                            let mut tags_list: HashMap<String, String> = HashMap::new();
+                            let mut custom_tags: HashMap<String, String> = HashMap::new();
+                            if custom_tags_per_record_data != "" && percent_of_custom_tags_per_record!=0 {
+                                custom_tags = get_hash_map_from_json_string(custom_tags_per_record_data);
+                                let num_of_records_wih_custom_tags = ((records_per_wallet_cnt * percent_of_custom_tags_per_record)/100);
+                                for (tag_name, tag_value) in custom_tags {
+                                    if i>=1 && i<=num_of_records_wih_custom_tags{
+                                        tags_list.insert(tag_name, tag_value);
+
+                                    } else {
+                                        tags_list.insert(tag_name, random_string(10));
+                                    }
+                                }
                             }
-                                api_requests::add_record(&wallet_name, &record_id, &record_value, &tags);
-                            }
+                        let tags = serde_json::to_string(&tags_list).unwrap();
+                        api_requests::add_record(&wallet_name, &record_id, &record_value, &tags);
                         }
+                    }
                 }
             });
              results.push(thread);
@@ -75,8 +87,9 @@ const THREADS_CNT: u64 = 10;
         UpdateRecordValue,
         AddRecordTags,
         UpdateRecordTags,
-        DeleteRecordTags
-
+        DeleteRecordTags,
+        SearchRecords,
+        SearchAllRecords
     }
     ///
     /// Defines steps that should be executed for each aurora wallet api request.
@@ -92,7 +105,7 @@ const THREADS_CNT: u64 = 10;
     ///
     ///
 
-    fn execute_action(action: &Action, thread_number: u64, wallet_number_per_thread: u64, records_per_wallet_cnt: u64, tags_per_record_cnt: u64){
+    fn execute_action( thread_number: u64, wallet_number_per_thread: u64, records_per_wallet_cnt: u64, custom_tags_per_record_data: &'static str, action: &Action){
         let wallet_name = format!("wallet_name_{}_{}", thread_number, wallet_number_per_thread);
         let mut record_id;
         match action {
@@ -106,11 +119,12 @@ const THREADS_CNT: u64 = 10;
                 let record_value = get_random_record_value();
                     for i in 1..records_per_wallet_cnt + 1 {
                         record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
-                        let mut tags: String = "{}".to_string();
-                        if tags_per_record_cnt != 0 {
-                             tags = generate_predefinied_tags(tags_per_record_cnt);
-                        }
-                        api_requests::add_record(&wallet_name, &record_id, &record_value, &tags);
+                         let mut tags_list: HashMap<String, String> = HashMap::new();
+                            if custom_tags_per_record_data != "" {
+                                tags_list = get_hash_map_from_json_string(custom_tags_per_record_data);
+                            }
+                            let tags = serde_json::to_string(&tags_list).unwrap();
+                            api_requests::add_record(&wallet_name, &record_id, &record_value, &tags);
                     }
             },
             &Action::GetRecord =>{
@@ -133,31 +147,31 @@ const THREADS_CNT: u64 = 10;
                 }
             },
             &Action::AddRecordTags =>{
-                    for i in 1..records_per_wallet_cnt + 1 {
-                        record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
-                        if tags_per_record_cnt != 0 {
-                            let mut tags: String = generate_predefinied_tags(tags_per_record_cnt);
-                            api_requests::add_record_tags(&wallet_name, &record_id,  &tags);
-                        }
-                    }
+                for i in 1..records_per_wallet_cnt + 1 {
+                    record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                    api_requests::add_record_tags(&wallet_name, &record_id,  &custom_tags_per_record_data);
+
+                }
             }
             &Action::UpdateRecordTags =>{
-                    for i in 1..records_per_wallet_cnt + 1 {
-                        record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
-                        if tags_per_record_cnt != 0 {
-                            let mut tags: String = generate_predefinied_tags(tags_per_record_cnt);
-                            api_requests::update_record_tags(&wallet_name, &record_id,  &tags);
-                        }
-                    }
+                for i in 1..records_per_wallet_cnt + 1 {
+                    record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                    api_requests::update_record_tags(&wallet_name, &record_id,  &custom_tags_per_record_data);
+                }
             },
             &Action::DeleteRecordTags => {
-                    for i in 1..records_per_wallet_cnt + 1 {
-                        record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
-                        if tags_per_record_cnt != 0 {
-                            let mut tags: Vec<String> = get_predefined_tag_names(tags_per_record_cnt);
-                            api_requests::delete_record_tags(&wallet_name, &record_id,  &tags);
-                        }
-                    }
+                for i in 1..records_per_wallet_cnt + 1 {
+                    record_id = format!("record_id_{}_{}_{}", thread_number, wallet_number_per_thread, i);
+                    api_requests::delete_record_tags(&wallet_name, &record_id,  &custom_tags_per_record_data);
+                }
+            },
+            &Action::SearchRecords =>{
+                api_requests::search_records(&wallet_name, &custom_tags_per_record_data);
+                println!("Executed search record");
+            }
+            &Action::SearchAllRecords =>{
+                api_requests::search_all_records(&wallet_name);
+                println!("Executed search all records");
             }
 
         }
@@ -176,20 +190,20 @@ const THREADS_CNT: u64 = 10;
     ///  * `action` - enum that represents which specific api call should be executed
     ///     Can take any value defined in `Action` enum
     ///
-    fn send_requests(mut wallet_cnt: u64, mut records_per_wallet_cnt: u64, mut tags_per_record_cnt: u64, action: &'static Action) {
+    fn send_requests(mut wallet_cnt: u64, mut records_per_wallet_cnt: u64, custom_tags_per_record_data: &'static str, action: &'static Action) {
 
         let start_time = SystemTime::now();
 
         let mut thread_handles = Vec::new();
 
-        for a in 1..THREADS_CNT+1 {
+        for thread_num in 1..THREADS_CNT+1 {
 
             let thread = thread::spawn(move || {
                 let mut execution_times = Vec::new();
                 let time = SystemTime::now();
-                for w  in 1..(wallet_cnt/THREADS_CNT)+1{
+                for wallet_num  in 1..(wallet_cnt/THREADS_CNT)+1{
                     let time = SystemTime::now();
-                    execute_action(&action, a, w, records_per_wallet_cnt, tags_per_record_cnt);
+                    execute_action(thread_num, wallet_num, records_per_wallet_cnt,  custom_tags_per_record_data, &action);
                     let time_diff = SystemTime::now().duration_since(time).unwrap();
                     execution_times.push(time_diff);
                 }
@@ -215,11 +229,6 @@ const THREADS_CNT: u64 = 10;
             records_per_wallet_cnt = 1;
         }
 
-        if tags_per_record_cnt == 0{
-            tags_per_record_cnt = 1;
-        }
-
-
         let mut max_execution_time = Duration::from_secs(0);
         let mut sum_execution_time = Duration::from_secs(0);
         for exec_time in all_execution_times {
@@ -233,7 +242,7 @@ const THREADS_CNT: u64 = 10;
                      Sum of Exection times:   \t{:?}\n\
                      Total Duration:          \t{:?}\n\
                      Aprox TPS:               \t{:?}",
-                 max_execution_time, THREADS_CNT * wallet_cnt * records_per_wallet_cnt * tags_per_record_cnt, sum_execution_time, total_execution_time, ((THREADS_CNT * wallet_cnt * records_per_wallet_cnt * tags_per_record_cnt) / total_execution_time_in_secs)
+                 max_execution_time,  wallet_cnt * records_per_wallet_cnt , sum_execution_time, total_execution_time, ((wallet_cnt * records_per_wallet_cnt) / total_execution_time_in_secs)
         );
 }
 
@@ -243,79 +252,87 @@ const THREADS_CNT: u64 = 10;
 
 mod performance {
     use super::*;
-
     #[test]
     fn test_add_wallet(){
         cleanup();
-        send_requests( 100, 0, 0, &Action::AddWallet);
+        send_requests( 100,  0, "",  &Action::AddWallet);
     }
 
     #[test]
     fn test_delete_wallet(){
         cleanup();
-        populate_database(100, 10, 10);
-        send_requests( 100, 0, 0, &Action::DeleteWallet);
+        populate_database(100, 10, r#"{"ime": "Nemanja", "nadimak": "donkey"}"#, 100);
+        send_requests( 100, 0,  "", &Action::DeleteWallet);
     }
 
     #[test]
     fn test_add_record_without_tags(){
         cleanup();
-        populate_database(100, 0, 0);
-        send_requests( 100, 1, 0, &Action::AddRecord);
-
+        populate_database(50, 0,  "", 0);
+        send_requests( 50, 10, "", &Action::AddRecord);
     }
 
     #[test]
     fn test_add_record_with_tags(){
         cleanup();
-        populate_database(100, 0, 0);
-        send_requests( 100, 6, 3, &Action::AddRecord);
-
+        //populate_database(50, 0,  "", 0);
+        send_requests( 50, 10, r#"{"name": "John", "surname": "Doe"}"#, &Action::AddRecord);
     }
 
     #[test]
     fn test_get_record(){
         cleanup();
-        populate_database(100, 10, 0);
-        send_requests( 100, 10, 0, &Action::GetRecord);
+        populate_database(50, 10,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( 50, 10, "", &Action::GetRecord);
     }
 
     #[test]
     fn test_delete_record(){
         cleanup();
-        populate_database(50, 10, 10);
-        send_requests( 50, 10, 0, &Action::DeleteRecord);
+        populate_database(50, 10,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( 50, 10, "", &Action::DeleteRecord);
     }
 
     #[test]
     fn test_update_record_value(){
         cleanup();
-        populate_database(50, 10, 10);
-        send_requests( 50, 10, 1, &Action::UpdateRecordValue);
+        populate_database(50, 10,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( 50, 10, "", &Action::UpdateRecordValue);
     }
 
     #[test]
     fn test_add_record_tags(){
         cleanup();
-        populate_database(50, 10, 0);
-        send_requests( 50, 10, 10, &Action::AddRecordTags);
-
+        populate_database(50, 10,  "", 0);
+        send_requests( 50, 10,  r#"{"name": "John", "surname": "Doe"}"#,&Action::AddRecordTags);
     }
 
     #[test]
     fn test_update_record_tags(){
         cleanup();
-        populate_database(50, 10, 10);
-        send_requests( 50, 10, 10, &Action::UpdateRecordTags);
+        populate_database(50, 10,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( 50, 10,  r#"{"surname": "UpdatedSurname"}"#, &Action::UpdateRecordTags);
 
     }
 
     #[test]
     fn test_delete_record_tags(){
         cleanup();
-        populate_database(50, 10, 10);
-        send_requests( 50, 10, 10, &Action::DeleteRecordTags);
-
+        populate_database(50, 10, r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( 50, 10, r#"["name"]"#, &Action::DeleteRecordTags);
     }
 
+    #[test]
+    fn test_search_record(){
+        cleanup();
+        populate_database(20, 70, r#"{"name": "John", "surname": "Doe"}"#, 40);
+        send_requests( 20, 0,  r#"{"name": {"$in": ["John", "john"]}}"#,&Action::SearchRecords);
+    }
+
+    #[test]
+    fn test_search_all_records(){
+        cleanup();
+        populate_database(20, 70, r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( 20, 0,  "", &Action::SearchAllRecords);
+    }
 }
