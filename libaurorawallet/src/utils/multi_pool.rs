@@ -1,6 +1,6 @@
 use std::sync::{RwLock, Arc};
 use std::collections::HashMap;
-use mysql::{Pool, OptsBuilder, Opts};
+use mysql::{Pool, OptsBuilder};
 use mysql::consts::CapabilityFlags;
 
 #[derive(Deserialize)]
@@ -29,7 +29,7 @@ impl MultiPool {
     pub fn get(&self, read_only: bool, config: &StorageConfig, credentials: &StorageCredentials) -> Option<Arc<Pool>> {
 
         let host_addr = if read_only {config.read_host} else {config.write_host};
-        let connection_string = format!("{}:{}@{}:{}/{}", credentials.user, credentials.pass, host_addr, config.port, config.db_name);
+        let connection_string = format!("mysql://{}:{}@{}:{}/{}", credentials.user, credentials.pass, host_addr, config.port, config.db_name);
 
         let mut c = match self.map.read() {
             Err(_) => None,
@@ -41,16 +41,8 @@ impl MultiPool {
 
         if c.is_none() {
 
-            let mut builder = OptsBuilder::default();
-
-            builder.user(Some(credentials.user))
-                   .pass(Some(credentials.pass))
-                   .ip_or_hostname(Some(host_addr))
-                   .db_name(Some(config.db_name))
-                   .tcp_port(config.port)
-                   .additional_capabilities(CapabilityFlags::CLIENT_FOUND_ROWS);
-
-            let opts: Opts = builder.into();
+            let mut opts = OptsBuilder::from_opts(&connection_string);
+            opts.additional_capabilities(CapabilityFlags::CLIENT_FOUND_ROWS);
 
             let pool = Pool::new_manual(1, 100, opts);
             if pool.is_err() {
