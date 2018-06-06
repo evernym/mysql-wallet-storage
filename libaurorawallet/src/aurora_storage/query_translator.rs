@@ -15,7 +15,6 @@ pub enum Operator {
     Gte(String, String),
     Lt(String, String),
     Lte(String, String),
-    Regex(String, String),
     Like(String, String),
     In(String, Vec<String>),
 }
@@ -122,7 +121,6 @@ fn parse_single_operator(operator_name: String, key: String, value: serde_json::
         ("$lt", serde_json::Value::String(s)) => Ok(Operator::Lt(key, s)),
         ("$lte", serde_json::Value::String(s)) => Ok(Operator::Lte(key, s)),
         ("$like", serde_json::Value::String(s)) => Ok(Operator::Like(key, s)),
-        ("$regex", serde_json::Value::String(s)) => Ok(Operator::Regex(key, s)),
         ("$in", serde_json::Value::Array(values)) => {
             let mut target_values: Vec<String> = Vec::new();
 
@@ -153,7 +151,6 @@ fn operator_to_sql(op: &Operator, arguments: &mut Vec<Value>) -> Result<String, 
         Operator::Lt(ref tag_name, ref target_value) => lt_to_sql(tag_name, target_value, arguments),
         Operator::Lte(ref tag_name, ref target_value) => lte_to_sql(tag_name, target_value, arguments),
         Operator::Like(ref tag_name, ref target_value) => like_to_sql(tag_name, target_value, arguments),
-        Operator::Regex(ref tag_name, ref target_value) => regex_to_sql(tag_name, target_value, arguments),
         Operator::In(ref tag_name, ref target_values) => Ok(in_to_sql(tag_name, target_values, arguments)),
         Operator::And(ref suboperators) => and_to_sql(suboperators, arguments),
         Operator::Or(ref suboperators) => or_to_sql(suboperators, arguments),
@@ -247,22 +244,6 @@ fn like_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>
         },
         _ => {
             warn!("Search Query Translation Error: Trying to use `like` operator with a encrypted tag");
-            Err(ErrorCode::InvalidStructure)
-        }
-    }
-}
-
-fn regex_to_sql(tag_name: &String, tag_value: &String, arguments: &mut Vec<Value>) -> Result<String, ErrorCode> {
-    match tag_name.chars().next().unwrap_or('\0') {
-        '~' => {
-
-            let tag_path = format!(r#"'$."{}"'"#, tag_name);
-
-            arguments.push(tag_value.into());
-            Ok(format!("(JSON_UNQUOTE(JSON_EXTRACT(tags, {})) REGEXP ?)", tag_path))
-        },
-        _ => {
-            warn!("Search Query Translation Error: Trying to use `regex` operator with a encrypted tag");
             Err(ErrorCode::InvalidStructure)
         }
     }
