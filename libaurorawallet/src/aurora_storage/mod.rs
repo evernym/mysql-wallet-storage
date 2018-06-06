@@ -896,7 +896,7 @@ impl<'a> AuroraStorage<'a> {
     ///         {
     ///             "tagName": "tagValue",
     ///             $or: {
-    ///                 "tagName2": { $regex: 'pattern' },
+    ///                 "tagName2": "tagValue2",
     ///                 "tagName3": { $gte: 123 },
     ///             },
     ///         }

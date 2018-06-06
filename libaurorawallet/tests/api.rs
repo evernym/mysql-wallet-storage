@@ -1690,29 +1690,6 @@ mod high_casees {
     }
 
     #[test]
-    fn test_search_records_invalid_query_regex_with_non_string_arg() {
-        let handle = open_storage();
-
-        let type_ = CString::new("type1").unwrap();
-
-        let query_json = json!({
-
-            "k5": {
-                "$regex": 1
-            }
-
-        });
-
-        let query_json = serde_json::to_string(&query_json).unwrap();
-        let query_json = CString::new(query_json).unwrap();
-        let options_json = CString::new("{}").unwrap();
-        let mut search_handle: i32 = -1;
-
-        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
-        assert_eq!(err, ErrorCode::InvalidStructure);
-    }
-
-    #[test]
     fn test_search_records_invalid_query_not_with_non_string_arg() {
         let handle = open_storage();
 
@@ -1872,29 +1849,6 @@ mod high_casees {
         let query_json = json!({
 
             "k2": {"$like": "like_target"},
-
-        });
-
-        let query_json = serde_json::to_string(&query_json).unwrap();
-        let query_json = CString::new(query_json).unwrap();
-        let options_json = CString::new("{}").unwrap();
-        let mut search_handle: i32 = -1;
-
-        let err = api::search_records(handle, type_.as_ptr(), query_json.as_ptr(), options_json.as_ptr(), &mut search_handle);
-        assert_eq!(err, ErrorCode::InvalidStructure);
-    }
-
-    #[test]
-    fn test_search_records_invalid_query_regex_with_encrypted_tag_name() {
-        let handle = open_storage();
-
-        let type_ = CString::new("type1").unwrap();
-
-        let query_json = json!({
-
-            "k5": {
-                "$regex": "regex_string"
-            }
 
         });
 
