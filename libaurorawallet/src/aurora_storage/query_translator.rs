@@ -1,4 +1,3 @@
-use std::string;
 use serde_json;
 use mysql::Value;
 
@@ -45,35 +44,6 @@ impl Operator {
                 Operator::In(key, targets)
             },
             _ => self
-        }
-    }
-}
-
-fn join_operator_strings(operators: &Vec<Operator>) -> String {
-    operators.iter()
-             .map(|o: &Operator| -> String { o.to_string() })
-             .collect::<Vec<String>>()
-             .join(",")
-}
-
-impl string::ToString for Operator {
-    fn to_string(&self) -> String {
-        match *self {
-            Operator::Eq(ref tag_name, ref tag_value) => format!("\"{}\": \"{}\"", tag_name.to_string(), tag_value.to_string()),
-            Operator::Neq(ref tag_name, ref tag_value) => format!("\"{}\": {{\"$neq\": \"{}\"}}", tag_name.to_string(), tag_value.to_string()),
-            Operator::Gt(ref tag_name, ref tag_value) => format!("\"{}\": {{\"$gt\": \"{}\"}}", tag_name.to_string(), tag_value.to_string()),
-            Operator::Gte(ref tag_name, ref tag_value) => format!("\"{}\": {{\"$gte\": \"{}\"}}", tag_name.to_string(), tag_value.to_string()),
-            Operator::Lt(ref tag_name, ref tag_value) => format!("\"{}\": {{\"$lt\": \"{}\"}}", tag_name.to_string(), tag_value.to_string()),
-            Operator::Lte(ref tag_name, ref tag_value) => format!("\"{}\": {{\"$lte\": \"{}\"}}", tag_name.to_string(), tag_value.to_string()),
-            Operator::Like(ref tag_name, ref tag_value) => format!("\"{}\": {{\"$like\": \"{}\"}}", tag_name.to_string(), tag_value.to_string()),
-            Operator::Regex(ref tag_name, ref tag_value) => format!("\"{}\": {{\"$regex\": \"{}\"}}", tag_name.to_string(), tag_value.to_string()),
-            Operator::Not(ref stmt) => format!("\"$not\": {{{}}}", stmt.to_string()),
-            Operator::And(ref operators) => format!("{{{}}}", join_operator_strings(operators)),
-            Operator::Or(ref operators) => format!("\"$or\": [{}])", join_operator_strings(operators)),
-            Operator::In(ref tag_name, ref tag_values) => {
-                let strings = tag_values.iter().map(|v| v.to_string()).collect::<Vec<String>>().join(", ");
-                format!("\"{}\": {{\"$in\": [{}]}}", tag_name.to_string(), strings)
-            },
         }
     }
 }
