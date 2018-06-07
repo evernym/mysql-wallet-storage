@@ -18,7 +18,7 @@ extern crate serde_json;
 extern crate lazy_static;
 extern crate core;
 
-const THREADS_CNT: u64 = 10;
+const THREADS_CNT: u64 = 20;
 
     ///
     /// Populates DB with data needed for tests execution
@@ -80,6 +80,9 @@ const THREADS_CNT: u64 = 10;
     ///
     enum Action {
         AddWallet,
+        SetMetadata,
+        GetMetadata,
+        OpenAndCloseWallet,
         DeleteWallet,
         AddRecord,
         GetRecord,
@@ -112,9 +115,19 @@ const THREADS_CNT: u64 = 10;
             &Action::AddWallet =>{
                 api_requests::create_wallet(&wallet_name);
             },
+            &Action::SetMetadata =>{
+                let new_metadata: String = format!("Set metadata {}", random_string(20));
+                api_requests::set_metadata(&wallet_name, &new_metadata);
+            },
+            &Action::GetMetadata =>{
+                api_requests::get_metadata(&wallet_name);
+            }
+            &Action::OpenAndCloseWallet => {
+                api_requests::open_and_close_storage(&wallet_name);
+            }
             &Action::DeleteWallet =>{
                 api_requests::delete_wallet(&wallet_name);
-            }
+            },
             &Action::AddRecord => {
                 let record_value = get_random_record_value();
                     for i in 1..records_per_wallet_cnt + 1 {
@@ -266,6 +279,27 @@ mod performance {
     }
 
     #[test]
+    fn test_set_metadata(){
+        cleanup();
+        populate_database(100, 0, "", 0);
+        send_requests(100, 0, "", &Action::SetMetadata);
+    }
+
+    #[test]
+    fn test_get_metadata(){
+        cleanup();
+        populate_database(100, 0, "", 0);
+        send_requests(100, 0, "", &Action::GetMetadata);
+    }
+
+    #[test]
+    fn test_open_and_close_wallet(){
+        cleanup();
+        populate_database(100, 0, "", 0);
+        send_requests(100, 0, "", &Action::OpenAndCloseWallet);
+    }
+
+    #[test]
     fn test_add_record_without_tags(){
         cleanup();
         populate_database(50, 0,  "", 0);
@@ -275,7 +309,7 @@ mod performance {
     #[test]
     fn test_add_record_with_tags(){
         cleanup();
-        //populate_database(50, 0,  "", 0);
+        populate_database(50, 0,  "", 0);
         send_requests( 50, 10, r#"{"name": "John", "surname": "Doe"}"#, &Action::AddRecord);
     }
 

@@ -35,6 +35,12 @@ pub mod api_requests {
         handle
     }
 
+    pub fn open_and_close_storage(wallet_name: &String){
+        let handle = open_storage(&wallet_name);
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
+    }
+
     pub fn create_wallet(wallet_name: &String) {
         let name = CString::new(wallet_name.clone()).unwrap();
 
@@ -46,6 +52,24 @@ pub mod api_requests {
         assert_eq!(err, ErrorCode::Success);
     }
 
+    pub fn set_metadata(wallet_name: &String, new_metadata: &String){
+        let handle = open_storage(wallet_name);
+        let new_metadata_cstring = CString::new(new_metadata.clone()).unwrap();
+
+        let err = api::set_metadata(handle, new_metadata_cstring.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+    }
+
+    pub fn get_metadata(wallet_name: &String){
+        let handle = open_storage(wallet_name);
+
+        let mut metadata_handle = -1;
+        let mut metadata_ptr: *const c_char = ptr::null_mut();
+
+        let err = api::get_metadata(handle, &mut metadata_ptr, &mut metadata_handle);
+        assert_eq!(err, ErrorCode::Success);
+    }
+
     pub fn delete_wallet(wallet_name: &String){
         let name = CString::new(wallet_name.clone()).unwrap();
         let config = CString::new(TEST_CONFIG.get_config()).unwrap();
@@ -53,6 +77,7 @@ pub mod api_requests {
         let err = api::delete_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
+
     pub fn add_record(wallet_name: &String, record_id: &String, record_value: &Vec<u8>, tags: &String) {
         let handle = open_storage(wallet_name);
 
@@ -63,7 +88,6 @@ pub mod api_requests {
         let err = api::add_record(handle, type_.as_ptr(), record_id.as_ptr(), record_value.as_ptr(), record_value.len(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
-
 
     pub fn get_record_with_details(wallet_name: &String, record_id: &String){
         let handle = open_storage(wallet_name);
