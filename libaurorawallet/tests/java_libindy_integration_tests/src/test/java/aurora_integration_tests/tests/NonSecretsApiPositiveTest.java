@@ -47,7 +47,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", JSONObject.NULL)
-                .put("tags", "{}");
+                .put("tags", new JSONObject());
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
     }
@@ -76,7 +76,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", JSONObject.NULL)
-                .put("tags", "{}");
+                .put("tags", new JSONObject());
 
         // get record with options: retriveTags
         String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
@@ -93,16 +93,14 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 .put("id", id)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", JSONObject.NULL)
-                .put("tags", TAGS);
+                .put("tags", new JSONObject(TAGS));
 
         // get record with options: retriveTags
         String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
-        JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
-        JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
-        Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
-                "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
+        Assert.assertTrue(expected.similar(actual),
+                "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
     }
 
 
@@ -114,7 +112,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 "\"tagName2\": \"5\"" +
                 "}";
 
-        String queryJson = "{" +
+        queryJson = "{" +
                 "\"tagName1\": \"str1\", " +
                 "\"tagName2\": \"5\"" +
                 "}";
@@ -179,18 +177,18 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
         JSONObject expected = new JSONObject()
                 .put("id", id)
-                .putOpt("type", JSONObject.NULL)
+                .putOpt("type", ITEM_TYPE)
                 .put("value", value2)
-                .put("tags", tagsWithDeletedTag1);
+                .put("tags", new JSONObject(tagsWithDeletedTag1));
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_ALL).get();
         JSONObject actual = new JSONObject(recordJson);
 
-        JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
-        JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
-        Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
-                "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
+//        JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
+//        JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
+        Assert.assertTrue(expected.similar(actual),
+                "expected '" + expected.toString() + "' matches actual'" + actual.toString() + "'");
     }
 
     @Test (dependsOnMethods = "deleteTags", priority = 7)
@@ -200,21 +198,19 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
         JSONObject expected = new JSONObject()
                 .put("id", id)
-                .putOpt("type", JSONObject.NULL)
+                .putOpt("type", ITEM_TYPE)
                 .put("value", value2)
-                .put("tags", TAGS);
+                .put("tags", new JSONObject(TAGS));
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_ALL).get();
         JSONObject actual = new JSONObject(recordJson);
 
-        JSONObject expectedTagsJson = new JSONObject(expected.getString("tags"));
-        JSONObject actualTagsJson = new JSONObject(actual.getString("tags"));
-        Assert.assertTrue(expectedTagsJson.similar(actualTagsJson),
-                "expected tags '" + expectedTagsJson.toString() + "' matches actual tags'" + actualTagsJson.toString() + "'");
+        Assert.assertTrue(expected.similar(actual),
+                "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
     }
 
-    @Test (dependsOnMethods = "addTags", priority = 8)
+    @Test (dependsOnMethods = "addRecord", priority = 8)
     public void deleteRecord() throws Exception {
 
         WalletRecord.delete(wallet, ITEM_TYPE, id).get();
@@ -229,11 +225,15 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     }
 
     @Test (dependsOnMethods = "createAndOpenWallet", priority = 9)
-    public void deleteWallet() throws Exception {
+    public void closeAndDeleteWallet() throws Exception {
 
+        wallet.closeWallet().get();
         Wallet.deleteWallet(walletName, CREDENTIALS).get();
         // create wallet with same name as proof that delete was successful
         Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        wallet.closeWallet().get();
     }
 
     @AfterClass(alwaysRun = true)
