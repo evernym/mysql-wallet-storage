@@ -17,6 +17,7 @@ public class BaseTest {
 
     protected static final String POOL = "Pool1";
     protected static final String ITEM_TYPE = "TestType";
+    protected static final String ITEM_TYPE2 = "TestType2";
 
     protected static final String QUERY_EMPTY = "{}";
     protected static final String TAGS_EMPTY = "{}";
