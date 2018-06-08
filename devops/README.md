@@ -4,7 +4,7 @@ This folder includes devops related routine and consists of the following parts:
 - [Makefile](Makefile) automates devops tasks like test, package and publish to [crates.io](https://crates.io/) which could be performed either on-host or in-docker
 - [docker](docker) folder holds docker related routine
 - [aws-codebuild](aws-codebuild) folder consists of files that describes AWS CodeBuild based CI/CD pipelines
-- [ext](ext) folder is a [git-subrepo][d003158e] of shared [library](https://github.com/andkononykhin/aurora-wallet/tree/subrepo/devops/ext) which provides makefile based approach of devops tasks automation. Please check its [README.md](ext/README.md) for more information.
+- [ext](ext) folder is a [git-subrepo][d003158e] of shared [library](https://github.com/evernym/jenkins-shared/tree/devops-shared) which provides makefile based approach of devops tasks automation. Please check its [README.md](ext/README.md) for more information.
 
   [d003158e]: https://github.com/ingydotnet/git-subrepo "git-subrepo"
 
