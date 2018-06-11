@@ -13,7 +13,6 @@ pub mod api_requests {
     use super::*;
     use std::ptr;
     use std::os::raw::c_char;
-    use std::collections::HashMap;
 
     const RECORD_TYPE: &'static str = "test-type";
 
@@ -58,6 +57,9 @@ pub mod api_requests {
 
         let err = api::set_metadata(handle, new_metadata_cstring.as_ptr());
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn get_metadata(wallet_name: &String){
@@ -68,12 +70,19 @@ pub mod api_requests {
 
         let err = api::get_metadata(handle, &mut metadata_ptr, &mut metadata_handle);
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_metadata(handle, metadata_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn delete_wallet(wallet_name: &String){
         let name = CString::new(wallet_name.clone()).unwrap();
         let config = CString::new(TEST_CONFIG.get_config()).unwrap();
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+
         let err = api::delete_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);
     }
@@ -85,7 +94,11 @@ pub mod api_requests {
         let type_ = CString::new(RECORD_TYPE).unwrap();
         let tags: String = format!(r##"{}"##, tags.clone());
         let tags_json = CString::new(tags).unwrap();
+
         let err = api::add_record(handle, type_.as_ptr(), record_id.as_ptr(), record_value.as_ptr(), record_value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -111,6 +124,12 @@ pub mod api_requests {
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_record(handle, record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn delete_record(wallet_name: &String, record_id: &String){
@@ -120,6 +139,9 @@ pub mod api_requests {
 
         let err = api::delete_record(handle, type_.as_ptr(), record_id.as_ptr());
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn update_record_value(wallet_name: &String, record_id: &String, new_record_value: &Vec<u8>) {
@@ -127,7 +149,11 @@ pub mod api_requests {
 
         let record_id = CString::new(record_id.clone()).unwrap();
         let type_ = CString::new(RECORD_TYPE).unwrap();
+
         let err = api::update_record_value(handle, type_.as_ptr(), record_id.as_ptr(), new_record_value.as_ptr(), new_record_value.len());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -136,9 +162,12 @@ pub mod api_requests {
         let record_id = CString::new(record_id.clone()).unwrap();
         let type_ = CString::new(RECORD_TYPE).unwrap();
         let tags_json = CString::new(tags).unwrap();
+
         let err = api::add_record_tags(handle, type_.as_ptr(), record_id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn update_record_tags(wallet_name: &String, record_id: &String, tags: &str) {
@@ -146,9 +175,12 @@ pub mod api_requests {
         let record_id = CString::new(record_id.clone()).unwrap();
         let type_ = CString::new(RECORD_TYPE).unwrap();
         let tags_json = CString::new(tags).unwrap();
+
         let err = api::update_record_tags(handle, type_.as_ptr(), record_id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn delete_record_tags(wallet_name: &String, record_id: &String, tags: &str) {
@@ -156,9 +188,12 @@ pub mod api_requests {
         let record_id = CString::new(record_id.clone()).unwrap();
         let type_ = CString::new(RECORD_TYPE).unwrap();
         let tags_json = CString::new(tags).unwrap();
+
         let err = api::delete_record_tags(handle, type_.as_ptr(), record_id.as_ptr(), tags_json.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn search_records(wallet_name: &String, query_json: &str){
@@ -174,6 +209,9 @@ pub mod api_requests {
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     pub fn search_all_records(wallet_name: &String){
@@ -182,7 +220,11 @@ pub mod api_requests {
 
         let err = api::search_all_records(handle, &mut search_handle);
         assert_eq!(err, ErrorCode::Success);
+
         let err = api::free_search(handle, search_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 }

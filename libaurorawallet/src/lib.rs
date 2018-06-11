@@ -11,7 +11,7 @@ extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
 
-mod utils;
+pub mod utils;
 
 #[macro_use]
 pub mod errors;
