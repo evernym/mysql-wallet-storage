@@ -11,6 +11,9 @@ extern crate serde_derive;
 #[macro_use]
 extern crate lazy_static;
 
+#[macro_use]
+extern crate log;
+
 pub mod utils;
 
 #[macro_use]
@@ -29,6 +32,7 @@ use utils::callbacks;
 
 #[no_mangle]
 pub extern fn aurora_storage_init() -> ErrorCode {
+    utils::logger::init();
     let storage_name = CString::new("aurora").unwrap();
 
     let (sender, receiver) = channel();

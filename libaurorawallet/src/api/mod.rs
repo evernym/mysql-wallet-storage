@@ -256,7 +256,6 @@ pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut 
     storage.search_all_records(search_handle_p)
 }
 
-#[allow(unused_variables)]
 #[no_mangle]
 pub extern "C" fn get_search_total_count(storage_handle: i32, search_handle: i32, total_count_p: *mut usize) -> ErrorCode {
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
