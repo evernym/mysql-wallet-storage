@@ -467,7 +467,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         try {
             String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
             Assert.assertTrue(false, "This line should not be reached but fetchNextRecords returned: '" + searchRecordsJson + "'");
-        } catch(Exception e) {
+        } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
@@ -475,6 +475,38 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         search.close();
 
         search = WalletSearch.open(wallet, ITEM_TYPE, searchQuery, SEARCH_OPTIONS_ALL_RETRIEVE_FALSE).get();
+
+        try {
+            String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
+            Assert.assertTrue(false, "This line should not be reached but fetchNextRecords returned: '" + searchRecordsJson + "'");
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        search.close();
+    }
+
+    @Test()
+    public void retriveTagsButNotRecords() throws Exception {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        prepareRecordsForSearch(wallet);
+
+        String searchQuery = "{" +
+                "\"tagName1\": {\"$in\": [\"str1\", \"blabla\"]}, " +
+                "\"$not\": {\"tagName2\": \"12\"}" +
+                "}";
+
+        String retriveTagsButNotRecords = "{\"retrieveTags\": true, " +
+                                        "\"retrieveValue\": false, " +
+                                        "\"retrieveType\": false, " +
+                                        "\"retrieveTotalCount\": false, " +
+                                        "\"retrieveRecords\": false}";
+
+        WalletSearch search = WalletSearch.open(wallet, ITEM_TYPE, searchQuery, retriveTagsButNotRecords).get();
 
         try {
             String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();

@@ -110,7 +110,6 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     }
 
 
-    // TODO: add query strings for all operators
     @DataProvider (name = "searchQueries")
     private Object[][] searchQueries() {
         String queryJson = "{" +
