@@ -20,29 +20,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     private Wallet wallet = null;
 
     String tagsWithDeletedTag1 =  "{\"tagName2\":\"5\",\"tagName3\":\"12\"}";
-    String id = "RecordId";
-    String value = "RecordValue";
     String value2 = "RecordValue2";
-
-
-    private void prepareRecordsForSearch() throws IndyException, ExecutionException, InterruptedException {
-
-        String tags = "";
-        for(int i=0; i<12; i++) {
-            String type = ITEM_TYPE;
-            if( i % 2 == 1 ) type = ITEM_TYPE2; //every odd iteration will use ITEM_TYPE2
-
-            // rotate tags every 2nd iteration
-            if ( (i/2) % 2 == 1 ) {
-                tags = TAGS2;
-            } else {
-                tags = TAGS3;
-            }
-
-
-            WalletRecord.add(wallet, type, "Search"+id+i, value, tags).get();
-        }
-    }
 
 
     @Test (priority = 0)
@@ -54,25 +32,25 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
     @Test (dependsOnMethods = "createAndOpenWallet", priority = 1)
     public void addRecords() throws Exception {
-        WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
+        WalletRecord.add(wallet, ITEM_TYPE, RECORD_ID, RECORD_VALUE, TAGS_EMPTY).get();
 
         /**
          * This can't go to beforeClass since we have the test for create and opent wallet
          * also can't be a part of searchTags test because that test uses data provider
          * and since this is actually "add records" I'll put it here
          */
-        prepareRecordsForSearch();
+        prepareRecordsForSearch(wallet);
     }
 
     @Test (dependsOnMethods = "addRecords", priority = 2)
     public void getRecordWithTags() throws Exception {
 
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_TAGS_ONLY).get();
 
         JSONObject actual = new JSONObject(recordJson);
 
         JSONObject expected = new JSONObject()
-                .put("id", id)
+                .put("id", RECORD_ID)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", JSONObject.NULL)
                 .put("tags", new JSONObject());
@@ -83,14 +61,14 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "addRecords", priority = 2)
     public void getRecordWithoutTags() throws Exception {
 
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_EMPTY).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_EMPTY).get();
 
         JSONObject actual = new JSONObject(recordJson);
 
         JSONObject expected = new JSONObject()
-                .put("id", id)
+                .put("id", RECORD_ID)
                 .putOpt("type", JSONObject.NULL)
-                .put("value", value) // value is returned by default
+                .put("value", RECORD_VALUE) // value is returned by default
                 .put("tags", JSONObject.NULL);
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
@@ -98,16 +76,16 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
     @Test (dependsOnMethods = "addRecords", priority = 3)
     public void updateRecordValue() throws Exception {
-        WalletRecord.updateValue(wallet, ITEM_TYPE, id, value2).get();
+        WalletRecord.updateValue(wallet, ITEM_TYPE, RECORD_ID, value2).get();
 
         JSONObject expected = new JSONObject()
-                .put("id", id)
+                .put("id", RECORD_ID)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", JSONObject.NULL)
                 .put("tags", new JSONObject());
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
@@ -116,15 +94,15 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "updateRecordValue", priority = 4)
     public void updateRecordTags() throws Exception {
 
-        WalletRecord.updateTags(wallet, ITEM_TYPE, id, TAGS).get();
+        WalletRecord.updateTags(wallet, ITEM_TYPE, RECORD_ID, TAGS).get();
         JSONObject expected = new JSONObject()
-                .put("id", id)
+                .put("id", RECORD_ID)
                 .putOpt("type", JSONObject.NULL)
                 .put("value", JSONObject.NULL)
                 .put("tags", new JSONObject(TAGS));
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_TAGS_ONLY).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertTrue(expected.similar(actual),
@@ -141,7 +119,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 "}";
 
         JSONObject jsonObject = new JSONObject()
-                .put("id", id)
+                .put("id", RECORD_ID)
                 .putOpt("type", ITEM_TYPE)
                 .put("value", value2)
                 .put("tags", new JSONObject(TAGS));
@@ -168,16 +146,47 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 "{\"id\":\"SearchRecordId4\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"tagName3\":\"14\"}}," +
                 "{\"id\":\"RecordId\",\"type\":\"TestType\",\"value\":\"RecordValue2\",\"tags\":{\"tagName1\":\"str1\",\"tagName2\":\"5\",\"tagName3\":\"12\"}}]");
 
-        String complexQuery = "{\"$not\":{\"" +
-                "{xxxxxx}\":\"{xxxxxx}\"," +
-                "\"$or\":[\"{xxxxxxx}\":{\"$gt\":\"{xxxxxxxxx}\"},\"$not\":{\"{xxxxxx}\":{\"$lte\":\"{xxxxxxx}\"}},{\"{xxxxxxx}\":{\"$lt\":\"{xxxxxxxx}\"}," +
-                "\"$not\":{\"{xxxxxxxxx}\":{\"$gte\":\"{xxxxxxxxxx}\"}}}}],\"$not\":{\"{xxxxxxxxx}\":{\"$like\":\"{xxxxxxxxxx}\"}},{\"{xxxxxxxxx}\":\"{xxxxxxxxx}\",\"$not\":{\"{xxxxxxxxxx}\":{\"$neq\":\"{xxxxxx}\"}}}}}";
+        String complexQuery = "{\"$not\":{" +
+                                    "\"tagName1\":\"str2\"," +
+                                    "\"$or\":[" +
+                                        "{\"tagName2\":{" +
+                                            "\"$gt\": \"6\"" +
+                                        "}}," +
+                                        "{\"$not\":{" +
+                                            "\"tagName3\":{" +
+                                                "\"$lte\": \"14\"" +
+                                            "}" +
+                                        "}}," +
+                                        "{" +
+                                            "\"tagName2\":{\"$lt\": \"7\"}," +
+                                            "\"$not\":{" +
+                                                "\"tagName3\":{" +
+                                                    "\"$gte\": \"14\"" +
+                                                "}" +
+                                            "}" +
+                                        "}" +
+                                    "]," +
+                                    "\"$not\":{" +
+                                        "\"tagName1\":{" +
+                                            "\"$like\":\"str\"" +
+                                        "}" +
+                                    "}," +
+                                    "{" +
+                                        "\"tagName3\":\"13\"," +
+                                        "\"$not\":{" +
+                                            "\"tagName2\":{" +
+                                                "\"$neq\": \"7\"" +
+                                            "}" +
+                                        "}" +
+                                    "}" +
+                                "}}";
 
         Object[][] toReturn = {
             {queryJson, jsonArray},
             {queryJsonIn, jsonArray},
             {queryJsonInNot, jsonArray},
-            {QUERY_EMPTY, jsonArray2}
+            {QUERY_EMPTY, jsonArray2},
+            {complexQuery, jsonArray2}
         };
 
         return toReturn;
@@ -218,19 +227,37 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         search.close();
     }
 
+    @Test (dependsOnMethods = "updateRecordTags",  dataProvider = "searchQueries", priority = 5)
+    public void searchRecordsFaleCountTruey(String searchQuery, JSONArray expectedJSONArray) throws Exception {
+
+        WalletSearch search = WalletSearch.open(wallet, ITEM_TYPE, searchQuery, SEARCH_OPTIONS_TOTAL_COUNT_ONLY).get();
+
+        String searchRecordsJson = search.fetchNextRecords(wallet, 0).get();
+
+        JSONObject searchRecords = new JSONObject(searchRecordsJson);
+
+        JSONObject expected = new JSONObject()
+                .put("totalCount", expectedJSONArray.length())
+                .put("records", JSONObject.NULL);
+
+        Assert.assertTrue(searchRecords.similar(expected), "actual '" + searchRecords.toString() + "' is similar to expected '" + expected.toString() + "'");
+
+        search.close();
+    }
+
     @Test (dependsOnMethods = "updateRecordTags", priority = 6)
     public void deleteTags() throws Exception {
 
-        WalletRecord.deleteTags(wallet, ITEM_TYPE, id, "[\"tagName1\"]").get();
+        WalletRecord.deleteTags(wallet, ITEM_TYPE, RECORD_ID, "[\"tagName1\"]").get();
 
         JSONObject expected = new JSONObject()
-                .put("id", id)
+                .put("id", RECORD_ID)
                 .putOpt("type", ITEM_TYPE)
                 .put("value", value2)
                 .put("tags", new JSONObject(tagsWithDeletedTag1));
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_ALL).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_ALL).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertTrue(expected.similar(actual),
@@ -240,16 +267,16 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "deleteTags", priority = 7)
     public void addTags() throws Exception {
 
-        WalletRecord.addTags(wallet, ITEM_TYPE, id, "{\"tagName1\": \"str1\"}").get();
+        WalletRecord.addTags(wallet, ITEM_TYPE, RECORD_ID, "{\"tagName1\": \"str1\"}").get();
 
         JSONObject expected = new JSONObject()
-                .put("id", id)
+                .put("id", RECORD_ID)
                 .putOpt("type", ITEM_TYPE)
                 .put("value", value2)
                 .put("tags", new JSONObject(TAGS));
 
         // get record with options: retriveTags
-        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_ALL).get();
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_ALL).get();
         JSONObject actual = new JSONObject(recordJson);
 
         Assert.assertTrue(expected.similar(actual),
@@ -259,10 +286,10 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @Test (dependsOnMethods = "addRecords", priority = 8)
     public void deleteRecord() throws Exception {
 
-        WalletRecord.delete(wallet, ITEM_TYPE, id).get();
+        WalletRecord.delete(wallet, ITEM_TYPE, RECORD_ID).get();
 
         try {
-            WalletRecord.get(wallet, ITEM_TYPE, id, GET_OPTIONS_TAGS_ONLY).get();
+            WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_TAGS_ONLY).get();
             Assert.assertTrue(false); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());

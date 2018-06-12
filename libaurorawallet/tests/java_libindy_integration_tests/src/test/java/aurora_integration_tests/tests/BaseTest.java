@@ -1,12 +1,14 @@
 package aurora_integration_tests.tests;
 
 import aurora_integration_tests.main.AuroraPluggableStorage;
-import org.json.JSONObject;
+import org.hyperledger.indy.sdk.IndyException;
+import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
+import org.hyperledger.indy.sdk.wallet.Wallet;
 import org.testng.annotations.BeforeSuite;
 
 import java.io.*;
-import java.util.HashMap;
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
 public class BaseTest {
 
@@ -18,6 +20,8 @@ public class BaseTest {
     protected static final String POOL = "Pool1";
     protected static final String ITEM_TYPE = "TestType";
     protected static final String ITEM_TYPE2 = "TestType2";
+    protected static String RECORD_ID = "RecordId";
+    protected static String RECORD_VALUE = "RecordValue";
 
     protected static final String QUERY_EMPTY = "{}";
     protected static final String TAGS_EMPTY = "{}";
@@ -32,6 +36,8 @@ public class BaseTest {
     protected static final String GET_OPTIONS_TYPE_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": false, \"retrieveType\": true}";
 
     protected static final String SEARCH_OPTIONS_EMPTY = "{}";
+    protected static final String SEARCH_OPTIONS_ALL_RETRIEVE_FALSE = "{\"retrieveTags\": false, \"retrieveValue\": false, \"retrieveType\": false, " +
+            "\"retrieveTotalCount\": false, \"retrieveRecords\": false}";
     protected static final String SEARCH_OPTIONS_ALL = "{\"retrieveTags\": true, \"retrieveValue\": true, \"retrieveType\": true, " +
                                                             "\"retrieveTotalCount\": true, \"retrieveRecords\": true}";
     protected static final String SEARCH_OPTIONS_TAGS_ONLY = "{\"retrieveTags\": true, \"retrieveValue\": false, \"retrieveType\": false, " +
@@ -111,5 +117,24 @@ public class BaseTest {
                 "        \"pass\": \"" + password + "\"" +
                 "    }" +
                 "}";
+    }
+
+    protected void prepareRecordsForSearch(Wallet wallet) throws IndyException, ExecutionException, InterruptedException {
+
+        String tags = "";
+        for(int i=0; i<12; i++) {
+            String type = ITEM_TYPE;
+            if( i % 2 == 1 ) type = ITEM_TYPE2; //every odd iteration will use ITEM_TYPE2
+
+            // rotate tags every 2nd iteration
+            if ( (i/2) % 2 == 1 ) {
+                tags = TAGS2;
+            } else {
+                tags = TAGS3;
+            }
+
+
+            WalletRecord.add(wallet, type, "Search"+ RECORD_ID +i, RECORD_VALUE, tags).get();
+        }
     }
 }

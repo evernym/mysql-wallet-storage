@@ -1,9 +1,6 @@
 package aurora_integration_tests.tests;
 
-import org.hyperledger.indy.sdk.IOException;
-import org.hyperledger.indy.sdk.IndyException;
-import org.hyperledger.indy.sdk.InvalidStructureException;
-import org.hyperledger.indy.sdk.LibIndy;
+import org.hyperledger.indy.sdk.*;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.non_secrets.WalletSearch;
 import org.hyperledger.indy.sdk.wallet.*;
@@ -376,6 +373,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void openNonExistingWallet() {
         try {
             wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+            Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
@@ -387,21 +385,106 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
         try {
             Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+            Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletExistsException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
 
-    @Test ()
+    @Test
     public void deleteNonexistingWallet() throws Exception {
 
         try {
             Wallet.deleteWallet(walletName+"blabla", CREDENTIALS).get();
+            Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof IOException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
+    }
+
+
+    @Test
+    public void searchWithBadSearchQuery() throws Exception {
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        prepareRecordsForSearch(wallet);
+
+        String badQuery = "{" +
+                "\"tagName1\": {\"$in\": [\"str1\", \"blabla\"]}, " +
+                "\"$not\": {\"tagName2\": \"12\"" + // missing a closing bracket }
+                "}";
+
+        WalletSearch search = null;
+        try {
+            search = WalletSearch.open(wallet, ITEM_TYPE, badQuery, SEARCH_OPTIONS_ALL).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletInvalidQueryException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        if(search != null) search.close();
+    }
+
+    @Test
+    public void searchWithBadSearchQueryForOptions() throws Exception {
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        prepareRecordsForSearch(wallet);
+
+        String badOptionsQuery = SEARCH_OPTIONS_ALL.substring(1);
+
+        WalletSearch search = null;
+        try {
+            search = WalletSearch.open(wallet, ITEM_TYPE, "{}", badOptionsQuery).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        if(search != null) search.close();
+    }
+
+    @Test
+    public void searchDoNotRetrieveAnyAndFetchNext() throws Exception {
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        prepareRecordsForSearch(wallet);
+
+        String searchQuery = "{" +
+                "\"tagName1\": {\"$in\": [\"str1\", \"blabla\"]}, " +
+                "\"$not\": {\"tagName2\": \"12\"}" +
+                "}";
+
+        WalletSearch search = WalletSearch.open(wallet, ITEM_TYPE, searchQuery, SEARCH_OPTIONS_TOTAL_COUNT_ONLY).get();
+
+        try {
+            String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
+            Assert.assertTrue(false, "This line should not be reached but fetchNextRecords returned: '" + searchRecordsJson + "'");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        search.close();
+
+        search = WalletSearch.open(wallet, ITEM_TYPE, searchQuery, SEARCH_OPTIONS_ALL_RETRIEVE_FALSE).get();
+
+        try {
+            String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
+            Assert.assertTrue(false, "This line should not be reached but fetchNextRecords returned: '" + searchRecordsJson + "'");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        search.close();
     }
 
 
