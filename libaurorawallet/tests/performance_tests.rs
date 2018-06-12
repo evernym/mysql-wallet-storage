@@ -187,11 +187,9 @@ const THREADS_CNT: u64 = 10;
             },
             &Action::SearchRecords =>{
                 api_requests::search_records(handle, &custom_tags_per_record_data);
-                println!("Executed search record");
             }
             &Action::SearchAllRecords =>{
                 api_requests::search_all_records(handle);
-                println!("Executed search all records");
             }
 
         }
@@ -286,101 +284,103 @@ const THREADS_CNT: u64 = 10;
 
 mod performance {
     use super::*;
+    const TOTAL_WALLET_CNT: u64 = 10000;
+    const RECORDS_PER_WALLET_CNT: u64 = 100;
     #[test]
     fn test_add_wallet(){
         cleanup();
-        send_requests( 100000,  0, "",  &Action::AddWallet);
+        send_requests( TOTAL_WALLET_CNT,  0, "",  &Action::AddWallet);
     }
 
     #[test]
     fn test_delete_wallet(){
         cleanup();
-        populate_database(100000, 100, r#"{"name": "John", "surname": "Doe"}"#, 100);
-        send_requests( 100000, 0,  "", &Action::DeleteWallet);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( TOTAL_WALLET_CNT, 0,  "", &Action::DeleteWallet);
     }
 
     #[test]
     fn test_set_metadata(){
         cleanup();
-        populate_database(100000, 0, "", 0);
-        send_requests(100000, 0, "", &Action::SetMetadata);
+        populate_database(TOTAL_WALLET_CNT, 0, "", 0);
+        send_requests(TOTAL_WALLET_CNT, 0, "", &Action::SetMetadata);
     }
 
     #[test]
     fn test_get_metadata(){
         cleanup();
-        populate_database(100000, 0, "", 0);
-        send_requests(100000, 0, "", &Action::GetMetadata);
+        populate_database(TOTAL_WALLET_CNT, 0, "", 0);
+        send_requests(TOTAL_WALLET_CNT, 0, "", &Action::GetMetadata);
     }
 
     #[test]
     fn test_open_and_close_wallet(){
         cleanup();
-        populate_database(100000, 0, "", 0);
-        send_requests(100000, 0, "", &Action::OpenAndCloseWallet);
+        populate_database(TOTAL_WALLET_CNT, 0, "", 0);
+        send_requests(TOTAL_WALLET_CNT, 0, "", &Action::OpenAndCloseWallet);
     }
 
     #[test]
     fn test_add_record_with_tags(){
         cleanup();
-        populate_database(100, 0,  "", 0);
-        send_requests( 100, 10, r#"{"name": "John", "surname": "Doe"}"#, &Action::AddRecord);
+        populate_database(TOTAL_WALLET_CNT, 0,  "", 0);
+        send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, &Action::AddRecord);
     }
 
     #[test]
     fn test_get_record(){
         cleanup();
-        populate_database(100000, 100,  r#"{"name": "John", "surname": "Doe"}"#, 100);
-        send_requests( 100000, 100, "", &Action::GetRecord);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, "", &Action::GetRecord);
     }
 
     #[test]
     fn test_delete_record(){
         cleanup();
-        populate_database(100000, 100,  r#"{"name": "John", "surname": "Doe"}"#, 100);
-        send_requests( 100000, 100, "", &Action::DeleteRecord);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, "", &Action::DeleteRecord);
     }
 
     #[test]
     fn test_update_record_value(){
         cleanup();
-        populate_database(100000, 100,  r#"{"name": "John", "surname": "Doe"}"#, 100);
-        send_requests( 100000, 100, "", &Action::UpdateRecordValue);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, "", &Action::UpdateRecordValue);
     }
 
     #[test]
     fn test_add_record_tags(){
         cleanup();
-        populate_database(100000, 100,  r#"{"tag1": "value1", "tag2": "value2", "tag3": "value3"}"#, 0);
-        send_requests( 100000, 100,  r#"{"tag1": "newValue1", "name": "John", "surname": "Doe"}"#,&Action::AddRecordTags);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"tag1": "value1", "tag2": "value2", "tag3": "value3"}"#, 0);
+        send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"tag1": "newValue1", "name": "John", "surname": "Doe"}"#,&Action::AddRecordTags);
     }
 
     #[test]
     fn test_update_record_tags(){
         cleanup();
-        populate_database(100000, 100,  r#"{"name": "John", "surname": "Doe"}"#, 100);
-        send_requests( 100000, 100,  r#"{"name": "UpdatedName", "surname": "UpdatedSurname"}"#, &Action::UpdateRecordTags);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "UpdatedName", "surname": "UpdatedSurname"}"#, &Action::UpdateRecordTags);
 
     }
 
     #[test]
     fn test_delete_record_tags(){
         cleanup();
-        populate_database(100000, 100, r#"{"name": "John", "surname": "Doe"}"#, 100);
-        send_requests( 100000, 100, r#"["name"]"#, &Action::DeleteRecordTags);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"["name"]"#, &Action::DeleteRecordTags);
     }
 
     #[test]
     fn test_search_record(){
         cleanup();
-        populate_database(100000, 100, r#"{"name": "John", "surname": "Doe", "country": "Serbia"}"#, 40);
-        send_requests( 100000, 0,  r#"{"name": {"$in": ["John", "john"]}, "age": {"$in": ["Serbia", "serbia"]}}"#,&Action::SearchRecords);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe", "country": "Serbia"}"#, 40);
+        send_requests( TOTAL_WALLET_CNT, 0,  r#"{"name": {"$in": ["John", "john"]}, "age": {"$in": ["Serbia", "serbia"]}}"#,&Action::SearchRecords);
     }
 
     #[test]
     fn test_search_all_records(){
         cleanup();
-        populate_database(100000, 100, r#"{"name": "John", "surname": "Doe"}"#, 100);
-        send_requests( 100000, 0,  "", &Action::SearchAllRecords);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
+        send_requests( TOTAL_WALLET_CNT, 0,  "", &Action::SearchAllRecords);
     }
 }
