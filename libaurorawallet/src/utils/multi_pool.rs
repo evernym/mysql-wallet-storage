@@ -5,16 +5,16 @@ use mysql::consts::CapabilityFlags;
 
 #[derive(Deserialize)]
 pub struct StorageConfig <'a> {
-    read_host: &'a str,
-    write_host: &'a str,
-    port: u16,
-    db_name: &'a str
+    pub read_host: &'a str,
+    pub write_host: &'a str,
+    pub port: u16,
+    pub db_name: &'a str
 }
 
 #[derive(Deserialize)]
 pub struct StorageCredentials <'a> {
-    user: &'a str,
-    pass: &'a str,
+    pub user: &'a str,
+    pub pass: &'a str,
 }
 
 pub struct MultiPool {

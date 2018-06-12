@@ -1,4 +1,3 @@
 libaurorawallet/Cargo.lock
 libaurorawallet/target
-libaurorawallet/.idea
-.idea/
+*.idea
