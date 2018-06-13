@@ -27,7 +27,7 @@ const DB_THREADS_CNT: u64 = 25;
 
 const THREADS_CNT: u64 = 1;
 const TOTAL_WALLET_CNT: u64 = 10000;
-const RECORDS_PER_WALLET_CNT: u64 = 1;
+const RECORDS_PER_WALLET_CNT: u64 = 10;
 
     ///
     /// Populates DB with data needed for tests execution
@@ -377,7 +377,7 @@ mod performance {
     #[test]
     fn test_search_record(){
         cleanup();
-        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe", "country": "Serbia"}"#, 40);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe", "country": "Serbia"}"#, 20);
         send_requests( TOTAL_WALLET_CNT, 0,  r#"{"name": {"$in": ["John", "john"]}, "age": {"$in": ["Serbia", "serbia"]}}"#,&Action::SearchRecords);
     }
 
