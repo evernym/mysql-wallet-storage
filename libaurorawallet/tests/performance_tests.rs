@@ -26,7 +26,7 @@ extern crate core;
 const DB_THREADS_CNT: u64 = 25;
 
 const THREADS_CNT: u64 = 1;
-const TOTAL_WALLET_CNT: u64 = 1000;
+const TOTAL_WALLET_CNT: u64 = 10000;
 const RECORDS_PER_WALLET_CNT: u64 = 1;
 
     ///
@@ -47,18 +47,18 @@ const RECORDS_PER_WALLET_CNT: u64 = 1;
         println!("Start populating DB....");
         let mut results = Vec::new();
 
-        for a in 1..DB_THREADS_CNT +1 {
+        for thread_num in 1..DB_THREADS_CNT +1 {
 
             let thread = thread::spawn(move || {
                 let record_value = get_random_record_value();
 
-                for w in (a - 1)*(wallet_cnt/ DB_THREADS_CNT)+1..a*(wallet_cnt/ DB_THREADS_CNT)+1 {
-                    let wallet_name = format!("wallet_name_{}", w);
+                for wallet_num in (thread_num - 1)*(wallet_cnt/ DB_THREADS_CNT)+1..thread_num*(wallet_cnt/ DB_THREADS_CNT)+1 {
+                    let wallet_name = format!("wallet_name_{}", wallet_num);
                     api_requests::create_wallet(&wallet_name);
                     let handle: i32 = api_requests::open_storage(&wallet_name);
                     if records_per_wallet_cnt != 0 {
                         for i in 1..records_per_wallet_cnt + 1 {
-                            let record_id = format!("record_id_{}_{}", w, i);
+                            let record_id = format!("record_id_{}_{}", wallet_num, i);
                             let mut tags_list: HashMap<String, String> = HashMap::new();
                             let mut custom_tags: HashMap<String, String> = HashMap::new();
                             if custom_tags_per_record_data != "" && percent_of_custom_tags_per_record!=0 {
@@ -355,7 +355,7 @@ mod performance {
     #[test]
     fn test_add_record_tags(){
         cleanup();
-        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"tag1": "value1", "tag2": "value2", "tag3": "value3"}"#, 0);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"tag1": "value1", "tag2": "value2", "tag3": "value3"}"#, 100);
         send_requests( TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"tag1": "newValue1", "name": "John", "surname": "Doe"}"#,&Action::AddRecordTags);
     }
 
