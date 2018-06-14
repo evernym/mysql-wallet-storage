@@ -428,7 +428,7 @@ impl<'a> AuroraStorage<'a> {
             check_result!(CString::new(id), ErrorCode::InvalidState),
             if options.retrieve_value {Some(db_value)} else {None},
             if options.retrieve_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
-            Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
+            if options.retrieve_type {Some(check_result!(CString::new(type_), ErrorCode::InvalidState))} else {None}
         );
 
         let record_handle = self.records.insert(record);
