@@ -7,8 +7,6 @@ use std::slice;
 use serde_json;
 use std::collections::HashMap;
 
-// TODO: Modify tests to use prepare/cleanup
-
 macro_rules! c_char_to_str {
     ($x: expr) => {
         match unsafe { CStr::from_ptr($x).to_str() } {

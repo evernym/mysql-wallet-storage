@@ -428,7 +428,7 @@ impl<'a> AuroraStorage<'a> {
             check_result!(CString::new(id), ErrorCode::InvalidState),
             if options.retrieve_value {Some(db_value)} else {None},
             if options.retrieve_tags {Some(check_result!(CString::new(tags), ErrorCode::InvalidState))} else {None},
-            Some(check_result!(CString::new(type_), ErrorCode::InvalidState))
+            if options.retrieve_type {Some(check_result!(CString::new(type_), ErrorCode::InvalidState))} else {None}
         );
 
         let record_handle = self.records.insert(record);
@@ -658,6 +658,9 @@ impl<'a> AuroraStorage<'a> {
     pub fn update_record_tags(&self, type_: &str, id: &str, tags: &str) -> ErrorCode {
 
         trace!("Updating Record Tags -> type: {}, id: {}, tags: {}", type_, id, tags);
+
+        // check if tags are a valid JSON
+        let _tags_json_chk: HashMap<String, serde_json::Value> = check_result!(serde_json::from_str(tags), ErrorCode::InvalidStructure);
 
         let result = {
             self.write_pool.prep_exec(
