@@ -15,8 +15,9 @@ import java.util.concurrent.ExecutionException;
 
 public class NonSecretsApiNegativeTest extends BaseTest {
 
-    private String walletName = "testWallet" + System.currentTimeMillis();
-    private Wallet wallet = null;
+    private static String walletName = "testWallet" + System.currentTimeMillis();
+    private static String walletName2 = "";
+    private Wallet wallet = null, wallet2 = null;
 
 
     String id = "RecordId";
@@ -102,6 +103,24 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         String expectedErrorClassWithMessage2 = expectedErrorClass + ": An IO error occurred.";
 
 
+        Object[][] toReturn = {
+                // config, expected error message, scenario
+                {missingReadHost, expectedErrorClassWithMessage, "missingReadHost"},
+                {missingWriteHost, expectedErrorClassWithMessage, "missingWriteHost"},
+                {missingPort, expectedErrorClassWithMessage, "missingPort"},
+                {missingDBName, expectedErrorClassWithMessage, "missingDBName"}
+        };
+        return toReturn;
+    }
+
+    @DataProvider (name = "inaccessibleConfig")
+    private Object [][] inaccessibleConfig() {
+        String expectedErrorClass = IOException.class.toString();
+        if(expectedErrorClass.startsWith("class "))
+            expectedErrorClass = expectedErrorClass.substring("class ".length());
+        String expectedErrorClassWithMessage2 = expectedErrorClass + ": An IO error occurred.";
+
+
         String wrongPort = getConfig(CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT+"2", CONFIG_DB_NAME);
         String wrongDBName = getConfig(CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME+"_2");
         String wrongReadHost = getConfig("1.2.3.4", CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME);
@@ -109,10 +128,6 @@ public class NonSecretsApiNegativeTest extends BaseTest {
 
         Object[][] toReturn = {
                 // config, expected error message, scenario
-                {missingReadHost, expectedErrorClassWithMessage, "missingReadHost"},
-                {missingWriteHost, expectedErrorClassWithMessage, "missingWriteHost"},
-                {missingPort, expectedErrorClassWithMessage, "missingPort"},
-                {missingDBName, expectedErrorClassWithMessage, "missingDBName"},
                 {wrongPort, expectedErrorClassWithMessage2, "wrongPort"},
                 {wrongDBName, expectedErrorClassWithMessage2, "wrongDBName"}
                 ,{wrongReadHost, expectedErrorClassWithMessage2, "wrongReadHost"}
@@ -120,7 +135,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         };
         return toReturn;
     }
-    
+
     @Test(dataProvider = "wrongConfig")
     public void createAndOpenWitInvalidConfig(String wrongConfig, String expectedErrorClass, String scenario) {
         try {
@@ -139,6 +154,21 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, wrongCredentials).get();
             wallet = Wallet.openWallet(walletName, null, wrongCredentials).get();
             Assert.assertTrue(false, "Scenario: " + scenario ); // this line should not be reached, previous line should throw an exception
+        } catch (Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertEquals(e.getCause().toString(), expectedErrorClass, "Scenario: " + scenario + ", Cause is as expected");
+        }
+    }
+
+    @Test(dataProvider = "inaccessibleConfig")
+    public void createAndOpenWitInaccessibleConfig(String wrongConfig, String expectedErrorClass, String scenario) {
+
+        walletName2 = walletName + "_2";
+
+        try {
+            Wallet.createWallet(POOL, walletName2, WALLET_TYPE, wrongConfig, CREDENTIALS).get();
+            wallet2 = Wallet.openWallet(walletName2, null, CREDENTIALS).get();
+            Assert.assertTrue(false, "Scenario: " + scenario); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
             Assert.assertEquals(e.getCause().toString(), expectedErrorClass, "Scenario: " + scenario + ", Cause is as expected");
@@ -312,7 +342,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
-            Assert.assertTrue(e.getCause() instanceof WalletDecodingException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
 
@@ -332,7 +362,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
-            Assert.assertTrue(e.getCause() instanceof WalletDecodingException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
 
@@ -400,7 +430,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
-            Assert.assertTrue(e.getCause() instanceof IOException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
 
@@ -535,6 +565,19 @@ public class NonSecretsApiNegativeTest extends BaseTest {
                 wallet = null;
             }
             Wallet.deleteWallet(walletName, CREDENTIALS).get();
+        }
+        catch(Exception e){}
+
+        try{
+            if(wallet2 != null) {
+                wallet2.closeWallet().get();
+                wallet2 = null;
+            }
+
+            if(walletName2.isEmpty()) {
+                Wallet.deleteWallet(walletName2, CREDENTIALS).get();
+                walletName2 = "";
+            }
         }
         catch(Exception e){}
     }
