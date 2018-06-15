@@ -306,21 +306,21 @@ mod performance {
     #[test]
     fn test_set_metadata(){
         cleanup();
-        populate_database(TOTAL_WALLET_CNT, 0, "", 0);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
         send_requests(TOTAL_WALLET_CNT, 0, "", &Action::SetMetadata);
     }
 
     #[test]
     fn test_get_metadata(){
         cleanup();
-        populate_database(TOTAL_WALLET_CNT, 0, "", 0);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
         send_requests(TOTAL_WALLET_CNT, 0, "", &Action::GetMetadata);
     }
 
     #[test]
     fn test_open_and_close_wallet(){
         cleanup();
-        populate_database(TOTAL_WALLET_CNT, 0, "", 0);
+        populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
         send_requests(TOTAL_WALLET_CNT, 0, "", &Action::OpenAndCloseWallet);
     }
 
