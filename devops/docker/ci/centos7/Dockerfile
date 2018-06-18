@@ -2,6 +2,7 @@ FROM evernym/rust:0.4.0-centos7
 # TODO LABEL maintainer="Name <email-address>"
 
 ARG u_id=1000
+
 ARG u_name=user
 ARG INDY_SDK_VERSION
 
