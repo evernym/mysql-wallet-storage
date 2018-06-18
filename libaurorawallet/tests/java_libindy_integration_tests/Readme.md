@@ -4,5 +4,5 @@ mvn clean versions:update-properties validate test -DsuiteFile=NonSecrets-Positi
 ```
 or
 ```
-mvn clean test -DsuiteFile=NonSecrets-NegativeTests.xml
+mvn clean versions:update-properties validate test -DsuiteFile=NonSecrets-NegativeTests.xml
 ```
