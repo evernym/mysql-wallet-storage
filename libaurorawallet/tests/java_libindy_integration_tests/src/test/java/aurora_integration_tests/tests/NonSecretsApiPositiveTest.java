@@ -9,6 +9,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -21,13 +22,22 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
     String tagsWithDeletedTag1 =  "{\"tagName2\":\"5\",\"tagName3\":\"12\"}";
     String value2 = "RecordValue2";
+    String rekey = "BTIzNDU2Nzg7MDAyMzQ1Xjc4OTAxMjM0NTY3ODkwMTI=";
+
+
+    private static String credsForThisClass;
+
+    @BeforeClass
+    public void beforeClass() {
+        credsForThisClass = CREDENTIALS;
+    }
 
 
     @Test (priority = 0)
     public void createAndOpenWallet() throws Exception {
 
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass).get();
+        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
     }
 
     @Test (dependsOnMethods = "createAndOpenWallet", priority = 1)
@@ -282,7 +292,51 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
     }
 
-    @Test (dependsOnMethods = "addRecords", priority = 8)
+    @Test (dependsOnMethods = "addTags", priority = 8)
+    public void rekeyWallet() throws IndyException, ExecutionException, InterruptedException {
+        wallet.closeWallet().get();
+
+        // rekey through open wallet
+        JSONObject defaultJsonCreds = new JSONObject(credsForThisClass);
+        defaultJsonCreds.put("rekey", rekey);
+        wallet = Wallet.openWallet(walletName, null, defaultJsonCreds.toString()).get();
+
+        // close wallet
+        wallet.closeWallet().get();
+
+        // try to open wallet with old key
+        try {
+            Wallet.openWallet(walletName, null, credsForThisClass).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch (Exception e) {
+
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException");
+            Assert.assertEquals(e.getCause().toString(), "org.hyperledger.indy.sdk.wallet.WalletAccessFailedException: The wallet security error.", "Cause is as expected");
+
+            // key has been changed => update credentials
+            defaultJsonCreds = new JSONObject(credsForThisClass);
+            defaultJsonCreds.put("key", rekey);
+            credsForThisClass = defaultJsonCreds.toString();
+        }
+
+        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+
+        // get record with options: retriveTags
+        String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_ALL).get();
+        JSONObject actual = new JSONObject(recordJson);
+
+        JSONObject expected = new JSONObject()
+                .put("id", RECORD_ID)
+                .putOpt("type", ITEM_TYPE)
+                .put("value", value2)
+                .put("tags", new JSONObject(TAGS));
+
+        Assert.assertTrue(expected.similar(actual),
+                "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
+
+    }
+
+    @Test (dependsOnMethods = "addRecords", priority = 9)
     public void deleteRecord() throws Exception {
 
         WalletRecord.delete(wallet, ITEM_TYPE, RECORD_ID).get();
@@ -296,21 +350,21 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         }
     }
 
-    @Test (dependsOnMethods = "createAndOpenWallet", priority = 9)
+    @Test (dependsOnMethods = "createAndOpenWallet", priority = 10)
     public void closeAndDeleteWallet() throws Exception {
 
         wallet.closeWallet().get();
-        Wallet.deleteWallet(walletName, CREDENTIALS).get();
+        Wallet.deleteWallet(walletName, credsForThisClass).get();
         // create wallet with same name as proof that delete was successful
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass).get();
 
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
         wallet.closeWallet().get();
     }
 
     @AfterClass(alwaysRun = true)
-    public void afterMethod() throws IndyException, InterruptedException, ExecutionException {
+    public void afterClass() throws IndyException, InterruptedException, ExecutionException {
 
-        Wallet.deleteWallet(walletName, CREDENTIALS).get();
+        Wallet.deleteWallet(walletName, credsForThisClass).get();
     }
 }
