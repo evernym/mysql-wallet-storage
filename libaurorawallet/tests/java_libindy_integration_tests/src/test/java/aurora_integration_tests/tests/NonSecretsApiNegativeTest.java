@@ -549,6 +549,25 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         search.close();
     }
 
+    @Test
+    public void rekeyWalletWithEmptyRekey() throws IndyException, ExecutionException, InterruptedException {
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        wallet.closeWallet().get();
+
+        // rekey through open wallet
+        JSONObject defaultJsonCreds = new JSONObject(CREDENTIALS);
+        defaultJsonCreds.put("rekey", JSONObject.NULL);
+
+        // open with NULL for "rekey" and expect key will not be changed
+        wallet = Wallet.openWallet(walletName, null, defaultJsonCreds.toString()).get();
+        wallet.closeWallet().get();
+
+        // try to open with "old" key
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+    }
+
 
 
 

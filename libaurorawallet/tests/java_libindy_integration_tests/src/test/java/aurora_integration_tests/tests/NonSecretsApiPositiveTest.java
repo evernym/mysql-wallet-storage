@@ -307,9 +307,10 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         // try to open wallet with old key
         try {
             Wallet.openWallet(walletName, null, credsForThisClass).get();
+            Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
 
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException");
             Assert.assertEquals(e.getCause().toString(), "org.hyperledger.indy.sdk.wallet.WalletAccessFailedException: The wallet security error.", "Cause is as expected");
 
             // key has been changed => update credentials
