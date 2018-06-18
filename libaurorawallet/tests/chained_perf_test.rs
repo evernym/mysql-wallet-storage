@@ -144,6 +144,8 @@ mod chaned_perf_test {
         let err = api::set_metadata(handle, new_metadata_cstring.as_ptr());
         assert_eq!(err, ErrorCode::Success);
 
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     ///
@@ -163,6 +165,12 @@ mod chaned_perf_test {
         let mut metadata_ptr: *const c_char = ptr::null_mut();
 
         let err = api::get_metadata(handle, &mut metadata_ptr, &mut metadata_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_metadata(handle, metadata_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -186,6 +194,9 @@ mod chaned_perf_test {
 //        let tags_json = CString::new(r##"{}"##).unwrap();
 
         let err = api::add_record(handle, type_.as_ptr(), id.as_ptr(), value.as_ptr(), value.len(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -223,6 +234,12 @@ mod chaned_perf_test {
 
         let err = api::get_record_tags(handle, record_handle, &mut tags_json_p);
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::free_record(handle, record_handle);
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     ///
@@ -244,6 +261,9 @@ mod chaned_perf_test {
 
         let err = api::update_record_value(handle, type_.as_ptr(), id.as_ptr(), new_value.as_ptr(), new_value.len());
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     ///
@@ -262,8 +282,11 @@ mod chaned_perf_test {
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
         let tags_json = CString::new(r##"{"tag1": "new_value1", "new_encrypted": "ASDOPASFO==", "~new_plaintext": "as plain as it can be", "~age": 30}"##).unwrap();
-        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
 
+        let err = api::add_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -283,7 +306,11 @@ mod chaned_perf_test {
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
         let tags_json = CString::new(r##"{"new_encrypted": "After update", "~new_plaintext": "After Update"}"##).unwrap();
+
         let err = api::update_record_tags(handle, type_.as_ptr(), id.as_ptr(), tags_json.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -328,6 +355,9 @@ mod chaned_perf_test {
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     ///
@@ -350,6 +380,9 @@ mod chaned_perf_test {
 
         let err = api::free_search(handle, search_handle);
         assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
+        assert_eq!(err, ErrorCode::Success);
     }
 
     ///
@@ -368,7 +401,11 @@ mod chaned_perf_test {
         let id = format!("record_{}_{}", x, y);
         let id = CString::new(id).unwrap();
         let tag_names = CString::new(r##"["~new_plaintext", "tag2"]"##).unwrap();
+
         let err = api::delete_record_tags(handle, type_.as_ptr(), id.as_ptr(), tag_names.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -390,6 +427,9 @@ mod chaned_perf_test {
         let type_ =CString::new(ITEM_TYPE).unwrap();
 
         let err = api::delete_record(handle, type_.as_ptr(), id.as_ptr());
+        assert_eq!(err, ErrorCode::Success);
+
+        let err = api::close_storage(handle);
         assert_eq!(err, ErrorCode::Success);
     }
 

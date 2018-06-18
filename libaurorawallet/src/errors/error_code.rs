@@ -29,18 +29,21 @@ pub enum ErrorCode {
     /// <summary>
     /// Requested entity id isn't present in wallet.
     /// </summary>
-    WalletItemNotFound = 212,
+    ItemNotFound = 212,
 
     /// <summary>
     /// Entity already exists in the wallet.
     /// </summary>
-    WalletItemAlreadyExists = 213,
+    ItemAlreadyExists = 213,
 }
 
 macro_rules! check_result {
     ($r: expr, $e: expr) => {
         match $r {
-            Err(_err) => return $e,
+            Err(err) => {
+                warn!("Error Occurred: {:?}", err);
+                return $e
+            },
             Ok(x) => x
         }
     }
