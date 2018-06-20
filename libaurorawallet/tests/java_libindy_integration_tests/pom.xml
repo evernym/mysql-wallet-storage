@@ -6,6 +6,7 @@
     <artifactId>aurora-integration-tests</artifactId>
     <packaging>jar</packaging>
     <version>1.4.0</version>
+
     <build>
         <plugins>
             <plugin>
@@ -26,6 +27,25 @@
                     </suiteXmlFiles>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>2.3</version>
+                <configuration>
+                    <properties>
+                        <property>
+                            <name>indysdk.version</name>
+                            <dependencies>
+                                <dependency>
+                                    <groupId>org.hyperledger</groupId>
+                                    <artifactId>indy</artifactId>
+                                    <version>latest</version>
+                                </dependency>
+                            </dependencies>
+                        </property>
+                    </properties>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <name>Aurora Integration Tests</name>
@@ -40,6 +60,7 @@
     </licenses>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <indysdk.version>1.4.0-dev-586</indysdk.version>
     </properties>
 
     <repositories>
@@ -79,7 +100,7 @@
         <dependency>
             <groupId>org.hyperledger</groupId>
             <artifactId>indy</artifactId>
-            <version>1.4.0-dev-584</version>
+            <version>${indysdk.version}</version>
         </dependency>
 
         <dependency>
