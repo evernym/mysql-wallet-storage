@@ -350,7 +350,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         }
     }
 
-    @Test (dependsOnMethods = "deleteRecord", priority = 10)
+    @Test (dependsOnMethods = "addRecords", priority = 10)
     public void exportWallet() throws IndyException, ExecutionException, InterruptedException {
         Wallet.exportWallet(wallet, EXPORT_WALLET_CONFIG_JSON).get();
 
@@ -369,7 +369,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         wallet.closeWallet().get();
     }
 
-    @Test (dependsOnMethods = {"exportWallet", "closeAndDeleteWallet"}, priority = 12)
+    @Test (dependsOnMethods = {"exportWallet", "closeAndDeleteWallet", "deleteRecord"}, priority = 12)
     public void importWallet() throws Exception  {
         Wallet.deleteWallet(walletName, credsForThisClass).get();
 
