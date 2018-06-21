@@ -4,6 +4,7 @@ import aurora_integration_tests.main.AuroraPluggableStorage;
 import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.wallet.Wallet;
+import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 
 import java.io.*;
@@ -58,6 +59,14 @@ public class BaseTest {
     protected static String CREDENTIALS_KEY, CREDENTIALS_USERNAME,CREDENTIALS_PASSWORD;
 
 
+    protected static File TMP_FOLDER = new File("data/tmp");
+    protected static File EXPORT_WALLET_FILE = getFileInTempFolder("exportWallet.wallet");
+    protected static String EXPORT_WALLET_CONFIG_JSON = "{" +
+            "\"key\": \"some_key\"," +
+            "\"path\": \"" + EXPORT_WALLET_FILE.getAbsolutePath() + "\"" +
+            "}";
+
+
     @BeforeSuite(alwaysRun = true)
     public void init() throws IOException {
 
@@ -81,6 +90,10 @@ public class BaseTest {
         // init test data
         CONFIG = getDefaultConfig();
         CREDENTIALS = getDefaultCredentials();
+
+        // Create tmp dir and clean contents of it
+        if(!TMP_FOLDER.exists()) TMP_FOLDER.mkdirs();
+        cleanTmpDir();
     }
 
     protected static String getDefaultConfig() {
@@ -135,6 +148,27 @@ public class BaseTest {
 
 
             WalletRecord.add(wallet, type, "Search"+ RECORD_ID +i, RECORD_VALUE, tags).get();
+        }
+    }
+
+    private static File getFileInTempFolder(String fileName) {
+        return new File(TMP_FOLDER.getAbsolutePath() + "/" + fileName);
+    }
+
+    private static void cleanTmpDir() {
+        deleteFolder(TMP_FOLDER);
+    }
+
+    private static void deleteFolder(File folder) {
+        File[] files = folder.listFiles();
+        if(files!=null) { //some JVMs return null for empty dirs
+            for(File f: files) {
+                if(f.isDirectory()) {
+                    deleteFolder(f);
+                } else {
+                    f.delete();
+                }
+            }
         }
     }
 }
