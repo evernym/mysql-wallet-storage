@@ -237,7 +237,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     }
 
     @Test (dependsOnMethods = "updateRecordTags",  dataProvider = "searchQueries", priority = 5)
-    public void searchRecordsFaleCountTruey(String searchQuery, JSONArray expectedJSONArray) throws Exception {
+    public void searchRecordsFalseCountTrue(String searchQuery, JSONArray expectedJSONArray) throws Exception {
 
         WalletSearch search = WalletSearch.open(wallet, ITEM_TYPE, searchQuery, SEARCH_OPTIONS_TOTAL_COUNT_ONLY).get();
 
@@ -350,7 +350,14 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         }
     }
 
-    @Test (dependsOnMethods = "createAndOpenWallet", priority = 10)
+    @Test (dependsOnMethods = "addRecords", priority = 10)
+    public void exportWallet() throws IndyException, ExecutionException, InterruptedException {
+        Wallet.exportWallet(wallet, EXPORT_WALLET_CONFIG_JSON).get();
+
+        Assert.assertTrue(EXPORT_WALLET_FILE.exists());
+    }
+
+    @Test (dependsOnMethods = "createAndOpenWallet", priority = 11)
     public void closeAndDeleteWallet() throws Exception {
 
         wallet.closeWallet().get();
@@ -362,9 +369,66 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         wallet.closeWallet().get();
     }
 
+    @Test (dependsOnMethods = {"exportWallet", "closeAndDeleteWallet", "deleteRecord"}, priority = 12)
+    public void importWallet() throws Exception  {
+        Wallet.deleteWallet(walletName, credsForThisClass).get();
+
+        Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass, EXPORT_WALLET_CONFIG_JSON).get();
+        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+
+        // check total count of records
+        String[] availableTypes = {ITEM_TYPE, ITEM_TYPE2};
+        for (String type : availableTypes) {
+            // count all records of given type
+            WalletSearch search = WalletSearch.open(wallet, type, "{}", SEARCH_OPTIONS_TOTAL_COUNT_ONLY).get();
+
+            String searchRecordsJson = search.fetchNextRecords(wallet, 0).get();
+
+            JSONObject searchRecords = new JSONObject(searchRecordsJson);
+
+            JSONObject expected = new JSONObject()
+                    .put("totalCount", 6)
+                    .put("records", JSONObject.NULL);
+
+            Assert.assertTrue(searchRecords.similar(expected), "actual '" + searchRecords.toString() + "' is similar to expected '" + expected.toString() + "'");
+
+            search.close();
+        }
+
+        // check records one by one (see prepare method in BaseTest class
+        String tags = "";
+        for(int i=0; i<12; i++) {
+            String type = ITEM_TYPE;
+            if (i % 2 == 1) type = ITEM_TYPE2; //every odd iteration will use ITEM_TYPE2
+
+            // rotate tags every 2nd iteration
+            if ((i / 2) % 2 == 1) {
+                tags = TAGS2;
+            } else {
+                tags = TAGS3;
+            }
+
+
+            String recordJson = WalletRecord.get(wallet, type, "Search" + RECORD_ID + i, GET_OPTIONS_ALL).get();
+
+            JSONObject actual = new JSONObject(recordJson);
+
+            JSONObject expected = new JSONObject()
+                    .put("id", "Search" + RECORD_ID + i)
+                    .putOpt("type", type)
+                    .put("value", RECORD_VALUE)
+                    .put("tags", new JSONObject(tags));
+
+            Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
+        }
+
+        wallet.closeWallet().get();
+    }
+
     @AfterClass(alwaysRun = true)
     public void afterClass() throws IndyException, InterruptedException, ExecutionException {
 
         Wallet.deleteWallet(walletName, credsForThisClass).get();
+        if(EXPORT_WALLET_FILE.exists())EXPORT_WALLET_FILE.delete();
     }
 }
