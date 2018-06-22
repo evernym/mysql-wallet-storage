@@ -11,6 +11,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.util.concurrent.ExecutionException;
 
 public class NonSecretsApiNegativeTest extends BaseTest {
@@ -460,6 +461,61 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     }
 
     @Test
+    public void searchWithWrongWQL() throws Exception {
+        String badQuery = "{\"$not\":{" +
+                "\"tagName1\":\"str2\"," +
+                "\"$or\":[" +
+                "{\"tagName2\":{" +
+                "\"$gt\": \"6\"" +
+                "}}," +
+                "{\"$not\":{" +
+                "\"tagName3\":{" +
+                "\"$lte\": \"14\"" +
+                "}" +
+                "}}," +
+                "{" +
+                "\"tagName2\":{\"$lt\": \"7\"}," +
+                "\"$not\":{" +
+                "\"tagName3\":{" +
+                "\"$gte\": \"14\"" +
+                "}" +
+                "}" +
+                "}" +
+                "]," +
+                "\"$not\":{" +
+                "\"tagName1\":{" +
+                "\"$like\":\"str\"" +
+                "}" +
+                "}," +
+                "{" +
+                "\"tagName3\":\"13\"," +
+                "\"$not\":{" +
+                "\"tagName2\":{" +
+                "\"$neq\": \"7\"" +
+                "}" +
+                "}" +
+                "}" +
+                "}}";
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        prepareRecordsForSearch(wallet);
+
+        WalletSearch search = null;
+        try {
+            search = WalletSearch.open(wallet, ITEM_TYPE, badQuery, SEARCH_OPTIONS_ALL).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletInvalidQueryException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        if(search != null) search.close();
+
+    }
+
+    @Test
     public void searchWithBadSearchQueryForOptions() throws Exception {
         // create and open wallet
         Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
@@ -549,25 +605,143 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         search.close();
     }
 
-    @Test
-    public void rekeyWalletWithEmptyRekey() throws IndyException, ExecutionException, InterruptedException {
+
+
+    @DataProvider(name = "badExportImportJson")
+    private Object[][] badExportImportJson() {
+
+        String expectedErrorClass = InvalidStructureException.class.toString();
+        if(expectedErrorClass.startsWith("class "))
+            expectedErrorClass = expectedErrorClass.substring("class ".length());
+        String expectedErrorClassWithMessage = expectedErrorClass + ": A value being processed is not valid.";
+
+
+        JSONObject exportImportJson = new JSONObject(EXPORT_WALLET_CONFIG_JSON);
+        exportImportJson.remove("path");
+        String missingPathJson = exportImportJson.toString();
+
+        exportImportJson = new JSONObject(EXPORT_WALLET_CONFIG_JSON);
+        exportImportJson.remove("key");
+        String missingKeyJson = exportImportJson.toString();
+
+        String badFormatJson = EXPORT_WALLET_CONFIG_JSON.substring(1);
+
+
+        Object[][] toReturn = {
+                {missingPathJson, expectedErrorClassWithMessage, "missingPathJson"}
+                ,{missingKeyJson, expectedErrorClassWithMessage, "missingKeyJson"}
+                ,{"{}", expectedErrorClassWithMessage, "emptyJson"}
+                ,{badFormatJson, expectedErrorClassWithMessage, "badFormatJson"}
+        };
+
+        return toReturn;
+    }
+
+    @Test (dataProvider = "badExportImportJson")
+    public void badExportJsonTest(String exportJson, String expectedCauseWithMessage, String scenario) throws Exception {
         // create and open wallet
         Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
         wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
-        wallet.closeWallet().get();
+        prepareRecordsForSearch(wallet);
 
-        // rekey through open wallet
-        JSONObject defaultJsonCreds = new JSONObject(CREDENTIALS);
-        defaultJsonCreds.put("rekey", JSONObject.NULL);
-
-        // open with NULL for "rekey" and expect key will not be changed
-        wallet = Wallet.openWallet(walletName, null, defaultJsonCreds.toString()).get();
-        wallet.closeWallet().get();
-
-        // try to open with "old" key
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        try {
+            Wallet.exportWallet(wallet, exportJson).get();
+            Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
     }
 
+    @Test ()
+    public void exportWalletFileAlreadyExists() throws Exception {
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        prepareRecordsForSearch(wallet);
+
+        File tmpFile = getFileInTempFolder("tmp" + System.currentTimeMillis());
+        tmpFile.createNewFile();
+
+        Assert.assertTrue(tmpFile.exists(), "Tmp file exists");
+
+        JSONObject modifiedConfigJson = new JSONObject(EXPORT_WALLET_CONFIG_JSON);
+        modifiedConfigJson.put("path", tmpFile.getAbsolutePath());
+
+
+        try {
+            Wallet.exportWallet(wallet, modifiedConfigJson.toString()).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof IOException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        } finally {
+            // delete tmp file
+            tmpFile.delete();
+        }
+    }
+
+    @Test (dataProvider = "badExportImportJson")
+    public void badImportJsonTest(String importJson, String expectedCauseWithMessage, String scenario) throws Exception {
+
+        try {
+            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, importJson).get();
+            Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test ()
+    public void missingFileImportTest() throws Exception {
+
+        JSONObject json = new JSONObject(EXPORT_WALLET_CONFIG_JSON);
+        json.put("path", getFileInTempFolder(System.currentTimeMillis() + ".wallet").getAbsolutePath());
+
+        try {
+            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, json.toString()).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof IOException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test ()
+    public void invalidFormatFileImportTest() throws Exception {
+
+        // create an empty file
+        File f = getFileInTempFolder(System.currentTimeMillis() + ".wallet");
+        Assert.assertTrue(f.createNewFile(), "Empty file is created");
+
+        JSONObject json = new JSONObject(EXPORT_WALLET_CONFIG_JSON);
+        json.put("path", f.getAbsolutePath());
+
+        try {
+            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, json.toString()).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
+
+    @Test ()
+    public void importIntoExistingWallet() throws Exception {
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.exportWallet(wallet, EXPORT_WALLET_CONFIG_JSON).get();
+
+        try {
+            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, EXPORT_WALLET_CONFIG_JSON).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletExistsException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+    }
 
 
 

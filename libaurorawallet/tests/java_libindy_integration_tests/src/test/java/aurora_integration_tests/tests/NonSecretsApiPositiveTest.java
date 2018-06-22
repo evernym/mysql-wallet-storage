@@ -13,6 +13,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.util.concurrent.ExecutionException;
 
 public class NonSecretsApiPositiveTest extends BaseTest {
@@ -292,7 +293,24 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
     }
 
-    @Test (dependsOnMethods = "addTags", priority = 8)
+    @Test(dependsOnMethods = "addTags", priority = 8)
+    public void rekeyWalletWithEmptyRekey() throws IndyException, ExecutionException, InterruptedException {
+        // close wallet
+        wallet.closeWallet().get();
+
+        // rekey through open wallet
+        JSONObject defaultJsonCreds = new JSONObject(credsForThisClass);
+        defaultJsonCreds.put("rekey", JSONObject.NULL);
+
+        // open with NULL for "rekey" and expect key will not be changed
+        wallet = Wallet.openWallet(walletName, null, defaultJsonCreds.toString()).get();
+        wallet.closeWallet().get();
+
+        // try to open with "old" key
+        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+    }
+
+    @Test (dependsOnMethods = {"addTags", "rekeyWalletWithEmptyRekey"}, priority = 9)
     public void rekeyWallet() throws IndyException, ExecutionException, InterruptedException {
         wallet.closeWallet().get();
 
@@ -336,7 +354,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
     }
 
-    @Test (dependsOnMethods = "addRecords", priority = 9)
+    @Test (dependsOnMethods = "addRecords", priority = 10)
     public void deleteRecord() throws Exception {
 
         WalletRecord.delete(wallet, ITEM_TYPE, RECORD_ID).get();
@@ -350,14 +368,32 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         }
     }
 
-    @Test (dependsOnMethods = "addRecords", priority = 10)
-    public void exportWallet() throws IndyException, ExecutionException, InterruptedException {
-        Wallet.exportWallet(wallet, EXPORT_WALLET_CONFIG_JSON).get();
+    @DataProvider(name = "exportWalletConfigs")
+    public Object[][] exportWalletConfigs() {
 
-        Assert.assertTrue(EXPORT_WALLET_FILE.exists());
+        File tmpFile = getFileInTempFolder("some/not/existing/path/export.wallet");
+
+        JSONObject modifiedConfigJson = new JSONObject(EXPORT_WALLET_CONFIG_JSON);
+        modifiedConfigJson.put("path", tmpFile.getAbsolutePath());
+
+        Object[][] toReturn = {
+                {EXPORT_WALLET_CONFIG_JSON, "existingFolderPath"}
+                ,{modifiedConfigJson.toString(), "nonExisitingFolderPath"}
+        };
+        return toReturn;
     }
 
-    @Test (dependsOnMethods = "createAndOpenWallet", priority = 11)
+    @Test (dataProvider = "exportWalletConfigs", dependsOnMethods = "addRecords", priority = 11)
+    public void exportWallet(String configJson, String scenario) throws IndyException, ExecutionException, InterruptedException {
+        Wallet.exportWallet(wallet, configJson).get();
+
+        JSONObject json = new JSONObject(configJson);
+        File exportFile = new File(json.getString("path"));
+
+        Assert.assertTrue(exportFile.exists(), "Scenario: " + scenario + ": export file exists");
+    }
+
+    @Test (dependsOnMethods = "createAndOpenWallet", priority = 12)
     public void closeAndDeleteWallet() throws Exception {
 
         wallet.closeWallet().get();
@@ -369,11 +405,11 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         wallet.closeWallet().get();
     }
 
-    @Test (dependsOnMethods = {"exportWallet", "closeAndDeleteWallet", "deleteRecord"}, priority = 12)
-    public void importWallet() throws Exception  {
+    @Test (dataProvider = "exportWalletConfigs", dependsOnMethods = {"exportWallet", "closeAndDeleteWallet", "deleteRecord"}, priority = 13)
+    public void importWallet(String configJson, String scenario) throws Exception  {
         Wallet.deleteWallet(walletName, credsForThisClass).get();
 
-        Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass, EXPORT_WALLET_CONFIG_JSON).get();
+        Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass, configJson).get();
         wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
 
         // check total count of records
@@ -390,7 +426,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                     .put("totalCount", 6)
                     .put("records", JSONObject.NULL);
 
-            Assert.assertTrue(searchRecords.similar(expected), "actual '" + searchRecords.toString() + "' is similar to expected '" + expected.toString() + "'");
+            Assert.assertTrue(searchRecords.similar(expected), "Scenario: " + scenario + ", actual '" + searchRecords.toString() + "' is similar to expected '" + expected.toString() + "'");
 
             search.close();
         }
@@ -419,7 +455,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                     .put("value", RECORD_VALUE)
                     .put("tags", new JSONObject(tags));
 
-            Assert.assertTrue(expected.similar(actual), "expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
+            Assert.assertTrue(expected.similar(actual), "Scenario: \" + scenario + \", expected '" + expected.toString() + "' matches actual '" + actual.toString() + "'");
         }
 
         wallet.closeWallet().get();
