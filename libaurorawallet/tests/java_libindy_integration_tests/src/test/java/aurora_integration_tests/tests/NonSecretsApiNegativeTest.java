@@ -461,6 +461,61 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     }
 
     @Test
+    public void searchWithWrongWQL() throws Exception {
+        String badQuery = "{\"$not\":{" +
+                "\"tagName1\":\"str2\"," +
+                "\"$or\":[" +
+                "{\"tagName2\":{" +
+                "\"$gt\": \"6\"" +
+                "}}," +
+                "{\"$not\":{" +
+                "\"tagName3\":{" +
+                "\"$lte\": \"14\"" +
+                "}" +
+                "}}," +
+                "{" +
+                "\"tagName2\":{\"$lt\": \"7\"}," +
+                "\"$not\":{" +
+                "\"tagName3\":{" +
+                "\"$gte\": \"14\"" +
+                "}" +
+                "}" +
+                "}" +
+                "]," +
+                "\"$not\":{" +
+                "\"tagName1\":{" +
+                "\"$like\":\"str\"" +
+                "}" +
+                "}," +
+                "{" +
+                "\"tagName3\":\"13\"," +
+                "\"$not\":{" +
+                "\"tagName2\":{" +
+                "\"$neq\": \"7\"" +
+                "}" +
+                "}" +
+                "}" +
+                "}}";
+
+        // create and open wallet
+        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        prepareRecordsForSearch(wallet);
+
+        WalletSearch search = null;
+        try {
+            search = WalletSearch.open(wallet, ITEM_TYPE, badQuery, SEARCH_OPTIONS_ALL).get();
+            Assert.assertTrue(false, "This line should not be reached");
+        } catch(Exception e) {
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof WalletInvalidQueryException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+        }
+
+        if(search != null) search.close();
+
+    }
+
+    @Test
     public void searchWithBadSearchQueryForOptions() throws Exception {
         // create and open wallet
         Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
@@ -647,7 +702,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, json.toString()).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "SExpected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof IOException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -666,7 +721,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, json.toString()).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "SExpected Exception is of ExecutionException but it is of " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
