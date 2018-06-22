@@ -131,8 +131,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
                 // config, expected error message, scenario
                 {wrongPort, expectedErrorClassWithMessage2, "wrongPort"},
                 {wrongDBName, expectedErrorClassWithMessage2, "wrongDBName"}
-                {wrongReadHost, expectedErrorClassWithMessage2, "wrongReadHost"}
-                {wrongWriteHost, expectedErrorClassWithMessage2, "wrongWriteHost"}
+                ,{wrongReadHost, expectedErrorClassWithMessage2, "wrongReadHost"}
+                ,{wrongWriteHost, expectedErrorClassWithMessage2, "wrongWriteHost"}
         };
         return toReturn;
     }
