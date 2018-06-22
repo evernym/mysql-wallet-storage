@@ -200,13 +200,58 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 "        ]\n" +
                 "    }\n" +
                 "}";
+        
+        String matchOneJson = "{\n" +
+                "    \"$not\": {\n" +
+                "        \"$or\": [{\n" +
+                "                \"$and\": [{\n" +
+                "                    \"tagName1\": {\n" +
+                "                        \"$in\": [\"str1\", \"str2\", \"str3\"]\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"tagName2\": {\n" +
+                "                        \"$neq\": \"6\"\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"~tagName3\": {\n" +
+                "                        \"$like\": \"%2\"\n" +
+                "                    }\n" +
+                "                }]\n" +
+                "            },\n" +
+                "            {\n" +
+                "                \"$and\": [{\n" +
+                "                    \"tagName1\": {\n" +
+                "                        \"$neq\": \"str2\"\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"$not\": {\n" +
+                "                        \"tagName2\": {\n" +
+                "                            \"$in\": [\"5\", \"8\", \"10\", \"bla\"]\n" +
+                "                        }\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"~tagName3\": {\n" +
+                "                        \"$gte\": \"14\"\n" +
+                "                    }\n" +
+                "                }]\n" +
+                "            }\n" +
+                "        ]\n" +
+                "    }\n" +
+                "}";
+
+        JSONArray jsonArray3 = new JSONArray("[" +
+                "{\"id\":\"SearchRecordId6\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}," +
+                "{\"id\":\"SearchRecordId2\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}," +
+                "{\"id\":\"SearchRecordId10\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}]");
 
         Object[][] toReturn = {
             {queryJson, jsonArray},
             {queryJsonIn, jsonArray},
             {queryJsonInNot, jsonArray},
             {QUERY_EMPTY, jsonArray2},
-            {complexQueryCorrected, jsonArray2}
+            {complexQueryCorrected, jsonArray2},
+            {matchOneJson, jsonArray3},
+            {QUERY_EMPTY, jsonArray2}
         };
 
         return toReturn;
