@@ -151,7 +151,7 @@ public class BaseTest {
         }
     }
 
-    private static File getFileInTempFolder(String fileName) {
+    protected static File getFileInTempFolder(String fileName) {
         return new File(TMP_FOLDER.getAbsolutePath() + "/" + fileName);
     }
 
@@ -159,12 +159,13 @@ public class BaseTest {
         deleteFolder(TMP_FOLDER);
     }
 
-    private static void deleteFolder(File folder) {
+    protected static void deleteFolder(File folder) {
         File[] files = folder.listFiles();
         if(files!=null) { //some JVMs return null for empty dirs
             for(File f: files) {
                 if(f.isDirectory()) {
                     deleteFolder(f);
+                    f.delete();
                 } else {
                     f.delete();
                 }
