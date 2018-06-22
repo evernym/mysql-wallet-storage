@@ -26,9 +26,9 @@ public class BaseTest {
 
     protected static final String QUERY_EMPTY = "{}";
     protected static final String TAGS_EMPTY = "{}";
-    protected static final String TAGS =  "{\"tagName1\":\"str1\",\"tagName2\":\"5\",\"tagName3\":\"12\"}";
-    protected static final String TAGS2 =  "{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"tagName3\":\"13\"}";
-    protected static final String TAGS3 =  "{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"tagName3\":\"14\"}";
+    protected static final String TAGS =  "{\"tagName1\":\"str1\",\"tagName2\":\"5\",\"~tagName3\":\"12\"}";
+    protected static final String TAGS2 =  "{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}";
+    protected static final String TAGS3 =  "{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"~tagName3\":\"14\"}";
 
     protected static final String GET_OPTIONS_EMPTY = "{}";
     protected static final String GET_OPTIONS_ALL = "{\"retrieveTags\": true, \"retrieveValue\": true, \"retrieveType\": true}";
