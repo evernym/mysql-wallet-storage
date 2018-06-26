@@ -1,0 +1,8 @@
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd" >
+<suite name="Longevity tests" verbose="1">
+    <test name="Longevity tests">
+        <classes>
+            <class name="aurora_integration_tests.tests.WalletLongevityTest" />
+        </classes>
+    </test>
+</suite>
