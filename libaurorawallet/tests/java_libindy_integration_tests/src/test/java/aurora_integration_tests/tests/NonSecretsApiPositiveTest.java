@@ -21,7 +21,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     private String walletName = "testWallet" + System.currentTimeMillis();
     private Wallet wallet = null;
 
-    String tagsWithDeletedTag1 =  "{\"tagName2\":\"5\",\"tagName3\":\"12\"}";
+    String tagsWithDeletedTag1 =  "{\"tagName2\":\"5\",\"~tagName3\":\"12\"}";
     String value2 = "RecordValue2";
     String rekey = "BTIzNDU2Nzg7MDAyMzQ1Xjc4OTAxMjM0NTY3ODkwMTI=";
 
@@ -148,55 +148,110 @@ public class NonSecretsApiPositiveTest extends BaseTest {
                 "}";
 
         JSONArray jsonArray2 = new JSONArray("[" +
-                "{\"id\":\"SearchRecordId6\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"tagName3\":\"13\"}}," +
-                "{\"id\":\"SearchRecordId8\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"tagName3\":\"14\"}}," +
-                "{\"id\":\"SearchRecordId2\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"tagName3\":\"13\"}}," +
-                "{\"id\":\"SearchRecordId10\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"tagName3\":\"13\"}}," +
-                "{\"id\":\"SearchRecordId0\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"tagName3\":\"14\"}}," +
-                "{\"id\":\"SearchRecordId4\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"tagName3\":\"14\"}}," +
-                "{\"id\":\"RecordId\",\"type\":\"TestType\",\"value\":\"RecordValue2\",\"tags\":{\"tagName1\":\"str1\",\"tagName2\":\"5\",\"tagName3\":\"12\"}}]");
+                "{\"id\":\"SearchRecordId6\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}," +
+                "{\"id\":\"SearchRecordId8\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"~tagName3\":\"14\"}}," +
+                "{\"id\":\"SearchRecordId2\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}," +
+                "{\"id\":\"SearchRecordId10\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}," +
+                "{\"id\":\"SearchRecordId0\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"~tagName3\":\"14\"}}," +
+                "{\"id\":\"SearchRecordId4\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str3\",\"tagName2\":\"7\",\"~tagName3\":\"14\"}}," +
+                "{\"id\":\"RecordId\",\"type\":\"TestType\",\"value\":\"RecordValue2\",\"tags\":{\"tagName1\":\"str1\",\"tagName2\":\"5\",\"~tagName3\":\"12\"}}]");
 
-        String complexQuery = "{\"$not\":{" +
-                                    "\"tagName1\":\"str2\"," +
-                                    "\"$or\":[" +
-                                        "{\"tagName2\":{" +
-                                            "\"$gt\": \"6\"" +
-                                        "}}," +
-                                        "{\"$not\":{" +
-                                            "\"tagName3\":{" +
-                                                "\"$lte\": \"14\"" +
-                                            "}" +
-                                        "}}," +
-                                        "{" +
-                                            "\"tagName2\":{\"$lt\": \"7\"}," +
-                                            "\"$not\":{" +
-                                                "\"tagName3\":{" +
-                                                    "\"$gte\": \"14\"" +
-                                                "}" +
-                                            "}" +
-                                        "}" +
-                                    "]," +
-                                    "\"$not\":{" +
-                                        "\"tagName1\":{" +
-                                            "\"$like\":\"str\"" +
-                                        "}" +
-                                    "}," +
-                                    "{" +
-                                        "\"tagName3\":\"13\"," +
-                                        "\"$not\":{" +
-                                            "\"tagName2\":{" +
-                                                "\"$neq\": \"7\"" +
-                                            "}" +
-                                        "}" +
-                                    "}" +
-                                "}}";
+
+        String complexQueryCorrected = "{\n" +
+                "    \"$not\": {\n" +
+                "        \"$and\": [{\n" +
+                "                \"tagName1\": \"str2\"\n" +
+                "            },\n" +
+                "            {\n" +
+                "                \"$or\": [{\n" +
+                "                    \"~tagName3\": {\n" +
+                "                        \"$gt\": \"6\"\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"$not\": {\n" +
+                "                        \"~tagName3\": {\n" +
+                "                            \"$lte\": \"14\"\n" +
+                "                        }\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"tagName2\": \"7\",\n" +
+                "                    \"$not\": {\n" +
+                "                        \"~tagName3\": {\n" +
+                "                            \"$gte\": \"14\"\n" +
+                "                        }\n" +
+                "                    }\n" +
+                "                }]\n" +
+                "            },\n" +
+                "            {\n" +
+                "                \"$not\": {\n" +
+                "                    \"~tagName3\": {\n" +
+                "                        \"$like\": \"1%\"\n" +
+                "                    }\n" +
+                "                }\n" +
+                "            },\n" +
+                "            {\n" +
+                "                \"~tagName3\": \"13\",\n" +
+                "                \"$not\": {\n" +
+                "                    \"tagName2\": {\n" +
+                "                        \"$neq\": \"7\"\n" +
+                "                    }\n" +
+                "                }\n" +
+                "            }\n" +
+                "        ]\n" +
+                "    }\n" +
+                "}";
+        
+        String matchOneJson = "{\n" +
+                "    \"$not\": {\n" +
+                "        \"$or\": [{\n" +
+                "                \"$and\": [{\n" +
+                "                    \"tagName1\": {\n" +
+                "                        \"$in\": [\"str1\", \"str2\", \"str3\"]\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"tagName2\": {\n" +
+                "                        \"$neq\": \"6\"\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"~tagName3\": {\n" +
+                "                        \"$like\": \"%2\"\n" +
+                "                    }\n" +
+                "                }]\n" +
+                "            },\n" +
+                "            {\n" +
+                "                \"$and\": [{\n" +
+                "                    \"tagName1\": {\n" +
+                "                        \"$neq\": \"str2\"\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"$not\": {\n" +
+                "                        \"tagName2\": {\n" +
+                "                            \"$in\": [\"5\", \"8\", \"10\", \"bla\"]\n" +
+                "                        }\n" +
+                "                    }\n" +
+                "                }, {\n" +
+                "                    \"~tagName3\": {\n" +
+                "                        \"$gte\": \"14\"\n" +
+                "                    }\n" +
+                "                }]\n" +
+                "            }\n" +
+                "        ]\n" +
+                "    }\n" +
+                "}";
+
+        JSONArray jsonArray3 = new JSONArray("[" +
+                "{\"id\":\"SearchRecordId6\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}," +
+                "{\"id\":\"SearchRecordId2\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}," +
+                "{\"id\":\"SearchRecordId10\",\"type\":\"TestType\",\"value\":\"RecordValue\",\"tags\":{\"tagName1\":\"str2\",\"tagName2\":\"6\",\"~tagName3\":\"13\"}}]");
 
         Object[][] toReturn = {
             {queryJson, jsonArray},
             {queryJsonIn, jsonArray},
             {queryJsonInNot, jsonArray},
             {QUERY_EMPTY, jsonArray2},
-            {complexQuery, jsonArray2}
+            {complexQueryCorrected, jsonArray2},
+            {matchOneJson, jsonArray3},
+            {QUERY_EMPTY, jsonArray2}
         };
 
         return toReturn;
