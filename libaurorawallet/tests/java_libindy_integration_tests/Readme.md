@@ -9,7 +9,7 @@ to `lib` subfolder located in the same folder as this Readme file.
 
 # Tests executon
 
-In order to run Libindy - Aurora storage *integration tests* execute this from the command line
+In order to run Libindy - Aurora storage **integration tests** execute this from the command line
 ```
 mvn clean versions:update-properties validate test -DsuiteFile=NonSecrets-PositiveTests.xml
 ```
@@ -18,7 +18,7 @@ or
 mvn clean versions:update-properties validate test -DsuiteFile=NonSecrets-NegativeTests.xml
 ```
 
-In order to run Libindy - Aurora storage *longevity tests* execute this from the command line
+In order to run Libindy - Aurora storage **longevity tests** execute this from the command line
 ```
 mvn clean versions:update-properties validate test -DsuiteFile=AuroraStorageLongevityTest.xml
 ```
