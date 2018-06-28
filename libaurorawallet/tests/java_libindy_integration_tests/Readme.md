@@ -1,10 +1,10 @@
 # Prerequisites
 
 Apache maven and Java JRE 1.8 installed on the machine where tests will be executed <br>
-Copy
-    - `libindy.so` and `libaurorastorage.so` for Linux
-    - `libindy.dll` and `libaurorastorage.dll` for Windows
-    - `libindy.dylib` and `libaurorastorage.dylib` for Mac
+Copy<br>
+    - `libindy.so` and `libaurorastorage.so` for Linux<br>
+    - `libindy.dll` and `libaurorastorage.dll` for Windows<br>
+    - `libindy.dylib` and `libaurorastorage.dylib` for Mac<br>
 to `lib` subfolder located in the same folder as this Readme file.
 
 # Tests executon
