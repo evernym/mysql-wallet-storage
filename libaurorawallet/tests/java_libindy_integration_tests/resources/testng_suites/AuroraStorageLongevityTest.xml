@@ -3,7 +3,7 @@
     <test name="Longevity tests">
         <parameter name="numberOfThreads" value = "20" />
         <parameter name="numberOfWallets" value = "20000" />
-        <parameter name="numOfIterrationsForStatusMessage" value = "500" />
+        <parameter name="printStatusFrequency" value = "500" />
         <parameter name="walletNamePrefix" value = "WalletLongevityTest" />
         <parameter name="maxNumOfKeyPerWallet" value = "10" />
         <parameter name="infoLogPeriodInSeconds" value = "30" />

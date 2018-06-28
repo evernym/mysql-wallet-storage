@@ -16,7 +16,7 @@ public class WalletLongevityTest extends BaseTest {
 
     /** Test parameters **/
     private static Logger logger = LoggerFactory.getLogger(WalletLongevityTest.class);
-    private static int numOfWalletsPerThread, numOfIterrationsForStatusMessage, numberOfWallets;
+    private static int numOfWalletsPerThread, printStatusFrequency, numberOfWallets;
     private static String walletNamePrefix;
     private static int maxNumOfKeyPerWallet;
 
@@ -25,7 +25,7 @@ public class WalletLongevityTest extends BaseTest {
     private static Thread[] workers;
     private static long testDurationInMillis;
 
-    @Parameters({ "testDurationInMillis", "testDurationInHours", "numberOfWallets", "numberOfThreads", "walletNamePrefix", "numOfIterrationsForStatusMessage", "maxNumOfKeyPerWallet"})
+    @Parameters({ "testDurationInMillis", "testDurationInHours", "numberOfWallets", "numberOfThreads", "walletNamePrefix", "printStatusFrequency", "maxNumOfKeyPerWallet"})
     @BeforeClass (alwaysRun = true)
     public void prepareTestParameters(@Optional("") String testDurationInMillisParameter,
                                       long testDurationInHours,
@@ -42,7 +42,7 @@ public class WalletLongevityTest extends BaseTest {
             testDurationInMillis = Long.parseLong(testDurationInMillisParameter);
         }
 
-        numOfIterrationsForStatusMessage = numOfIterrationsForStatus;
+        printStatusFrequency = numOfIterrationsForStatus;
         walletNamePrefix = namePrefix;
         numberOfWallets = numOfWallets;
         maxNumOfKeyPerWallet = maxNumOfKeys;
@@ -150,7 +150,7 @@ public class WalletLongevityTest extends BaseTest {
 
 
                 // check if I'm alive needs to be logged
-                if(statusMessageIterrationCounter % numOfIterrationsForStatusMessage == 0) {
+                if(statusMessageIterrationCounter % printStatusFrequency == 0) {
                     logger.info("status msg #" + statusMessageIterrationCounter + " I'm alive.");
                 }
 
