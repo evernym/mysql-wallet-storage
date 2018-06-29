@@ -159,9 +159,6 @@ public class WalletLongevityTest extends BaseTest {
         public void run() {
 
             logger.debug("starting ...");
-            try{Thread.sleep(2000);}catch(Exception e){};
-
-
 
             while(testEndTimestamp > System.currentTimeMillis()) {
                 numOfItterations++;
