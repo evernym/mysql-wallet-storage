@@ -2,14 +2,14 @@
 <suite name="Longevity tests" verbose="1">
     <test name="Longevity tests">
         <parameter name="numberOfThreads" value = "20" />
-        <parameter name="numberOfWallets" value = "20000" />
+        <parameter name="numberOfWallets" value = "40000" />
         <parameter name="printStatusFrequency" value = "500" />
         <parameter name="walletNamePrefix" value = "WalletLongevityTest" />
         <parameter name="maxNumOfKeyPerWallet" value = "10" />
         <parameter name="infoLogPeriodInSeconds" value = "30" />
 
         <!-- "testDurationInMillis" is optional. If provided it will override "testDurationInHours"  -->
-        <parameter name="testDurationInMillis" value = "120000" />
+        <parameter name="testDurationInMillis" value = "240000" />
         <parameter name="testDurationInHours" value = "720" />
 
         <classes>

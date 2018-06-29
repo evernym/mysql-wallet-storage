@@ -1,5 +1,6 @@
 package aurora_integration_tests.tests;
 
+import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.non_secrets.WalletSearch;
 import org.hyperledger.indy.sdk.wallet.Wallet;
@@ -11,6 +12,7 @@ import org.testng.Assert;
 import org.testng.annotations.*;
 
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 
 public class WalletLongevityTest extends BaseTest {
 
@@ -22,7 +24,8 @@ public class WalletLongevityTest extends BaseTest {
 
     /** Test data **/
     private static int[] walletsStatuses;
-    private static Thread[] workers;
+    private static Thread[] threads;
+    private static WalletWorker[] walletWorkers;
     private static long testDurationInMillis;
 
     @Parameters({ "testDurationInMillis", "testDurationInHours", "numberOfWallets", "numberOfThreads", "walletNamePrefix", "printStatusFrequency", "maxNumOfKeyPerWallet"})
@@ -47,6 +50,7 @@ public class WalletLongevityTest extends BaseTest {
         numberOfWallets = numOfWallets;
         maxNumOfKeyPerWallet = maxNumOfKeys;
 
+        // TODO: replace deletion with direct DB delete query + wallet folders deletion
         // delete existing wallets (if any)
         for(int i=0; i<numberOfWallets; i++) {
             try {
@@ -64,7 +68,8 @@ public class WalletLongevityTest extends BaseTest {
         walletsStatuses = new int[numberOfWallets];
         for(int i=0; i<walletsStatuses.length; i++) walletsStatuses[i] = -1; // initialise with status -1 (not created)
 
-        workers = new Thread[numberOfThreads];
+        threads = new Thread[numberOfThreads];
+        walletWorkers = new WalletWorker[numberOfThreads];
     }
 
     @Parameters({"infoLogPeriodInSeconds"})
@@ -76,17 +81,18 @@ public class WalletLongevityTest extends BaseTest {
         long testEndTimestamp = System.currentTimeMillis() + testDurationInMillis;
 
         // prepare threads
-        for(int i=0; i<workers.length; i++) {
+        for(int i = 0; i< threads.length; i++) {
             // 0-9999, 1000-1999, 2000-2999 ...
             int minID = i*numOfWalletsPerThread;
             int maxID = (i+1)*numOfWalletsPerThread-1;
-            workers[i] = new Thread(new WalletWorker(minID, maxID, testEndTimestamp));
-            workers[i].setName("Wallets_" + minID + "-" + maxID);
+            walletWorkers[i] = new WalletWorker(minID, maxID, testEndTimestamp);
+            threads[i] = new Thread(walletWorkers[i]);
+            threads[i].setName(walletWorkers[i].getName());
         }
 
         // start threads
-        for(Thread w : workers) {
-            w.start();
+        for(Thread t : threads) {
+            t.start();
         }
 
         InfoWorker infoWorker = new InfoWorker(infoLogPeriodInSeconds);
@@ -97,7 +103,7 @@ public class WalletLongevityTest extends BaseTest {
         // wait for all threads to finish
         boolean normalExit = false;
         while(!normalExit) {
-            for(Thread t : workers) {
+            for(Thread t : threads) {
                 try{
                     t.join();
                 } catch(InterruptedException e){
@@ -108,6 +114,13 @@ public class WalletLongevityTest extends BaseTest {
 
             // all joins finished without exceptions -> this is normal exit
             normalExit = true;
+        }
+
+        infoWorker.setStopRunning(true);
+        try {
+            infoWorkerThread.join();
+        } catch (InterruptedException e) {
+            logger.warn("InterruptedException when join is called for InfoWorker thread, exception message: " + e.getMessage());
         }
 
         logger.info("Actual test duration: " + (System.currentTimeMillis() - testStartTimestamp));
@@ -130,11 +143,16 @@ public class WalletLongevityTest extends BaseTest {
         int minID;
         int maxID;
         long testEndTimestamp;
+        long lastSeenOn;
+        String name;
+        long numOfItterations = 0;
 
         public WalletWorker(int minWalletID, int maxWalletID, long testEndTimestamp) {
             minID = minWalletID;
             maxID = maxWalletID;
             this.testEndTimestamp = testEndTimestamp;
+            this.lastSeenOn = System.currentTimeMillis();
+            name = "Wallets_" + minID + "-" + maxID;
         }
 
         @Override
@@ -143,16 +161,19 @@ public class WalletLongevityTest extends BaseTest {
             logger.debug("starting ...");
             try{Thread.sleep(2000);}catch(Exception e){};
 
-            long statusMessageIterrationCounter = 0;
+
 
             while(testEndTimestamp > System.currentTimeMillis()) {
-                statusMessageIterrationCounter++;
+                numOfItterations++;
 
 
                 // check if I'm alive needs to be logged
-                if(statusMessageIterrationCounter % printStatusFrequency == 0) {
-                    logger.info("status msg #" + statusMessageIterrationCounter + " I'm alive.");
+                if(numOfItterations % printStatusFrequency == 0) {
+                    logger.debug("status msg #" + numOfItterations + " I'm alive.");
                 }
+
+                // update last seen
+                lastSeenOn = System.currentTimeMillis();
 
                 Wallet wallet = null;
 
@@ -164,8 +185,7 @@ public class WalletLongevityTest extends BaseTest {
                 if(walletsStatuses[walletID] < 0) {
                     // create wallet
                     try {
-                        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-                        walletsStatuses[walletID] = 0;
+                        createWallet(walletName, walletID);
                     } catch (Exception e) {
                         logger.error("Wallet '" + walletName + "' not created, exception message is: " + e.getMessage());
                         continue; // start new iterration
@@ -175,7 +195,7 @@ public class WalletLongevityTest extends BaseTest {
 
                 // open wallet
                 try {
-                    wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+                    wallet = openWallet(walletName);
                 } catch(Exception e) {
                     logger.error("Wallet '" + walletName + "' not opened, exception message is: " + e.getMessage());
                     continue; // start new iterration
@@ -218,6 +238,14 @@ public class WalletLongevityTest extends BaseTest {
             }
 
             logger.debug("finishing ...");
+        }
+
+        private void createWallet(String name, int walletID) throws IndyException, ExecutionException, InterruptedException {
+            Wallet.createWallet(POOL, name, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+            walletsStatuses[walletID] = 0;
+        }
+        private Wallet openWallet(String walletName) throws IndyException, ExecutionException, InterruptedException {
+            return Wallet.openWallet(walletName, null, CREDENTIALS).get();
         }
 
         private void addRecord(Wallet wallet, int walletID){
@@ -308,12 +336,20 @@ public class WalletLongevityTest extends BaseTest {
                 logger.error("Exception when updating a record '" + (RECORD_ID + keyID) + "' from wallet with ID '" + walletID + "', exception message is: " + e.getMessage());
             }
         }
+
+        public long getLastSeenOn() {
+            return lastSeenOn;
+        }
+
+        public String getName() {return name;}
+        public long getNumOfItterations(){return numOfItterations;}
     }
 
     private class InfoWorker implements Runnable {
 
         boolean stopRunning = false;
         int logPeriodInSeconds = 30;
+        long lastSeenThresholdInSeconds = 60; // 1 minutes allowed for wallet worker inactivity
 
         public InfoWorker(int logPeriodInSeconds) {
             this.logPeriodInSeconds = logPeriodInSeconds;
@@ -327,7 +363,7 @@ public class WalletLongevityTest extends BaseTest {
         public void run() {
             while(!stopRunning) {
                 // go through wallet statuses and calculate statistics
-                int walletTotals[] = new int[maxNumOfKeyPerWallet]; // last item is to count irregular states
+                int walletTotals[] = new int[maxNumOfKeyPerWallet+1]; //
                 int notCreated = 0;
                 int numOfIrregular = 0;
 
@@ -345,6 +381,18 @@ public class WalletLongevityTest extends BaseTest {
                 logger.info("Wallet stats: notCreated: " + notCreated + ", "
                         + "numOfIrregular: " + numOfIrregular + ", "
                         + "regular: " + Arrays.toString(walletTotals));
+
+                String numOfIterratiosPerThread = "";
+                for(WalletWorker w : walletWorkers) {
+                    numOfIterratiosPerThread += " ," + w.getNumOfItterations();
+                }
+                logger.info("Number of itterations per worker: " + numOfIterratiosPerThread.substring(2));
+
+                for (WalletWorker w : walletWorkers) {
+                    long diff = System.currentTimeMillis() - w.getLastSeenOn();
+                    if(diff >= lastSeenThresholdInSeconds * 1000)
+                        logger.warn("Thread '" + w.getName() + "' not seen more than " + lastSeenThresholdInSeconds + " seconds");
+                }
 
                 try{Thread.sleep(logPeriodInSeconds * 1000);}catch(Exception e){};
 
