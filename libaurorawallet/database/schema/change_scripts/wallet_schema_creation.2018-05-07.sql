@@ -2,7 +2,7 @@
 /*** Wallet Schema Creation Script ***/
 
 
-CREATE DATABASE IF NOT EXISTS `wallet` DEFAULT CHARACTER SET latin1;
+CREATE DATABASE IF NOT EXISTS `wallet` DEFAULT CHARACTER SET ascii;
 
 USE `wallet`;
 
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `wallets` (
     `metadata` VARCHAR(10240) NOT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `wallet_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=ascii;
 
 /*** Item Table Structure - Holding Item Data. ***/
 
@@ -31,4 +31,4 @@ CREATE TABLE IF NOT EXISTS `items` (
         REFERENCES `wallets` (`id`)
         ON DELETE CASCADE
         ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=ascii;
