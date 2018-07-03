@@ -238,11 +238,16 @@ public class WalletLongevityTest extends BaseTest {
         }
 
         private void createWallet(String name, int walletID) throws IndyException, ExecutionException, InterruptedException {
+            logger.trace("Creating wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
             Wallet.createWallet(POOL, name, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+            logger.trace("Created wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
             walletsStatuses[walletID] = 0;
         }
         private Wallet openWallet(String walletName) throws IndyException, ExecutionException, InterruptedException {
-            return Wallet.openWallet(walletName, null, CREDENTIALS).get();
+            logger.trace("Opening a wallet '" + walletName + "'");
+            Wallet w =  Wallet.openWallet(walletName, null, CREDENTIALS).get();
+            logger.trace("Opened a wallet '" + walletName + "'");
+            return w;
         }
 
         private void addRecord(Wallet wallet, int walletID){
