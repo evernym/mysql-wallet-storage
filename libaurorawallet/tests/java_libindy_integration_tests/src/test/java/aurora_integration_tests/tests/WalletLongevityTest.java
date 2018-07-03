@@ -177,7 +177,7 @@ public class WalletLongevityTest extends BaseTest {
                 // get random wallet ID and set wallet name
                 int walletID = minID + (int)(Math.random()*(maxID-minID+1));
                 String walletName = walletNamePrefix+walletID;
-                logger.debug("picked wallet: " + walletName);
+                logger.trace("picked wallet: " + walletName);
 
                 if(walletsStatuses[walletID] < 0) {
                     // create wallet
