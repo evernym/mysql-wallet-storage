@@ -10,7 +10,7 @@
 
         <!-- "testDurationInMillis" is optional. If provided it will override "testDurationInHours"  -->
         <!-- parameter name="testDurationInMillis" value = "240000" / -->
-        <parameter name="testDurationInHours" value = "720" />
+        <parameter name="testDurationInHours" value = "120" />
 
         <classes>
             <class name="aurora_integration_tests.tests.WalletLongevityTest" />
