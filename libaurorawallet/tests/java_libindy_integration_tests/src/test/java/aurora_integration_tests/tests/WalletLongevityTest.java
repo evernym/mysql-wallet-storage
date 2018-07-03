@@ -268,6 +268,7 @@ public class WalletLongevityTest extends BaseTest {
 
             try {
                 WalletRecord.delete(wallet, ITEM_TYPE, itemID).get();
+                logger.trace("Deleted a key to wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
                 walletsStatuses[walletID] -= 1; // key deleted
             } catch(Exception e) {
                 logger.error("Deleting key to wallet with ID '" + walletID + "' failed with message " + e.getMessage());
@@ -284,9 +285,11 @@ public class WalletLongevityTest extends BaseTest {
 
             // pick one random key from the wallet: random() => [0,N), then +1 => [1,N]
             int keyID = 1 + (int) Math.random()*numOfKeysInWallet;
+            logger.trace("Getting a key from wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
 
             try {
                 WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID + keyID, GET_OPTIONS_ALL).get();
+                logger.trace("Got a key from wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
 
             } catch(Exception e) {
                 logger.error("Exception when getting a record '" + (RECORD_ID + keyID) + "' from wallet with ID '" + walletID + "', exception message is: " + e.getMessage());
@@ -296,12 +299,14 @@ public class WalletLongevityTest extends BaseTest {
         private void searchWallet(Wallet wallet, int walletID) {
 
             JSONObject searchRecords;
+            logger.trace("Searching wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
             try {
                 WalletSearch search = WalletSearch.open(wallet, ITEM_TYPE, QUERY_EMPTY, SEARCH_OPTIONS_ALL).get();
+                logger.trace("Searched wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
                 String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
                 searchRecords = new JSONObject(searchRecordsJson);
             } catch (Exception e) {
-                logger.error("Exception when getting a record from wallet with ID '" + walletID + "', exception message is: " + e.getMessage());
+                logger.error("Exception when searching wallet with ID '" + walletID + "', exception message is: " + e.getMessage());
                 return;
             }
 
@@ -327,8 +332,10 @@ public class WalletLongevityTest extends BaseTest {
             // pick one random key from the wallet: random() => [0,N), then +1 => [1,N]
             int keyID = 1 + (int) Math.random()*numOfKeysInWallet;
 
+            logger.trace("Updating a key in wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
             try {
                 WalletRecord.updateValue(wallet, ITEM_TYPE, RECORD_ID + keyID, ""+System.currentTimeMillis()).get();
+                logger.trace("Updated a key in wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
             } catch (Exception e) {
                 logger.error("Exception when updating a record '" + (RECORD_ID + keyID) + "' from wallet with ID '" + walletID + "', exception message is: " + e.getMessage());
             }
