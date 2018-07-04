@@ -773,6 +773,9 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             }
         }
         catch(Exception e){}
+
+        // clean indy_client folder
+        cleanIndyClientWalletsFolder();
     }
 }
 
