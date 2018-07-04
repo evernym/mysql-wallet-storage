@@ -98,11 +98,6 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         json = new JSONObject(CONFIG); json.remove("db_name");
         String missingDBName = json.toString();
 
-        expectedErrorClass = IOException.class.toString();
-        if(expectedErrorClass.startsWith("class "))
-            expectedErrorClass = expectedErrorClass.substring("class ".length());
-        String expectedErrorClassWithMessage2 = expectedErrorClass + ": An IO error occurred.";
-
 
         Object[][] toReturn = {
                 // config, expected error message, scenario
