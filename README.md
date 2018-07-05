@@ -1,2 +1,3 @@
-# aurora-wallet
-indy-sdk plugged wallet for AWS Aurora writen in Rust
+# mysql-wallet-storage
+
+MySQL Storage Wallet Plug-In for IndySDK

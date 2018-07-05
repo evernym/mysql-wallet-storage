@@ -16,7 +16,7 @@ PROJECT_DIR := $(shell git rev-parse --show-toplevel)
 endif
 
 # project variables
-SRC_DIR_NAME := libaurorawallet
+SRC_DIR_NAME := libmysqlstorage
 SRC_DIR := $(PROJECT_DIR)/$(SRC_DIR_NAME)
 SRC_VERSION := $(shell grep -oP '^version = "\K.*(?=")' $(SRC_DIR)/Cargo.toml)
 
@@ -26,7 +26,7 @@ CRATE_P_VERSION ?= $(SRC_VERSION)
 CARGO_LOGIN_TOKEN ?=
 
 # libs related variables
-LIBNAME := libaurorastorage
+LIBNAME := libmysqlstorage
 LIB_TARGET_DIR = $(SRC_DIR)/$(CARGO_TARGET_DIR)/$(BUILD_TYPE)
 LIB_STATIC = $(LIB_TARGET_DIR)/$(LIBNAME).a
 LIB_DYNAMIC = $(LIB_TARGET_DIR)/$(LIBNAME).so
@@ -35,17 +35,17 @@ LIBS = $(LIB_DYNAMIC) $(LIB_STATIC)
 # package related variables
 PRE_PACKAGE_GOALS := pre_package $(LIB_DYNAMIC)
 FPM_P_MAINTAINER := Evernym
-FPM_P_URL := https://github.com/evernym/aurora-wallet
+FPM_P_URL := https://github.com/evernym/mysql-wallet-storage
 FPM_P_LICENSE := Apache License 2.0
 FPM_P_VENDOR := Evernym
-FPM_P_DESCRIPTION := indy-sdk plugged wallet for AWS Aurora writen in Rust
+FPM_P_DESCRIPTION := MySQL Storage Wallet Plug-In for IndySDK
 FPM_P_NAME = $(LIBNAME)
 FPM_P_VERSION ?= $(SRC_VERSION)
 FPM_P_OUTPUT_DIR = $(LIB_TARGET_DIR)
 FPM_ARGS = $(LIB_DYNAMIC)=/usr/lib/
 
 # docker related variables
-DOCKER_NAME ?= evernym/aurora-wallet
+DOCKER_NAME ?= evernym/mysql-storage
 DOCKER_TAG ?=
 CI_DOCKERFILE_PATH = docker/ci/$(OSNAME)/Dockerfile
 
