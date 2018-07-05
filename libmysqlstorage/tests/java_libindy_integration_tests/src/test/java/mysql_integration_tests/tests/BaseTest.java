@@ -5,9 +5,11 @@ import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.wallet.Wallet;
 import org.testng.Assert;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeSuite;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -93,7 +95,16 @@ public class BaseTest {
 
         // Create tmp dir and clean contents of it
         if(!TMP_FOLDER.exists()) TMP_FOLDER.mkdirs();
+
+    }
+
+    @BeforeClass(alwaysRun = true)
+    public void cleanFoldersInUse() {
+        // clean Tmp folder
         cleanTmpDir();
+
+        // clean indy_client folder
+        cleanIndyClientWalletsFolder();
     }
 
     protected static String getDefaultConfig() {
@@ -157,6 +168,13 @@ public class BaseTest {
 
     private static void cleanTmpDir() {
         deleteFolder(TMP_FOLDER);
+    }
+
+    protected static void cleanIndyClientWalletsFolder() {
+        File folder = Paths.get(System.getProperty("user.home"),
+                ".indy_client",
+                "wallet").toFile();
+        deleteFolder(folder);
     }
 
     protected static void deleteFolder(File folder) {
