@@ -1,4 +1,4 @@
-libaurorawallet/Cargo.lock
-libaurorawallet/target
+libmysqlstorage/Cargo.lock
+libmysqlstorage/target
 *.idea
 *.swp

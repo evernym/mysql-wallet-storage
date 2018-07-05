@@ -11,7 +11,7 @@ logger.setGlobalLevel('TRACE')
 pipelineWrapper({
 
     nodeWrapper {
-        def packageName = 'libaurorastorage'
+        def packageName = 'libmysqlstorage'
         def srcVersion
         def lastRevision
         def debPVersion
@@ -28,7 +28,7 @@ pipelineWrapper({
 
         def evernymRepo = evLibrary.EvernymRepo.new(this)
         def utils = evLibrary.Utils.new(this)
-        def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet')
+        def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('mysql-storage')
         def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
 
         stage('Resolve current source version') {
@@ -83,7 +83,7 @@ pipelineWrapper({
             envv = [
                 [name: 'OSNAME', value: "$osname"],
                 [name: 'MAKE_GOALS', value: "${goals.join(' ')}"],
-                [name: 'ARTIFACTS', value: 'libaurorawallet/target/release/libaurorastorage*.*'],
+                [name: 'ARTIFACTS', value: 'libmysqlstorage/target/release/libmysqlstorage*.*'],
                 [name: 'FPM_P_VERSION', value: debPVersion],
                // [name: 'CRATE_P_VERSION', value: cratePVersion],
             ]
