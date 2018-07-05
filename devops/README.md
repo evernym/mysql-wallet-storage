@@ -1,4 +1,4 @@
-# Aurora-wallet devops routine
+# MySQL Storage Wallet Plugin devops routine
 
 This folder includes devops related routine and consists of the following parts:
 - [Makefile](Makefile) automates devops tasks like test, package and publish to [crates.io](https://crates.io/) which could be performed either on-host or in-docker
@@ -10,7 +10,7 @@ This folder includes devops related routine and consists of the following parts:
 
 ## Docker
 
-Aurora wallet is shipped with dockerfiles for ubuntu [xenial](docker/ci/xenial/Dockerfile) and [centos7](docker/ci/xenial/Dockerfile) which describe images with necessary environment for CI/CD tasks on these OSes.
+MySQL Storage Wallet Plugin is shipped with dockerfiles for ubuntu [xenial](docker/ci/xenial/Dockerfile) and [centos7](docker/ci/xenial/Dockerfile) which describe images with necessary environment for CI/CD tasks on these OSes.
 
 ## CI pipeline
 
@@ -34,7 +34,7 @@ CD pipeline is described by [Jenkinsfile.cd](aws-codebuild/Jenkinsfile.cd). It u
 CD pipeline stages:
 - clone the GitHub repository
 - resolve the following parameters:
-  - current source version from [Cargo.toml](../libaurorawallet/Cargo.toml)
+  - current source version from [Cargo.toml](../libmysqlstorage/Cargo.toml)
   - last revision number among the debian packages with the same source version in [Evernym debian repo](https://repo.corp.evernym.com/deb/dists/evernym-agency-dev-ubuntu/)
 - evaluate new debian package version basing on source version, last revision number and current build number
 - upload current HEAD as zip archive to AWS S3 bucket used by CodeBuild project
@@ -71,8 +71,8 @@ Each target could be run in two ways - with or without `_in_docker` postfix: e.g
 - `RELEASE`: adds `--release` flag to cargo `test` and `build` commands if set to `1`. Default: `1`
 - `OSNAME`: switches OS context, possible values: `xenial`, `centos7`. Default: `xenial`
 - `CARGO_TARGET_DIR`: sets [CARGO_TARGET_DIR](https://doc.rust-lang.org/cargo/reference/environment-variables.html) environment variable. Default: `target/$(OSNAME)`
-- `CRATE_P_VERSION`: if set overwrites `version` field of `[package]` section in [Cargo.toml](../libaurorawallet/Cargo.toml) before crate publishing. Default: not set
+- `CRATE_P_VERSION`: if set overwrites `version` field of `[package]` section in [Cargo.toml](../libmysqlstorage/Cargo.toml) before crate publishing. Default: not set
 - `CARGO_LOGIN_TOKEN`: token to perform `cargo login` during crate publishing. Default: not set
-- `DOCKER_NAME`: name of the image built by `image_ci` target. Default: `evernym/aurora-wallet`
+- `DOCKER_NAME`: name of the image built by `image_ci` target. Default: `evernym/mysql-wallet-storage`
 - `DOCKER_TAG`: tag of the image built by `image_ci` target. Default: `<VERSION>-$(OSNAME)-ci`, where `VERSION` is value of `CI_ENV_VERSION` environment variable in accordant dockerfile
 - please refer to [ext/README.md](ext/README.md) for list of environment variables inherited from there

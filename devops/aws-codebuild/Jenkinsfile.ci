@@ -24,7 +24,7 @@ pipelineWrapper({
         def utils = evLibrary.Utils.new(this)
         // TODO Cargo.toml is necessary only for variable in makefile which is not used for that context, thus
         // shouldn't be taken into account when deciding to rebuild docker images
-        def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('aurora-wallet', ['devops', 'libaurorawallet/Cargo.toml'])
+        def buildCtx = evLibrary.AwsCodeBuildHelper.BuildCtx.new('mysql-storage', ['devops', 'libmysqlstorage/Cargo.toml'])
         def awsCBHelper = evLibrary.AwsCodeBuildHelper.new(this, buildCtx)
 
         stage('Upload source to S3') {
