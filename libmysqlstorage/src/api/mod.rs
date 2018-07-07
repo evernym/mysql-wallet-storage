@@ -40,7 +40,7 @@ pub extern "C" fn delete_storage(name: *const c_char, config: *const c_char, cre
 }
 
 #[no_mangle]
-pub extern "C" fn open_storage(name: *const c_char, config: *const c_char, _runtime_config: *const c_char, credentials: *const c_char, handle_p: *mut i32) -> ErrorCode {
+pub extern "C" fn open_storage(name: *const c_char, config: *const c_char, credentials: *const c_char, handle_p: *mut i32) -> ErrorCode {
     let name = c_char_to_str!(name);
     let config = c_char_to_str!(config);
     let credentials = c_char_to_str!(credentials);

@@ -38,7 +38,6 @@ mod high_casees {
         name: CString,
         config: CString,
         credentials: CString,
-        runtime_config: CString,
         metadata: CString
     }
 
@@ -55,10 +54,9 @@ mod high_casees {
             let name = CString::new(random_name()).unwrap();
             let config = CString::new(TEST_CONFIG.get_config()).unwrap();
             let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
-            let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
             let metadata = CString::new(random_string(100)).unwrap();
 
-            let mut test_wallet = TestWallet{handle, is_mock, name, config, credentials, runtime_config, metadata};
+            let mut test_wallet = TestWallet{handle, is_mock, name, config, credentials, metadata};
 
             if !is_mock {
                 test_wallet._create();
@@ -76,7 +74,7 @@ mod high_casees {
 
         fn _open(&mut self) -> i32 {
             let mut handle: i32 = -1;
-            let err = api::open_storage(self.name.as_ptr(), self.config.as_ptr(), self.runtime_config.as_ptr(), self.credentials.as_ptr(), &mut handle);
+            let err = api::open_storage(self.name.as_ptr(), self.config.as_ptr(), self.credentials.as_ptr(), &mut handle);
             assert_eq!(err, ErrorCode::Success);
 
             handle
@@ -294,7 +292,7 @@ mod high_casees {
 
         let mut handle: i32 = -1;
 
-        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), wallet.runtime_config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::Success);
     }
 
@@ -304,7 +302,7 @@ mod high_casees {
 
         let mut handle: i32 = -1;
 
-        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), wallet.runtime_config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::InvalidState);
     }
 
@@ -315,7 +313,7 @@ mod high_casees {
         let bad_config = CString::new("..").unwrap();
         let mut handle: i32 = -1;
 
-        let err = api::open_storage(wallet.name.as_ptr(), bad_config.as_ptr(), wallet.runtime_config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(wallet.name.as_ptr(), bad_config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
@@ -326,7 +324,7 @@ mod high_casees {
         let bad_credentials = CString::new("..").unwrap();
         let mut handle: i32 = -1;
 
-        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), wallet.runtime_config.as_ptr(), bad_credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), bad_credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
@@ -337,7 +335,7 @@ mod high_casees {
         let bad_config = CString::new(r#"{"key": "value"}"#).unwrap();
         let mut handle: i32 = -1;
 
-        let err = api::open_storage(wallet.name.as_ptr(), bad_config.as_ptr(), wallet.runtime_config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(wallet.name.as_ptr(), bad_config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
@@ -348,7 +346,7 @@ mod high_casees {
         let bad_credentials = CString::new(r#"{"key": "value"}"#).unwrap();
         let mut handle: i32 = -1;
 
-        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), wallet.runtime_config.as_ptr(), bad_credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), bad_credentials.as_ptr(), &mut handle);
         assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
