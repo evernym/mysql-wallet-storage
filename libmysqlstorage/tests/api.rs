@@ -176,12 +176,28 @@ mod high_casees {
     }
 
     #[test]
+    fn test_create_null_config() {
+        let wallet = TestWallet::new_default(true);
+
+        let err = api::create_storage(wallet.name.as_ptr(), std::ptr::null(), wallet.credentials.as_ptr(), wallet.metadata.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
     fn test_create_bad_credentials_format() {
         let wallet = TestWallet::new_default(true);
 
         let bad_credentials = CString::new("...").unwrap();
 
         let err = api::create_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), bad_credentials.as_ptr(), wallet.metadata.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_create_null_credentials() {
+        let wallet = TestWallet::new_default(true);
+
+        let err = api::create_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), std::ptr::null(), wallet.metadata.as_ptr());
         assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
@@ -255,12 +271,28 @@ mod high_casees {
     }
 
     #[test]
+    fn test_delete_null_config() {
+        let wallet = TestWallet::new_default(true);
+
+        let err = api::delete_storage(wallet.name.as_ptr(), std::ptr::null(), wallet.credentials.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
     fn test_delete_bad_credentials_format() {
         let wallet = TestWallet::new_default(true);
 
         let bad_credentials = CString::new("..").unwrap();
 
         let err = api::delete_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), bad_credentials.as_ptr());
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_delete_null_credentials() {
+        let wallet = TestWallet::new_default(true);
+
+        let err = api::delete_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), std::ptr::null());
         assert_eq!(err, ErrorCode::InvalidStructure);
     }
 
@@ -318,6 +350,16 @@ mod high_casees {
     }
 
     #[test]
+    fn test_open_null_config() {
+        let wallet = TestWallet::new_default(true);
+
+        let mut handle: i32 = -1;
+
+        let err = api::open_storage(wallet.name.as_ptr(), std::ptr::null(), wallet.credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
     fn test_open_bad_credentials_format() {
         let wallet = TestWallet::new_default(true);
 
@@ -325,6 +367,16 @@ mod high_casees {
         let mut handle: i32 = -1;
 
         let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), bad_credentials.as_ptr(), &mut handle);
+        assert_eq!(err, ErrorCode::InvalidStructure);
+    }
+
+    #[test]
+    fn test_open_null_credentials() {
+        let wallet = TestWallet::new_default(true);
+
+        let mut handle: i32 = -1;
+
+        let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), std::ptr::null(), &mut handle);
         assert_eq!(err, ErrorCode::InvalidStructure);
     }
 

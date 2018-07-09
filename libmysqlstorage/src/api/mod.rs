@@ -22,9 +22,25 @@ lazy_static! {
 
 #[no_mangle]
 pub extern "C" fn create_storage(name: *const c_char, config: *const c_char, credentials: *const c_char, metadata: *const c_char) -> ErrorCode {
+
+    trace!("Create Storage Called");
+
     let name = c_char_to_str!(name);
+
+    if config.is_null() {
+        warn!("Provided config JSON is NULL");
+        return ErrorCode::InvalidStructure;
+    }
+
     let config = c_char_to_str!(config);
+
+    if credentials.is_null() {
+        warn!("Provided credentials JSON is NULL");
+        return ErrorCode::InvalidStructure;
+    }
+
     let credentials = c_char_to_str!(credentials);
+
     let metadata = c_char_to_str!(metadata);
 
     MySQLStorage::create_storage(&name, &config, &credentials, &metadata)
@@ -32,8 +48,23 @@ pub extern "C" fn create_storage(name: *const c_char, config: *const c_char, cre
 
 #[no_mangle]
 pub extern "C" fn delete_storage(name: *const c_char, config: *const c_char, credentials: *const c_char) -> ErrorCode {
+
+    trace!("Delete Storage Called");
+
     let name = c_char_to_str!(name);
+
+    if config.is_null() {
+        warn!("Provided config JSON is NULL");
+        return ErrorCode::InvalidStructure;
+    }
+
     let config = c_char_to_str!(config);
+
+    if credentials.is_null() {
+        warn!("Provided credentials JSON is NULL");
+        return ErrorCode::InvalidStructure;
+    }
+
     let credentials = c_char_to_str!(credentials);
 
     MySQLStorage::delete_storage(&name, &config, &credentials)
@@ -41,8 +72,23 @@ pub extern "C" fn delete_storage(name: *const c_char, config: *const c_char, cre
 
 #[no_mangle]
 pub extern "C" fn open_storage(name: *const c_char, config: *const c_char, credentials: *const c_char, handle_p: *mut i32) -> ErrorCode {
+
+    trace!("Open Storage Called");
+
     let name = c_char_to_str!(name);
+
+    if config.is_null() {
+        warn!("Provided config JSON is NULL");
+        return ErrorCode::InvalidStructure;
+    }
+
     let config = c_char_to_str!(config);
+
+    if credentials.is_null() {
+        warn!("Provided credentials JSON is NULL");
+        return ErrorCode::InvalidStructure;
+    }
+
     let credentials = c_char_to_str!(credentials);
 
     let handle = match MySQLStorage::open_storage(&name, &config, &credentials) {
@@ -57,6 +103,9 @@ pub extern "C" fn open_storage(name: *const c_char, config: *const c_char, crede
 
 #[no_mangle]
 pub extern "C" fn close_storage(storage_handle: i32) -> ErrorCode {
+
+    trace!("Close Storage Called");
+
     if STORAGES.remove(storage_handle) {
         ErrorCode::Success
     }
@@ -67,6 +116,9 @@ pub extern "C" fn close_storage(storage_handle: i32) -> ErrorCode {
 
 #[no_mangle]
 pub extern "C" fn add_record(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, value_p: *const u8, value_len: usize, tags_json_p: *const c_char) -> ErrorCode {
+
+    trace!("Add Record Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
@@ -81,6 +133,9 @@ pub extern "C" fn add_record(storage_handle: i32, type_p: *const c_char, id_p: *
 
 #[no_mangle]
 pub extern "C" fn get_record(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, options_json_p: *const c_char, record_handle_p: *mut i32) -> ErrorCode {
+
+    trace!("Get Record Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
@@ -92,6 +147,9 @@ pub extern "C" fn get_record(storage_handle: i32, type_p: *const c_char, id_p: *
 
 #[no_mangle]
 pub extern "C" fn delete_record(storage_handle: i32, type_p: *const c_char, id_p: *const c_char) -> ErrorCode {
+
+    trace!("Delete Record Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
@@ -102,6 +160,9 @@ pub extern "C" fn delete_record(storage_handle: i32, type_p: *const c_char, id_p
 
 #[no_mangle]
 pub extern "C" fn update_record_value(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, value_p: *const u8, value_len: usize) -> ErrorCode {
+
+    trace!("Update Record Value Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
@@ -115,6 +176,9 @@ pub extern "C" fn update_record_value(storage_handle: i32, type_p: *const c_char
 
 #[no_mangle]
 pub extern "C" fn add_record_tags(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
+
+    trace!("Add Record Tags Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
@@ -126,6 +190,9 @@ pub extern "C" fn add_record_tags(storage_handle: i32, type_p: *const c_char, id
 
 #[no_mangle]
 pub extern "C" fn update_record_tags(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tags_json_p: *const c_char) -> ErrorCode {
+
+    trace!("Update Record Tags Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
@@ -137,6 +204,9 @@ pub extern "C" fn update_record_tags(storage_handle: i32, type_p: *const c_char,
 
 #[no_mangle]
 pub extern "C" fn delete_record_tags(storage_handle: i32, type_p: *const c_char, id_p: *const c_char, tag_names_json_p: *const c_char) -> ErrorCode {
+
+    trace!("Delete Record Tags Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let type_ = c_char_to_str!(type_p);
@@ -148,6 +218,9 @@ pub extern "C" fn delete_record_tags(storage_handle: i32, type_p: *const c_char,
 
 #[no_mangle]
 pub extern "C" fn get_record_type(storage_handle: i32, record_handle: i32, type_p: *mut *const c_char) -> ErrorCode {
+
+    trace!("Get Record Type Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     let record = check_option!(storage.get_record(record_handle), ErrorCode::InvalidState);
 
@@ -162,6 +235,9 @@ pub extern "C" fn get_record_type(storage_handle: i32, record_handle: i32, type_
 
 #[no_mangle]
 pub extern "C" fn get_record_id(storage_handle: i32, record_handle: i32, id_p: *mut *const c_char) -> ErrorCode {
+
+    trace!("Get Record ID Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     let record = check_option!(storage.get_record(record_handle), ErrorCode::InvalidState);
 
@@ -171,6 +247,9 @@ pub extern "C" fn get_record_id(storage_handle: i32, record_handle: i32, id_p: *
 
 #[no_mangle]
 pub extern "C" fn get_record_value(storage_handle: i32, record_handle: i32, value_p: *mut *const u8, value_len_p: *mut usize) -> ErrorCode {
+
+    trace!("Get Record Value Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     let record = check_option!(storage.get_record(record_handle), ErrorCode::InvalidState);
 
@@ -188,6 +267,9 @@ pub extern "C" fn get_record_value(storage_handle: i32, record_handle: i32, valu
 
 #[no_mangle]
 pub extern "C" fn get_record_tags(storage_handle: i32, record_handle: i32, tags_json_p: *mut *const c_char) -> ErrorCode {
+
+    trace!("Get Record Tags Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     let record = check_option!(storage.get_record(record_handle), ErrorCode::InvalidState);
 
@@ -202,12 +284,18 @@ pub extern "C" fn get_record_tags(storage_handle: i32, record_handle: i32, tags_
 
 #[no_mangle]
 pub extern "C" fn free_record(storage_handle: i32, record_handle: i32) -> ErrorCode {
+
+    trace!("Free Record Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     storage.free_record(record_handle)
 }
 
 #[no_mangle]
 pub extern "C" fn get_metadata(storage_handle: i32, metadata_ptr: *mut *const c_char, metadata_handle_ptr: *mut i32) -> ErrorCode {
+
+    trace!("Get Metadata Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     let metadata = storage.get_metadata();
 
@@ -225,6 +313,9 @@ pub extern "C" fn get_metadata(storage_handle: i32, metadata_ptr: *mut *const c_
 
 #[no_mangle]
 pub extern "C" fn set_metadata(storage_handle: i32, metadata_ptr: *const c_char) -> ErrorCode {
+
+    trace!("Set Metadata Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     let metadata = c_char_to_str!(metadata_ptr);
     storage.set_metadata(metadata)
@@ -232,12 +323,18 @@ pub extern "C" fn set_metadata(storage_handle: i32, metadata_ptr: *const c_char)
 
 #[no_mangle]
 pub extern "C" fn free_metadata(storage_handle: i32, metadata_handle: i32) -> ErrorCode {
+
+    trace!("Free Metadata Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     storage.free_metadata(metadata_handle)
 }
 
 #[no_mangle]
 pub extern "C" fn search_records(storage_handle: i32, type_p: *const c_char, query_json_p: *const c_char, options_json_p: *const c_char, search_handle_p: *mut i32) -> ErrorCode {
+
+    trace!("Search Records Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     let query_json = c_char_to_str!(query_json_p);
@@ -249,6 +346,9 @@ pub extern "C" fn search_records(storage_handle: i32, type_p: *const c_char, que
 
 #[no_mangle]
 pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut i32) -> ErrorCode {
+
+    trace!("Search All Records Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
 
     storage.search_all_records(search_handle_p)
@@ -256,18 +356,27 @@ pub extern "C" fn search_all_records(storage_handle: i32, search_handle_p: *mut 
 
 #[no_mangle]
 pub extern "C" fn get_search_total_count(storage_handle: i32, search_handle: i32, total_count_p: *mut usize) -> ErrorCode {
+
+    trace!("Get Search Total Count Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     storage.get_search_total_count(search_handle, total_count_p)
 }
 
 #[no_mangle]
 pub extern "C" fn fetch_search_next_record(storage_handle: i32, search_handle: i32, record_handle_p: *mut i32) -> ErrorCode {
+
+    trace!("Fetch Next Record Called");
+
     let storage = check_option!(STORAGES.get(storage_handle), ErrorCode::InvalidState);
     storage.fetch_search_next_record(search_handle, record_handle_p)
 }
 
 #[no_mangle]
 pub extern "C" fn free_search(storage_handle: i32, search_handle: i32) -> ErrorCode {
+
+    trace!("Free Search Called");
+
     match STORAGES.get(storage_handle) {
         None => ErrorCode::InvalidState,
         Some(storage) => storage.free_search(search_handle)

@@ -4,10 +4,10 @@ import org.hyperledger.indy.sdk.*;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.non_secrets.WalletSearch;
 import org.hyperledger.indy.sdk.wallet.*;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.testng.Assert;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -16,31 +16,38 @@ import java.util.concurrent.ExecutionException;
 
 public class NonSecretsApiNegativeTest extends BaseTest {
 
-    private static String walletName = "testWallet" + System.currentTimeMillis();
-    private static String walletName2 = "";
-    private Wallet wallet = null, wallet2 = null;
+    private Wallet wallet = null;
 
+    private String walletName = "testWallet" + System.currentTimeMillis();
+
+    private static String config;
+    private static String credentials;
 
     String id = "RecordId";
     String id2 = "RecordId2";
     String value = "RecordValue";
     String value2 = "RecordValue2";
 
+    @BeforeClass
+    public void beforeClass() {
+        config = getDefaultConfig(walletName);
+        credentials = getDefaultCredentials();
+    }
 
     @DataProvider()
     public Object[][] wrongCredentials() {
 
         // wrong credentials
-        JSONObject json = new JSONObject(CREDENTIALS);
+        JSONObject json = new JSONObject(credentials);
         json.remove("key");
         String missingCredentialsKey =  json.toString();
 
-        String expectedErrorClass = WalletInputException.class.toString();
+        String expectedErrorClass = InvalidStructureException.class.toString();
         if(expectedErrorClass.startsWith("class "))
             expectedErrorClass = expectedErrorClass.substring("class ".length());
-        String expectedErrorClassWithMessage = expectedErrorClass + ": Input provided to wallet operations is considered not valid.";
+        String expectedErrorClassWithMessage = expectedErrorClass + ": A value being processed is not valid.";
 
-        json = new JSONObject(CREDENTIALS);
+        json = new JSONObject(credentials);
         json.getJSONObject("storage_credentials").remove("user");
         String missingCredentialsUser = json.toString();
 
@@ -50,12 +57,12 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         String expectedErrorClassWithMessage2 = expectedErrorClass + ": A value being processed is not valid.";
 
 
-        json = new JSONObject(CREDENTIALS);
+        json = new JSONObject(credentials);
         json.getJSONObject("storage_credentials").remove("pass");
         String missingCredentialsPassword = json.toString();
 
 
-        json = new JSONObject(CREDENTIALS);
+        json = new JSONObject(credentials);
         json.getJSONObject("storage_credentials").put("pass", CREDENTIALS_PASSWORD + "WRONG");
         String wrongCredentialsPassword = json.toString();
 
@@ -80,22 +87,21 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         String expectedErrorClass = null;
 
         // wrong config
-        JSONObject json = new JSONObject(CONFIG); json.remove("read_host");
+        JSONObject json = new JSONObject(config); json.getJSONObject("storage_config").remove("read_host");
         String missingReadHost = json.toString();
-
         expectedErrorClass = InvalidStructureException.class.toString();
         if(expectedErrorClass.startsWith("class "))
             expectedErrorClass = expectedErrorClass.substring("class ".length());
         String expectedErrorClassWithMessage = expectedErrorClass + ": A value being processed is not valid.";
 
 
-        json = new JSONObject(CONFIG); json.remove("write_host");
+        json = new JSONObject(config); json.getJSONObject("storage_config").remove("write_host");
         String missingWriteHost = json.toString();
 
-        json = new JSONObject(CONFIG); json.remove("port");
+        json = new JSONObject(config); json.getJSONObject("storage_config").remove("port");
         String missingPort = json.toString();
 
-        json = new JSONObject(CONFIG); json.remove("db_name");
+        json = new JSONObject(config); json.getJSONObject("storage_config").remove("db_name");
         String missingDBName = json.toString();
 
 
@@ -117,10 +123,10 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         String expectedErrorClassWithMessage2 = expectedErrorClass + ": An IO error occurred.";
 
 
-        String wrongPort = getConfig(CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT+"2", CONFIG_DB_NAME);
-        String wrongDBName = getConfig(CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME+"_2");
-        String wrongReadHost = getConfig("1.2.3.4", CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME);
-        String wrongWriteHost = getConfig(CONFIG_READ_HOST, "1.2.3.4", CONFIG_PORT, CONFIG_DB_NAME);
+        String wrongPort = getConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT+"2", CONFIG_DB_NAME);
+        String wrongDBName = getConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME+"_2");
+        String wrongReadHost = getConfig(walletName, WALLET_TYPE, "1.2.3.4", CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME);
+        String wrongWriteHost = getConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, "1.2.3.4", CONFIG_PORT, CONFIG_DB_NAME);
 
         Object[][] toReturn = {
                 // config, expected error message, scenario
@@ -133,40 +139,37 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     }
 
     @Test(dataProvider = "wrongConfig")
-    public void createAndOpenWitInvalidConfig(String wrongConfig, String expectedErrorClass, String scenario) {
+    public void createAndOpenWithInvalidConfig(String wrongConfig, String expectedErrorClass, String scenario) {
         try {
-            Wallet.createWallet(POOL, walletName, WALLET_TYPE, wrongConfig, CREDENTIALS).get();
-            wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+            Wallet.createWallet(wrongConfig, credentials).get();
+            wallet = Wallet.openWallet(wrongConfig, credentials).get();
             Assert.assertTrue(false, "Scenario: " + scenario); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertEquals(e.getCause().toString(), expectedErrorClass, "Scenario: " + scenario + ", Cause is as expected");
         }
     }
 
     @Test(dataProvider = "wrongCredentials")
-    public void createAndOpenWitInvalidCredentials(String wrongCredentials, String expectedErrorClass, String scenario) {
+    public void createAndOpenWithInvalidCredentials(String wrongCredentials, String expectedErrorClass, String scenario) {
         try {
-            Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, wrongCredentials).get();
-            wallet = Wallet.openWallet(walletName, null, wrongCredentials).get();
+            Wallet.createWallet(config, wrongCredentials).get();
+            wallet = Wallet.openWallet(config, wrongCredentials).get();
             Assert.assertTrue(false, "Scenario: " + scenario ); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertEquals(e.getCause().toString(), expectedErrorClass, "Scenario: " + scenario + ", Cause is as expected");
         }
     }
 
     @Test(dataProvider = "inaccessibleConfig")
-    public void createAndOpenWitInaccessibleConfig(String wrongConfig, String expectedErrorClass, String scenario) {
-
-        walletName2 = walletName + "_2";
-
+    public void createAndOpenWithInaccessibleConfig(String wrongConfig, String expectedErrorClass, String scenario) {
         try {
-            Wallet.createWallet(POOL, walletName2, WALLET_TYPE, wrongConfig, CREDENTIALS).get();
-            wallet2 = Wallet.openWallet(walletName2, null, CREDENTIALS).get();
+            Wallet.createWallet(wrongConfig, credentials).get();
+            wallet = Wallet.openWallet(wrongConfig, credentials).get();
             Assert.assertTrue(false, "Scenario: " + scenario); // this line should not be reached, previous line should throw an exception
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ", Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertEquals(e.getCause().toString(), expectedErrorClass, "Scenario: " + scenario + ", Cause is as expected");
         }
     }
@@ -188,8 +191,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void getNonExistingKey(String getOptionJson, String scenario) throws IndyException, ExecutionException, InterruptedException {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -199,7 +202,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id2, getOptionJson).get();
             Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached but actual result is: " + recordJson);
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -221,8 +224,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void getKeyWithBadFormatForOptionsJson (String optionsJson, String scenario) throws IndyException, ExecutionException, InterruptedException {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -232,7 +235,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             String recordJson = WalletRecord.get(wallet, ITEM_TYPE, id2, optionsJson).get();
             Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached but actual result is: " + recordJson);
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -241,8 +244,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void updateNonExistingKey() throws IndyException, ExecutionException, InterruptedException {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -252,7 +255,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             WalletRecord.updateValue(wallet, ITEM_TYPE, id2, "new_value").get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -261,7 +264,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             WalletRecord.updateTags(wallet, ITEM_TYPE, id2, "{\"tag1\": \"value1\"}").get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -272,8 +275,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void deleteNonExistingKey() throws IndyException, ExecutionException, InterruptedException {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -283,7 +286,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             WalletRecord.delete(wallet, ITEM_TYPE, id2).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -292,8 +295,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void deleteTagFromNonExistingKey() throws IndyException, ExecutionException, InterruptedException {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -303,7 +306,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             WalletRecord.deleteTags(wallet, ITEM_TYPE, id2, "[\"tag1\"]").get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletItemNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -326,8 +329,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void deleteTagWithBadFormatForTagsList(String jsonTagsList, String scenario) throws IndyException, ExecutionException, InterruptedException {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -337,7 +340,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             WalletRecord.deleteTags(wallet, ITEM_TYPE, id, jsonTagsList).get();
             Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -346,8 +349,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void addTagWithBadFormatForTagsList(String jsonTagsList, String scenario) throws IndyException, ExecutionException, InterruptedException {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -357,7 +360,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             WalletRecord.addTags(wallet, ITEM_TYPE, id, jsonTagsList).get();
             Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Scenario: " + scenario + ": Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -365,8 +368,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test
     public void insertDuplicateKey() throws IndyException, ExecutionException, InterruptedException {
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // add one record
         WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
@@ -375,7 +378,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             WalletRecord.add(wallet, ITEM_TYPE, id, value, TAGS_EMPTY).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletItemAlreadyExistsException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -383,14 +386,14 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test
     public void openAnOpenedWallet() throws IndyException, ExecutionException, InterruptedException {
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         try {
-            Wallet.openWallet(walletName, null, CREDENTIALS).get();
+            Wallet.openWallet(config, credentials).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletAlreadyOpenedException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -398,22 +401,22 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test
     public void openNonExistingWallet() {
         try {
-            wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+            wallet = Wallet.openWallet(config, credentials).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
-            Assert.assertTrue(e.getCause() instanceof WalletNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
 
     @Test
     public void createWalletWithDuplicateName() throws IndyException, ExecutionException, InterruptedException {
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
         try {
-            Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
+            Wallet.createWallet(config, credentials).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletExistsException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
@@ -421,12 +424,14 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test
     public void deleteNonexistingWallet() throws Exception {
 
+        String config = getDefaultConfig("blablabla");
+
         try {
-            Wallet.deleteWallet(walletName+"blabla", CREDENTIALS).get();
+            Wallet.deleteWallet(config, credentials).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
-            Assert.assertTrue(e.getCause() instanceof WalletNotFoundException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
 
@@ -434,8 +439,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test
     public void searchWithBadSearchQuery() throws Exception {
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         prepareRecordsForSearch(wallet);
 
         String badQuery = "{" +
@@ -448,7 +453,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             search = WalletSearch.open(wallet, ITEM_TYPE, badQuery, SEARCH_OPTIONS_ALL).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletInvalidQueryException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -493,8 +498,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
                 "}}";
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         prepareRecordsForSearch(wallet);
 
         WalletSearch search = null;
@@ -502,7 +507,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             search = WalletSearch.open(wallet, ITEM_TYPE, badQuery, SEARCH_OPTIONS_ALL).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletInvalidQueryException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -513,8 +518,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test
     public void searchWithBadSearchQueryForOptions() throws Exception {
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         prepareRecordsForSearch(wallet);
 
         String badOptionsQuery = SEARCH_OPTIONS_ALL.substring(1);
@@ -524,7 +529,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             search = WalletSearch.open(wallet, ITEM_TYPE, "{}", badOptionsQuery).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStructureException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -534,8 +539,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test
     public void searchDoNotRetrieveAnyAndFetchNext() throws Exception {
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         prepareRecordsForSearch(wallet);
 
         String searchQuery = "{" +
@@ -549,7 +554,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
             Assert.assertTrue(false, "This line should not be reached but fetchNextRecords returned: '" + searchRecordsJson + "'");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -561,7 +566,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
             Assert.assertTrue(false, "This line should not be reached but fetchNextRecords returned: '" + searchRecordsJson + "'");
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -572,8 +577,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void retriveTagsButNotRecords() throws Exception {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         prepareRecordsForSearch(wallet);
 
         String searchQuery = "{" +
@@ -593,7 +598,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
             String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
             Assert.assertTrue(false, "This line should not be reached but fetchNextRecords returned: '" + searchRecordsJson + "'");
         } catch(Exception e) {
-            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actaul ITEM_TYPE is: " + e.getClass());
+            Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException ITEM_TYPE. Actual ITEM_TYPE is: " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof InvalidStateException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
 
@@ -635,8 +640,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     @Test (dataProvider = "badExportImportJson")
     public void badExportJsonTest(String exportJson, String expectedCauseWithMessage, String scenario) throws Exception {
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         prepareRecordsForSearch(wallet);
 
         try {
@@ -650,8 +655,8 @@ public class NonSecretsApiNegativeTest extends BaseTest {
 
     @Test ()
     public void exportWalletFileAlreadyExists() throws Exception {
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         prepareRecordsForSearch(wallet);
 
         File tmpFile = getFileInTempFolder("tmp" + System.currentTimeMillis());
@@ -679,7 +684,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void badImportJsonTest(String importJson, String expectedCauseWithMessage, String scenario) throws Exception {
 
         try {
-            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, importJson).get();
+            Wallet.importWallet(config, credentials, importJson).get();
             Assert.assertTrue(false, "Scenario: " + scenario + ": This line should not be reached");
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Scenario: " + scenario + ": Expected Exception is of ExecutionException but it is of " + e.getClass());
@@ -694,7 +699,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         json.put("path", getFileInTempFolder(System.currentTimeMillis() + ".wallet").getAbsolutePath());
 
         try {
-            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, json.toString()).get();
+            Wallet.importWallet(config, credentials, json.toString()).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
@@ -713,7 +718,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         json.put("path", f.getAbsolutePath());
 
         try {
-            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, json.toString()).get();
+            Wallet.importWallet(config, credentials, json.toString()).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
@@ -725,20 +730,18 @@ public class NonSecretsApiNegativeTest extends BaseTest {
     public void importIntoExistingWallet() throws Exception {
 
         // create and open wallet
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS).get();
-        wallet = Wallet.openWallet(walletName, null, CREDENTIALS).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
         Wallet.exportWallet(wallet, EXPORT_WALLET_CONFIG_JSON).get();
 
         try {
-            Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, CREDENTIALS, EXPORT_WALLET_CONFIG_JSON).get();
+            Wallet.importWallet(config, credentials, EXPORT_WALLET_CONFIG_JSON).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch(Exception e) {
             Assert.assertTrue(e instanceof ExecutionException, "Expected Exception is of ExecutionException but it is of " + e.getClass());
             Assert.assertTrue(e.getCause() instanceof WalletExistsException, "Cause is as expected. Actual cause is: " + e.getCause().getClass());
         }
     }
-
-
 
     /**
      * Cleanup method
@@ -752,20 +755,7 @@ public class NonSecretsApiNegativeTest extends BaseTest {
                 wallet.closeWallet().get();
                 wallet = null;
             }
-            Wallet.deleteWallet(walletName, CREDENTIALS).get();
-        }
-        catch(Exception e){}
-
-        try{
-            if(wallet2 != null) {
-                wallet2.closeWallet().get();
-                wallet2 = null;
-            }
-
-            if(walletName2.isEmpty()) {
-                Wallet.deleteWallet(walletName2, CREDENTIALS).get();
-                walletName2 = "";
-            }
+            Wallet.deleteWallet(config, credentials).get();
         }
         catch(Exception e){}
 

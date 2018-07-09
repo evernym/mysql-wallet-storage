@@ -9,11 +9,11 @@ use self::libc::c_char;
 ///
 /// #Params
 /// name: wallet storage name (the same as wallet name)
-/// config: wallet storage config (For example, database config)
+/// config_json: wallet storage config (For example, database config)
 /// credentials_json: wallet storage credentials (For example, database credentials)
 /// metadata: wallet metadata (For example encrypted keys).
 pub type WalletCreate = extern fn(name: *const c_char,
-                                  config: *const c_char,
+                                  config_json: *const c_char,
                                   credentials_json: *const c_char,
                                   metadata: *const c_char) -> ErrorCode;
 
@@ -21,11 +21,11 @@ pub type WalletCreate = extern fn(name: *const c_char,
 ///
 /// #Params
 /// name: wallet storage name (the same as wallet name)
-/// config: wallet storage config (For example, database config)
+/// config_json: wallet storage config (For example, database config)
 /// credentials_json: wallet storage credentials (For example, database credentials)
 /// storage_handle_p: pointer to store opened storage handle
 pub type WalletOpen = extern fn(name: *const c_char,
-                                config: *const c_char,
+                                config_json: *const c_char,
                                 credentials_json: *const c_char,
                                 storage_handle_p: *mut i32) -> ErrorCode;
 
@@ -39,10 +39,10 @@ pub type WalletClose = extern fn(storage_handle: i32) -> ErrorCode;
 ///
 /// #Params
 /// name: wallet storage name (the same as wallet name)
-/// config: wallet storage config (For example, database config)
+/// config_json: wallet storage config (For example, database config)
 /// credentials_json: wallet storage credentials (For example, database credentials)
 pub type WalletDelete = extern fn(name: *const c_char,
-                                  config: *const c_char,
+                                  config_json: *const c_char,
                                   credentials_json: *const c_char) -> ErrorCode;
 
 /// Create a new record in the wallet storage
@@ -80,7 +80,7 @@ pub type WalletUpdateRecordValue = extern fn(storage_handle: i32,
                                              value: *const u8,
                                              value_len: usize, ) -> ErrorCode;
 
-/// Update a record tags
+/// Update record tags
 ///
 /// #Params
 /// storage_handle: opened storage handle (See open handler)

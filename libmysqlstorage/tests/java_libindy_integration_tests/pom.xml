@@ -66,7 +66,7 @@
     </licenses>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <indysdk.version>1.5.0-dev-614</indysdk.version>
+        <indysdk.version>1.5.0-dev-617</indysdk.version>
     </properties>
 
     <repositories>
