@@ -1,16 +1,12 @@
 package aurora_integration_tests.tests;
 
 import aurora_integration_tests.main.AuroraPluggableStorage;
-import aurora_integration_tests.main.PrepareDatabaseRunnable;
 import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.wallet.Wallet;
-import org.testng.Assert;
 import org.testng.annotations.BeforeSuite;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -176,20 +172,4 @@ public class BaseTest {
         }
     }
 
-    public void populate_database(int db_threads_cnt, int total_wallet_cnt, int records_per_wallet_cnt, String custom_tags_per_record_data, int percent_of_custom_tags_per_record) throws InterruptedException {
-        //logger.debug("Start populating DB...");
-        List<Thread> threads = new ArrayList<>();
-        Thread thread;
-
-        for (int thread_num =1; thread_num<=db_threads_cnt; thread_num ++){
-            thread = new Thread(
-                    new PrepareDatabaseRunnable(POOL, WALLET_TYPE, CONFIG, CREDENTIALS, db_threads_cnt, thread_num, total_wallet_cnt, records_per_wallet_cnt, custom_tags_per_record_data, percent_of_custom_tags_per_record));
-            thread.start();
-            threads.add(thread);
-        }
-        for (Thread result: threads) {
-            result.join();
-        }
-        //logger.debug("Finished with populating DB");
-    }
 }

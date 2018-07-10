@@ -8,24 +8,24 @@ import java.util.Map;
 
 import static org.hyperledger.indy.sdk.wallet.Wallet.createWallet;
 
-public class PrepareDatabaseRunnable implements Runnable{
+public class PopulateDatabaseRunnable implements Runnable{
     private String pool;
     private String walletType;
     private String config;
     private String creds;
-    private int dbThreadsCnt;
+    private int threadsCnt;
     private int threadNum;
     private int totalWalletCnt;
     private int recordsPerWalletCnt;
     private String customTagsPerRecordData;
     private int percentOfCustomTagsPerRecord;
 
-    public PrepareDatabaseRunnable(String pool, String walletType, String config, String creds, int dbThreadsCnt, int threadNum, int totalWalletCnt, int recordsPerWalletCnt, String customTagsPerRecordData, int percentOfCustomTagsPerRecord){
+    public PopulateDatabaseRunnable(String pool, String walletType, String config, String creds, int dbThreadsCnt, int threadNum, int totalWalletCnt, int recordsPerWalletCnt, String customTagsPerRecordData, int percentOfCustomTagsPerRecord){
         this.pool = pool;
         this.walletType = walletType;
         this.config = config;
         this.creds = creds;
-        this.dbThreadsCnt = dbThreadsCnt;
+        this.threadsCnt = dbThreadsCnt;
         this.threadNum = threadNum;
         this.totalWalletCnt = totalWalletCnt;
         this.recordsPerWalletCnt = recordsPerWalletCnt;
@@ -33,9 +33,10 @@ public class PrepareDatabaseRunnable implements Runnable{
         this.percentOfCustomTagsPerRecord = percentOfCustomTagsPerRecord;
     }
 
+    @Override
     public void run() {
-        for (int walletNum = (threadNum -1) * (totalWalletCnt/dbThreadsCnt)+1; walletNum<threadNum*(totalWalletCnt/dbThreadsCnt)+1; walletNum++){
-            Wallet wallet = null;
+        for (int walletNum = (threadNum -1) * (totalWalletCnt/ threadsCnt)+1; walletNum<threadNum*(totalWalletCnt/ threadsCnt)+1; walletNum++){
+            Wallet wallet;
             String walletName = "wallet_name_" + walletNum;
             String recordValue = Utils.generateRandomString(20);
             try {

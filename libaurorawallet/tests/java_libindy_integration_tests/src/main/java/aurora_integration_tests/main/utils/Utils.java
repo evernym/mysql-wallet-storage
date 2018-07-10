@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.SplittableRandom;
 
 public class Utils {
     private static final String CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
@@ -42,14 +43,17 @@ public class Utils {
     }
 
     public static String generateRandomString(int size){
-        Random r = new Random();
         StringBuffer randStr = new StringBuffer();
         for(int i=0; i<size; i++){
-            int number = r.nextInt(CHARS.length());
+            int number = new SplittableRandom().nextInt(0, CHARS.length());
             char ch = CHARS.charAt(number);
             randStr.append(ch);
         }
         return randStr.toString();
+    }
+
+    public static String generateRandomRecordValue(){
+        return  new SplittableRandom().ints(300, 0, 255).parallel().toArray().toString();
     }
 
 }
