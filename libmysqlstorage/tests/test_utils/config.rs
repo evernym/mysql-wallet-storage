@@ -8,7 +8,6 @@ pub enum ConfigType {
 
 pub struct Config {
     config: String,
-    runtime_config: String,
     credentials: String,
 }
 
@@ -24,11 +23,6 @@ impl Config {
                             "write_host": "localhost",
                             "port": 3306,
                             "db_name": "wallet"
-                        }
-                    ).to_string(),
-                    runtime_config: json!(
-                        {
-                            "": ""
                         }
                     ).to_string(),
                     credentials: json!(
@@ -49,11 +43,6 @@ impl Config {
                             "db_name": "wallet"
                         }
                     ).to_string(),
-                    runtime_config: json!(
-                        {
-                            "": ""
-                        }
-                    ).to_string(),
                     credentials: json!(
                         {
                             "user": "wallet",
@@ -70,11 +59,6 @@ impl Config {
                             "write_host": "localhost",
                             "port": 3306,
                             "db_name": "wallet"
-                        }
-                    ).to_string(),
-                    runtime_config: json!(
-                        {
-                            "": ""
                         }
                     ).to_string(),
                     credentials: json!(
@@ -96,11 +80,6 @@ impl Config {
 
                         }
                     ).to_string(),
-                    runtime_config: json!(
-                        {
-                            "": ""
-                        }
-                    ).to_string(),
                     credentials: json!(
                         {
                             "user": "wallet",
@@ -114,10 +93,6 @@ impl Config {
 
     pub fn get_config(&self) -> String {
         self.config.clone()
-    }
-
-    pub fn get_runtime_config(&self) -> String {
-        self.runtime_config.clone()
     }
 
     pub fn get_credentials(&self) -> String {

@@ -18,7 +18,6 @@ import java.util.concurrent.ExecutionException;
 
 public class NonSecretsApiPositiveTest extends BaseTest {
 
-    private String walletName = "testWallet" + System.currentTimeMillis();
     private Wallet wallet = null;
 
     String tagsWithDeletedTag1 =  "{\"tagName2\":\"5\",\"~tagName3\":\"12\"}";
@@ -26,19 +25,21 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     String rekey = "BTIzNDU2Nzg7MDAyMzQ1Xjc4OTAxMjM0NTY3ODkwMTI=";
 
 
-    private static String credsForThisClass;
+    private static String config;
+    private static String credentials;
 
     @BeforeClass
     public void beforeClass() {
-        credsForThisClass = CREDENTIALS;
+        String walletName = "testWallet" + System.currentTimeMillis();
+        config = getDefaultConfig(walletName);
+        credentials = getDefaultCredentials();
     }
 
 
     @Test (priority = 0)
     public void createAndOpenWallet() throws Exception {
-
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass).get();
-        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+        Wallet.createWallet(config, credentials).get();
+        wallet = Wallet.openWallet(config, credentials).get();
     }
 
     @Test (dependsOnMethods = "createAndOpenWallet", priority = 1)
@@ -354,15 +355,15 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         wallet.closeWallet().get();
 
         // rekey through open wallet
-        JSONObject defaultJsonCreds = new JSONObject(credsForThisClass);
+        JSONObject defaultJsonCreds = new JSONObject(credentials);
         defaultJsonCreds.put("rekey", JSONObject.NULL);
 
         // open with NULL for "rekey" and expect key will not be changed
-        wallet = Wallet.openWallet(walletName, null, defaultJsonCreds.toString()).get();
+        wallet = Wallet.openWallet(config, defaultJsonCreds.toString()).get();
         wallet.closeWallet().get();
 
         // try to open with "old" key
-        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+        wallet = Wallet.openWallet(config, credentials).get();
     }
 
     @Test (dependsOnMethods = {"addTags", "rekeyWalletWithEmptyRekey"}, priority = 9)
@@ -370,16 +371,16 @@ public class NonSecretsApiPositiveTest extends BaseTest {
         wallet.closeWallet().get();
 
         // rekey through open wallet
-        JSONObject defaultJsonCreds = new JSONObject(credsForThisClass);
+        JSONObject defaultJsonCreds = new JSONObject(credentials);
         defaultJsonCreds.put("rekey", rekey);
-        wallet = Wallet.openWallet(walletName, null, defaultJsonCreds.toString()).get();
+        wallet = Wallet.openWallet(config, defaultJsonCreds.toString()).get();
 
         // close wallet
         wallet.closeWallet().get();
 
         // try to open wallet with old key
         try {
-            Wallet.openWallet(walletName, null, credsForThisClass).get();
+            Wallet.openWallet(config, credentials).get();
             Assert.assertTrue(false, "This line should not be reached");
         } catch (Exception e) {
 
@@ -387,12 +388,12 @@ public class NonSecretsApiPositiveTest extends BaseTest {
             Assert.assertEquals(e.getCause().toString(), "org.hyperledger.indy.sdk.wallet.WalletAccessFailedException: The wallet security error.", "Cause is as expected");
 
             // key has been changed => update credentials
-            defaultJsonCreds = new JSONObject(credsForThisClass);
+            defaultJsonCreds = new JSONObject(credentials);
             defaultJsonCreds.put("key", rekey);
-            credsForThisClass = defaultJsonCreds.toString();
+            credentials = defaultJsonCreds.toString();
         }
 
-        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // get record with options: retriveTags
         String recordJson = WalletRecord.get(wallet, ITEM_TYPE, RECORD_ID, GET_OPTIONS_ALL).get();
@@ -450,22 +451,23 @@ public class NonSecretsApiPositiveTest extends BaseTest {
 
     @Test (dependsOnMethods = "createAndOpenWallet", priority = 12)
     public void closeAndDeleteWallet() throws Exception {
-
         wallet.closeWallet().get();
-        Wallet.deleteWallet(walletName, credsForThisClass).get();
-        // create wallet with same name as proof that delete was successful
-        Wallet.createWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass).get();
 
-        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+        Wallet.deleteWallet(config, credentials).get();
+        // create wallet with same name as proof that delete was successful
+        Wallet.createWallet(config, credentials).get();
+
+        wallet = Wallet.openWallet(config, credentials).get();
         wallet.closeWallet().get();
     }
 
     @Test (dataProvider = "exportWalletConfigs", dependsOnMethods = {"exportWallet", "closeAndDeleteWallet", "deleteRecord"}, priority = 13)
     public void importWallet(String configJson, String scenario) throws Exception  {
-        Wallet.deleteWallet(walletName, credsForThisClass).get();
 
-        Wallet.importWallet(POOL, walletName, WALLET_TYPE, CONFIG, credsForThisClass, configJson).get();
-        wallet = Wallet.openWallet(walletName, null, credsForThisClass).get();
+        Wallet.deleteWallet(config, credentials).get();
+
+        Wallet.importWallet(config, credentials, configJson).get();
+        wallet = Wallet.openWallet(config, credentials).get();
 
         // check total count of records
         String[] availableTypes = {ITEM_TYPE, ITEM_TYPE2};
@@ -519,7 +521,7 @@ public class NonSecretsApiPositiveTest extends BaseTest {
     @AfterClass(alwaysRun = true)
     public void afterClass() throws IndyException, InterruptedException, ExecutionException {
 
-        Wallet.deleteWallet(walletName, credsForThisClass).get();
+        Wallet.deleteWallet(config, credentials).get();
         if(EXPORT_WALLET_FILE.exists())EXPORT_WALLET_FILE.delete();
     }
 }

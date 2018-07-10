@@ -94,11 +94,10 @@ mod chaned_perf_test {
     fn open_storage(wallet_name: String) -> i32 {
         let name = CString::new(wallet_name).unwrap();
         let config = CString::new(TEST_CONFIG.get_config()).unwrap();
-        let runtime_config = CString::new(TEST_CONFIG.get_runtime_config()).unwrap();
         let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
         let mut handle: i32 = -1;
 
-        let err = api::open_storage(name.as_ptr(), config.as_ptr(), runtime_config.as_ptr(), credentials.as_ptr(), &mut handle);
+        let err = api::open_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), &mut handle);
 
         assert_eq!(err, ErrorCode::Success);
         handle

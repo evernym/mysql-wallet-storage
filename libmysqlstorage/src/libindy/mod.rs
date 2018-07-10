@@ -9,26 +9,24 @@ use self::libc::c_char;
 ///
 /// #Params
 /// name: wallet storage name (the same as wallet name)
-/// config: wallet storage config (For example, database config)
-/// credentials: wallet storage credentials (For example, database credentials)
+/// config_json: wallet storage config (For example, database config)
+/// credentials_json: wallet storage credentials (For example, database credentials)
 /// metadata: wallet metadata (For example encrypted keys).
 pub type WalletCreate = extern fn(name: *const c_char,
-                                  config: *const c_char,
-                                  credentials: *const c_char,
+                                  config_json: *const c_char,
+                                  credentials_json: *const c_char,
                                   metadata: *const c_char) -> ErrorCode;
 
 /// Open the wallet storage (For example, opening database connection)
 ///
 /// #Params
 /// name: wallet storage name (the same as wallet name)
-/// config: wallet storage config (For example, database config)
-/// runtime_config: wallet storage runtime config (For example, connection config)
-/// credentials: wallet storage credentials (For example, database credentials)
+/// config_json: wallet storage config (For example, database config)
+/// credentials_json: wallet storage credentials (For example, database credentials)
 /// storage_handle_p: pointer to store opened storage handle
 pub type WalletOpen = extern fn(name: *const c_char,
-                                config: *const c_char,
-                                runtime_config: *const c_char,
-                                credentials: *const c_char,
+                                config_json: *const c_char,
+                                credentials_json: *const c_char,
                                 storage_handle_p: *mut i32) -> ErrorCode;
 
 /// Close the opened walled storage (For example, closing database connection)
@@ -41,11 +39,11 @@ pub type WalletClose = extern fn(storage_handle: i32) -> ErrorCode;
 ///
 /// #Params
 /// name: wallet storage name (the same as wallet name)
-/// config: wallet storage config (For example, database config)
-/// credentials: wallet storage credentials (For example, database credentials)
+/// config_json: wallet storage config (For example, database config)
+/// credentials_json: wallet storage credentials (For example, database credentials)
 pub type WalletDelete = extern fn(name: *const c_char,
-                                  config: *const c_char,
-                                  credentials: *const c_char) -> ErrorCode;
+                                  config_json: *const c_char,
+                                  credentials_json: *const c_char) -> ErrorCode;
 
 /// Create a new record in the wallet storage
 ///
@@ -82,7 +80,7 @@ pub type WalletUpdateRecordValue = extern fn(storage_handle: i32,
                                              value: *const u8,
                                              value_len: usize, ) -> ErrorCode;
 
-/// Update a record tags
+/// Update record tags
 ///
 /// #Params
 /// storage_handle: opened storage handle (See open handler)
@@ -149,7 +147,7 @@ pub type WalletDeleteRecord = extern fn(storage_handle: i32,
 /// storage_handle: opened storage handle (See open handler)
 /// type_: allows to separate different record types collections
 /// id: the id of record
-/// options_json: //TODO: FIXME: Think about replacing by bitmaks
+/// options_json: //TODO: FIXME: Think about replacing by bitmask
 ///  {
 ///    retrieveType: (optional, false by default) Retrieve record type,
 ///    retrieveValue: (optional, true by default) Retrieve record value,
@@ -267,7 +265,7 @@ pub type WalletFreeStorageMetadata = extern fn(storage_handle: i32,
 ///      "tagName3": { $gte: 123 },
 ///    },
 ///  }
-/// options_json: //TODO: FIXME: Think about replacing by bitmaks
+/// options_json: //TODO: FIXME: Think about replacing by bitmask
 ///  {
 ///    retrieveRecords: (optional, true by default) If false only "counts" will be calculated,
 ///    retrieveTotalCount: (optional, false by default) Calculate total count,
@@ -321,7 +319,6 @@ pub type WalletFetchSearchNextRecord = extern fn(storage_handle: i32,
 /// search_handle: wallet search handle (See search_records handler)
 pub type WalletFreeSearch = extern fn(storage_handle: i32,
                                       search_handle: i32) -> ErrorCode;
-
 
 
 extern {

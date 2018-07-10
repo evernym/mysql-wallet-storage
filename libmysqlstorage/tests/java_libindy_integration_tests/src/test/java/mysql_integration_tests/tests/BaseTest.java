@@ -18,7 +18,7 @@ public class BaseTest {
     private final String defaultConfigPropertiesFile = "resources/test.properties";
     Properties props = new Properties();
 
-    protected String WALLET_TYPE = "mysql";
+    protected static String WALLET_TYPE = "mysql";
 
     protected static final String POOL = "Pool1";
     protected static final String ITEM_TYPE = "TestType";
@@ -54,8 +54,6 @@ public class BaseTest {
     protected static final String SEARCH_OPTIONS_RECORDS_ONLY = "{\"retrieveTags\": false, \"retrieveValue\": false, \"retrieveType\": false, " +
                                                             "\"retrieveTotalCount\": false, \"retrieveRecords\": true}";
 
-    protected static String CONFIG;
-    protected static String CREDENTIALS;
 
     protected static String CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME;
     protected static String CREDENTIALS_KEY, CREDENTIALS_USERNAME,CREDENTIALS_PASSWORD;
@@ -73,7 +71,6 @@ public class BaseTest {
     public void init() throws IOException {
 
         // load properties
-        File configProperties = new File(defaultConfigPropertiesFile);
         props.load(new FileInputStream(defaultConfigPropertiesFile));
 
         // init config vars
@@ -89,13 +86,8 @@ public class BaseTest {
         // init mysql storage
         MySQLPluggableStorage.api.mysql_storage_init();
 
-        // init test data
-        CONFIG = getDefaultConfig();
-        CREDENTIALS = getDefaultCredentials();
-
         // Create tmp dir and clean contents of it
         if(!TMP_FOLDER.exists()) TMP_FOLDER.mkdirs();
-
     }
 
     @BeforeClass(alwaysRun = true)
@@ -107,8 +99,10 @@ public class BaseTest {
         cleanIndyClientWalletsFolder();
     }
 
-    protected static String getDefaultConfig() {
+    protected static String getDefaultConfig(String walletName) {
         return getConfig(
+                walletName,
+                WALLET_TYPE,
                 CONFIG_READ_HOST,
                 CONFIG_WRITE_HOST,
                 CONFIG_PORT,
@@ -116,12 +110,16 @@ public class BaseTest {
                 );
     }
 
-    protected static String getConfig(String readHost, String writeHost, String port, String dbName) {
+    protected static String getConfig(String walletName, String walletType, String readHost, String writeHost, String port, String dbName) {
         return "{" +
-                "   \"read_host\": \"" + readHost + "\"," +
-                "   \"write_host\": \"" + writeHost + "\"," +
-                "   \"port\": " + port + "," +
-                "   \"db_name\": \"" + dbName + "\"" +
+                "    \"id\": \"" + walletName + "\"," +
+                "    \"storage_type\": \"" + walletType + "\"," +
+                "    \"storage_config\": {" +
+                "       \"read_host\": \"" + readHost + "\"," +
+                "       \"write_host\": \"" + writeHost + "\"," +
+                "       \"port\": " + port + "," +
+                "       \"db_name\": \"" + dbName + "\"" +
+                "   }" +
                 "}";
     }
 
