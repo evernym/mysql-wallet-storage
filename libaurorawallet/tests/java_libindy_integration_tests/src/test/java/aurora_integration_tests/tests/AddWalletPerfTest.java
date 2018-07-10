@@ -6,7 +6,7 @@ import org.testng.annotations.Test;
 public class AddWalletPerfTest extends BasePerfTest{
 
     private static final int DB_THREADS_CNT = 10;
-    private static final int THREADS_CNT
+    private static final int THREADS_CNT = 10;
     private static final int TOTAL_WALLET_CNT = 10;
     private static final int RECORDS_PER_WALLET_CNT = 10;
     private static final String customTagsPerRecordData = "";
