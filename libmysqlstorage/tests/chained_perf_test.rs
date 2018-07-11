@@ -47,7 +47,7 @@ use std::time::{Duration, Instant};
 ///
 ///  All tests in this module are performed on wallets that contain a single item.
 ///
-///  This module is useful for getting a general fell of performance/regression of API methods,
+///  This module is useful for getting a general feel of performance/regression of API methods,
 ///  but it is not testing effects of real world load.
 ///
 /// # Example Flow - Single thread, two operations
