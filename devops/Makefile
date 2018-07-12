@@ -85,11 +85,11 @@ rust_version:
 
 test_dry: $(SRC_DIR) rust_version
 	echo "Running tests in dry mode (compile, but don't run tests)"
-	cd $< && cargo clean && RUST_TEST_THREADS=1 RUST_BACKTRACE=1 cargo test $(CARGO_FLAGS) --no-run
+	cd $< && cargo clean && RUST_BACKTRACE=1 cargo test $(CARGO_FLAGS) --no-run
 
 test: $(SRC_DIR) rust_version
 	echo "Running tests"
-	cd $< && cargo clean && RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test $(CARGO_FLAGS)
+	cd $< && cargo clean && RUST_BACKTRACE=1 RUST_LOG=trace cargo test $(CARGO_FLAGS)
 
 build $(LIBS): $(SRC_DIR) rust_version
 	echo "Compiling the project"
