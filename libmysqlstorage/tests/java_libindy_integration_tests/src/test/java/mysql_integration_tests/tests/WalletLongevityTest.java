@@ -238,9 +238,9 @@ public class WalletLongevityTest extends BaseTest {
             logger.debug("finishing ...");
         }
 
-        private void createWallet(String name, int walletID) throws IndyException, ExecutionException, InterruptedException {
+        private void createWallet(String walletName, int walletID) throws IndyException, ExecutionException, InterruptedException {
             logger.trace("Creating wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
-            Wallet.createWallet(getDefaultConfig(name), getDefaultCredentials()).get();
+            Wallet.createWallet(getDefaultConfig(walletName), getDefaultCredentials()).get();
             logger.trace("Created wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
             walletsStatuses[walletID] = 0;
         }
