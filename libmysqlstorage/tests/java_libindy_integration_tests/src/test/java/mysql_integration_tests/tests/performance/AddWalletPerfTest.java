@@ -1,5 +1,6 @@
 package mysql_integration_tests.tests.performance;
 
+import mysql_integration_tests.main.Action;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -19,7 +20,8 @@ public class AddWalletPerfTest extends BasePerfTest{
     }
 
     @Test()
-    public void addWalletPerfTest(){
+    public void addWalletPerfTest() throws InterruptedException {
+        sendRequests(THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, customTagsPerRecordData, Action.AddWallet);
     }
 
 }

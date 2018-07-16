@@ -103,7 +103,7 @@ public class PerfThreadRunnable implements Runnable{
                         tagsList = Utils.getHashMapFromJsonString(customTagsPerRecordData);
                     }
                     String tags = Utils.getJsonStringFromHashMap(tagsList);
-                    WalletRecord.add(wallet, walletType, recordId, recordValue, tags);
+                    WalletRecord.add(wallet, ITEM_TYPE, recordId, recordValue, tags);
                 }
             }
             case GetRecord: {
@@ -116,32 +116,32 @@ public class PerfThreadRunnable implements Runnable{
             case DeleteRecord: {
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.delete(wallet, walletType, recordId);
+                    WalletRecord.delete(wallet, ITEM_TYPE, recordId);
                 }
             }
             case UpdatRecordValue: {
                 String newRecordValue = Utils.generateRandomRecordValue();
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.updateValue(wallet, walletType, recordId, newRecordValue);
+                    WalletRecord.updateValue(wallet, ITEM_TYPE, recordId, newRecordValue);
                 }
             }
             case AddRecordTags: {
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.addTags(wallet, walletType, recordId, customTagsPerRecordData);
+                    WalletRecord.addTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData);
                 }
             }
             case UpdateRecordTags: {
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.updateTags(wallet, walletType, recordId, customTagsPerRecordData);
+                    WalletRecord.updateTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData);
                 }
             }
             case DeleteRecordTags: {
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.deleteTags(wallet, walletType, recordId, customTagsPerRecordData);
+                    WalletRecord.deleteTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData);
                 }
             }
             case SearchRecords: {

@@ -5,6 +5,7 @@ import mysql_integration_tests.main.Action;
 import mysql_integration_tests.main.PerfThreadRunnable;
 import mysql_integration_tests.main.PopulateDatabaseRunnable;
 import mysql_integration_tests.tests.BaseTest;
+import org.testng.annotations.AfterMethod;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -82,5 +83,10 @@ public class BasePerfTest extends BaseTest {
                 "Total Duration: \t" + totalExecutionTime+ "\n" +
                 "Aprox TPS: \t" + (totalWalletCnt * recordsPerWalletCnt) / totalExecutionTime.toMillis()/1000
         );
+    }
+
+    @AfterMethod
+    public void cleanup(){
+        // delete all from DB
     }
 }
