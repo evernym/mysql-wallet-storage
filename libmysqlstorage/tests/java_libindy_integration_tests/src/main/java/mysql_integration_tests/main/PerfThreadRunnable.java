@@ -112,8 +112,8 @@ public class PerfThreadRunnable implements Runnable{
                     }
                     String tags = Utils.getJsonStringFromHashMap(tagsList);
                     WalletRecord.add(wallet, ITEM_TYPE, recordId, recordValue, tags);
+                }
                 break;
-            }
             case GetRecord:
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
