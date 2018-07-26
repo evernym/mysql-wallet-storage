@@ -93,12 +93,13 @@ public class BaseTest {
                 + ":"
                 + CONFIG_PORT
                 + "/"
-                + CONFIG_DB_NAME,
+                + CONFIG_DB_NAME
+                + "?useSSL=false",
                 CREDENTIALS_USERNAME,
                 CREDENTIALS_PASSWORD);
 
         // Verify connection is working
-        dbConn.executeQuery("SELECT 1");
+        dbConn.execute("SELECT 1");
         DBQueries.setDBConnection(dbConn);
 
         // init mysql storage

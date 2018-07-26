@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class DBConnection {
@@ -16,15 +15,15 @@ public class DBConnection {
 
     public DBConnection(String connectionString, String username, String pwd) throws SQLException, ClassNotFoundException, IllegalAccessException, InstantiationException {
         if (conn == null) {
-            Class.forName("org.mysql.jdbc.Driver");
+            Class.forName("com.mysql.jdbc.Driver");
             conn = DriverManager
                     .getConnection(connectionString, username, pwd);
         }
     }
 
-    public ResultSet executeQuery(String query) throws SQLException {
+    public boolean execute(String query) throws SQLException {
         logger.debug("executing query: '" + query + "'");
-        return conn.createStatement().executeQuery(query);
+        return conn.createStatement().execute(query);
     }
 
     public void close() throws SQLException {
