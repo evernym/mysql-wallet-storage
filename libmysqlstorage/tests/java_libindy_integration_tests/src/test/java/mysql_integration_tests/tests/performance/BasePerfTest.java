@@ -4,8 +4,11 @@ package mysql_integration_tests.tests.performance;
 import mysql_integration_tests.main.Action;
 import mysql_integration_tests.main.PerfThreadRunnable;
 import mysql_integration_tests.main.PopulateDatabaseRunnable;
+import mysql_integration_tests.main.db.DBQueries;
 import mysql_integration_tests.tests.BaseTest;
+import org.testng.annotations.AfterMethod;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -42,7 +45,7 @@ public class BasePerfTest extends BaseTest {
         Instant start = Instant.now();
         Thread thread;
         List<Thread> threads = new ArrayList<>();
-        for (int thread_num = 1; thread_num <= threadsCnt + 1; thread_num++) {
+        for (int thread_num = 1; thread_num < threadsCnt + 1; thread_num++) {
             runnable = new PerfThreadRunnable(getDefaultConfig(""), getDefaultCredentials(), threadsCnt, thread_num, totalWalletCnt, recordsPerWalletCnt, customTagsPerRecordData, action);
             thread = new Thread(runnable);
             thread.start();
@@ -82,5 +85,10 @@ public class BasePerfTest extends BaseTest {
                 "Total Duration: \t" + totalExecutionTime+ "\n" +
                 "Aprox TPS: \t" + (totalWalletCnt * recordsPerWalletCnt) / totalExecutionTime.toMillis()/1000
         );
+    }
+
+    @AfterMethod
+    public void cleanup() throws SQLException {
+        DBQueries.deleteAll();
     }
 }

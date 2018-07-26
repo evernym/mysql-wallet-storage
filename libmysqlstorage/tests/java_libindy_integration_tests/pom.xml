@@ -66,7 +66,7 @@
     </licenses>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <indysdk.version>1.5.0-dev-620</indysdk.version>
+        <indysdk.version>1.5.0-dev-651</indysdk.version>
     </properties>
 
     <repositories>
@@ -144,5 +144,13 @@
             <artifactId>log4j-api</artifactId>
             <version>2.11.0</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
+        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.46</version>
+        </dependency>
+
     </dependencies>
 </project>

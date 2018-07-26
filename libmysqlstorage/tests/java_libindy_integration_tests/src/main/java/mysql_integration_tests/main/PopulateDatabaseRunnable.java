@@ -10,7 +10,7 @@ import java.util.Map;
 import static org.hyperledger.indy.sdk.wallet.Wallet.createWallet;
 
 public class PopulateDatabaseRunnable implements Runnable{
-    private String itemType;
+    private static final String ITEM_TYPE = "TestType";
     private String config;
     private String creds;
     private int threadsCnt;
@@ -20,8 +20,7 @@ public class PopulateDatabaseRunnable implements Runnable{
     private String customTagsPerRecordData;
     private int percentOfCustomTagsPerRecord;
 
-    public PopulateDatabaseRunnable(String itemType,String config, String creds, int dbThreadsCnt, int threadNum, int totalWalletCnt, int recordsPerWalletCnt, String customTagsPerRecordData, int percentOfCustomTagsPerRecord){
-        this.itemType = itemType;
+    public PopulateDatabaseRunnable(String config, String creds, int dbThreadsCnt, int threadNum, int totalWalletCnt, int recordsPerWalletCnt, String customTagsPerRecordData, int percentOfCustomTagsPerRecord){
         this.config = config;
         this.creds = creds;
         this.threadsCnt = dbThreadsCnt;
@@ -62,7 +61,7 @@ public class PopulateDatabaseRunnable implements Runnable{
                         }
                         String tags = Utils.getJsonStringFromHashMap(tagsList);
                         System.out.println("BEFORE ADD RECORD: " +rec);
-                        WalletRecord.add(wallet, itemType, recordId, recordValue,tags).get();
+                        WalletRecord.add(wallet, ITEM_TYPE, recordId, recordValue,tags).get();
                         System.out.println("AFTER ADD RECORD: " +rec);
                     }
                 }
