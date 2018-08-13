@@ -100,7 +100,8 @@ public class PerfThreadRunnable implements Runnable{
                 break;
             case DeleteWallet:
                 walletName = "wallet_name_" + walletNum;
-                Wallet.deleteWallet(walletName, creds).get();
+                conf = config.replace("\"id\": \"\"", "\"id\": \"" + walletName + "\"");
+                Wallet.deleteWallet(conf, creds).get();
                 break;
             case AddRecord:
                 String recordValue = Utils.generateRandomRecordValue();
