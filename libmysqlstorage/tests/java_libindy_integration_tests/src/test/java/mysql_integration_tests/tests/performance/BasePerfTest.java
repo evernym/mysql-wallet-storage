@@ -83,7 +83,7 @@ public class BasePerfTest extends BaseTest {
                 "Operations executed: \t" +totalWalletCnt * recordsPerWalletCnt+ "\n" +
                 "Sum of Execution Times: \t" +sumExecutionTime+ "\n" +
                 "Total Duration: \t" + totalExecutionTime+ "\n" +
-                "Aprox TPS: \t" + (totalWalletCnt * recordsPerWalletCnt) / totalExecutionTime.toMillis()/1000
+                "Aprox TPS: \t" + ((double)(totalWalletCnt * recordsPerWalletCnt) *1000 / totalExecutionTime.toMillis())
         );
     }
 
