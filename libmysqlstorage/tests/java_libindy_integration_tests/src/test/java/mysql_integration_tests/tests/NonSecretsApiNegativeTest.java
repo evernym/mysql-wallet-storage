@@ -123,10 +123,10 @@ public class NonSecretsApiNegativeTest extends BaseTest {
         String expectedErrorClassWithMessage2 = expectedErrorClass + ": An IO error occurred.";
 
 
-        String wrongPort = getConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT+"2", CONFIG_DB_NAME);
-        String wrongDBName = getConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME+"_2");
-        String wrongReadHost = getConfig(walletName, WALLET_TYPE, "1.2.3.4", CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME);
-        String wrongWriteHost = getConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, "1.2.3.4", CONFIG_PORT, CONFIG_DB_NAME);
+        String wrongPort = getMysqlWalletStorageConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT+"2", CONFIG_DB_NAME);
+        String wrongDBName = getMysqlWalletStorageConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME+"_2");
+        String wrongReadHost = getMysqlWalletStorageConfig(walletName, WALLET_TYPE, "1.2.3.4", CONFIG_WRITE_HOST, CONFIG_PORT, CONFIG_DB_NAME);
+        String wrongWriteHost = getMysqlWalletStorageConfig(walletName, WALLET_TYPE, CONFIG_READ_HOST, "1.2.3.4", CONFIG_PORT, CONFIG_DB_NAME);
 
         Object[][] toReturn = {
                 // config, expected error message, scenario

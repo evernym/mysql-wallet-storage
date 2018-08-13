@@ -9,11 +9,11 @@
         <parameter name="infoLogPeriodInSeconds" value = "30" />
 
         <!-- "testDurationInMillis" is optional. If provided it will override "testDurationInHours"  -->
-        <!-- parameter name="testDurationInMillis" value = "240000" / -->
+        <parameter name="testDurationInMillis" value = "240000" />
         <parameter name="testDurationInHours" value = "120" />
 
         <classes>
-            <class name="mysql_integration_tests.tests.WalletLongevityTest" />
+            <class name="common_wallet_tests.WalletLongevityTest" />
         </classes>
     </test>
 </suite>
