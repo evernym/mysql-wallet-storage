@@ -1,5 +1,6 @@
-package mysql_integration_tests.tests;
+package common_wallet_tests;
 
+import mysql_integration_tests.tests.BaseTest;
 import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.InvalidStateException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
