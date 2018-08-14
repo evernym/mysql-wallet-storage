@@ -4,7 +4,7 @@ import mysql_integration_tests.main.Action;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-public class DeleteWalletPerfTest extends BasePerfTest {
+public class DeleteRecordTagsPerfTest extends BasePerfTest{
 
     private static final int DB_THREADS_CNT = 10;
     private static final int THREADS_CNT = 5;
@@ -13,15 +13,13 @@ public class DeleteWalletPerfTest extends BasePerfTest {
     private static final String customTagsPerRecordData = "{\"name\": \"John\", \"surname\": \"Doe\"}";
     private static final int PERCENT_OF_CUSTOM_TAGS_PER_RECORD = 100;
 
-
     @BeforeClass()
     public void prepareDB() throws Exception {
-        //cleanup();
-        populateDatabase(DB_THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,"", PERCENT_OF_CUSTOM_TAGS_PER_RECORD);
+        populateDatabase(DB_THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,customTagsPerRecordData, PERCENT_OF_CUSTOM_TAGS_PER_RECORD);
     }
 
     @Test()
-    public void deleteWalletPerfTest() throws InterruptedException {
-        sendRequests(THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, customTagsPerRecordData, Action.DeleteWallet);
+    public void deleteRecordTagsPerfTest() throws InterruptedException {
+        sendRequests(THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, customTagsPerRecordData, Action.DeleteRecordTags);
     }
 }

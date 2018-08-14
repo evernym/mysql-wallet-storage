@@ -72,11 +72,7 @@ public class PerfThreadRunnable implements Runnable{
             }
             Instant timeAfterRequest = Instant.now();
             Duration timeDiff = Duration.between(timeBeforeRequest, timeAfterRequest);
-/*            synchronized (executionTimes) {
-                executionTimes.add(timeDiff);
-            }*/
             executionTimes.add(timeDiff);
-            System.out.println("Laaaaa");
         }
 
     }

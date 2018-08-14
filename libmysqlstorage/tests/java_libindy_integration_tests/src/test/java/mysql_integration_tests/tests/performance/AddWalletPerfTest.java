@@ -1,7 +1,6 @@
 package mysql_integration_tests.tests.performance;
 
 import mysql_integration_tests.main.Action;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 public class AddWalletPerfTest extends BasePerfTest{
@@ -13,15 +12,9 @@ public class AddWalletPerfTest extends BasePerfTest{
     private static final String customTagsPerRecordData = "";
     private static final int PERCENT_OF_CUSTOM_TAGS_PER_RECORD = 0;
 
-/*    @BeforeClass()
-    public void prepareDB() throws Exception {
-        //cleanup();
-        populateDatabase(DB_THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,customTagsPerRecordData, PERCENT_OF_CUSTOM_TAGS_PER_RECORD);
-    }*/
-
     @Test()
     public void addWalletPerfTest() throws InterruptedException {
-        sendRequests(THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, customTagsPerRecordData, Action.AddWallet);
+        sendRequests(THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, "", Action.AddWallet);
     }
 
 
