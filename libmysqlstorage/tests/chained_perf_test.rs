@@ -5,7 +5,7 @@ use mysqlstorage::api as api;
 use mysqlstorage::errors::error_code::ErrorCode;
 
 mod test_utils;
-use test_utils::config::{ConfigType, Config};
+use test_utils::test_env::TestEnv;
 
 // External dependencies
 extern crate libc;
@@ -76,7 +76,7 @@ mod chaned_perf_test {
     use super::*;
 
     lazy_static! {
-        static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
+        static ref TEST_ENV: TestEnv = TestEnv::new();
     }
 
     const THREAD_CNT: u64 = 1;
@@ -93,8 +93,8 @@ mod chaned_perf_test {
     ///
     fn open_storage(wallet_name: String) -> i32 {
         let name = CString::new(wallet_name).unwrap();
-        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
-        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let config = CString::new(TEST_ENV.get_config()).unwrap();
+        let credentials = CString::new(TEST_ENV.get_credentials()).unwrap();
         let mut handle: i32 = -1;
 
         let err = api::open_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), &mut handle);
@@ -116,8 +116,8 @@ mod chaned_perf_test {
         let name = format!("wallet_{}_{}", x, y);
         let name = CString::new(name).unwrap();
 
-        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
-        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let config = CString::new(TEST_ENV.get_config()).unwrap();
+        let credentials = CString::new(TEST_ENV.get_credentials()).unwrap();
         let metadata = CString::new("metadata").unwrap();
 
         let err = api::create_storage(name.as_ptr(), config.as_ptr(), credentials.as_ptr(), metadata.as_ptr());
@@ -444,8 +444,8 @@ mod chaned_perf_test {
     fn delete_wallet(x: u64, y: u64) {
         let wallet_name = format!("wallet_{}_{}", x, y);
         let wallet_name = CString::new(wallet_name).unwrap();
-        let config = CString::new(TEST_CONFIG.get_config()).unwrap();
-        let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+        let config = CString::new(TEST_ENV.get_config()).unwrap();
+        let credentials = CString::new(TEST_ENV.get_credentials()).unwrap();
 
         let err = api::delete_storage(wallet_name.as_ptr(), config.as_ptr(), credentials.as_ptr());
         assert_eq!(err, ErrorCode::Success);

@@ -6,7 +6,7 @@ use mysqlstorage::errors::error_code::ErrorCode;
 use mysqlstorage::utils::logger;
 
 mod test_utils;
-use test_utils::config::{ConfigType, Config};
+use test_utils::test_env::TestEnv;
 use test_utils::helper_functions::{random_string, random_name};
 
 // External dependencies
@@ -29,7 +29,7 @@ mod high_casees {
     use super::*;
 
     lazy_static! {
-        static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
+        static ref TEST_ENV: TestEnv = TestEnv::new();
     }
 
     struct TestWallet {
@@ -52,8 +52,8 @@ mod high_casees {
 
             let handle = -1;
             let name = CString::new(random_name()).unwrap();
-            let config = CString::new(TEST_CONFIG.get_config()).unwrap();
-            let credentials = CString::new(TEST_CONFIG.get_credentials()).unwrap();
+            let config = CString::new(TEST_ENV.get_config()).unwrap();
+            let credentials = CString::new(TEST_ENV.get_credentials()).unwrap();
             let metadata = CString::new(random_string(100)).unwrap();
 
             let mut test_wallet = TestWallet{handle, is_mock, name, config, credentials, metadata};
@@ -1203,7 +1203,7 @@ mod high_casees {
     fn test_get_record_invalid_options_format() {
         let wallet = TestWallet::new_default(false);
         let record = TestRecord::new_default(false);
-        
+
         wallet.add_record(&record);
 
         let options_json = CString::new("//").unwrap();
@@ -1217,7 +1217,7 @@ mod high_casees {
     fn test_get_record_record_not_exists() {
         let wallet = TestWallet::new_default(false);
         let record = TestRecord::new_default(false);
-        
+
         let mut record_handle = -1;
 
         let options_json = fetch_options(false, false, false);
@@ -1562,7 +1562,7 @@ mod high_casees {
     fn test_update_record_tags_same_value() {
         let wallet = TestWallet::new_default(false);
         let record = TestRecord::new_default(false);
-        
+
         wallet.add_record(&record);
 
         let err = api::update_record_tags(wallet.handle, record.type_.as_ptr(), record.id.as_ptr(), record.tags_json.as_ptr());
@@ -2930,7 +2930,7 @@ mod high_casees {
     #[test]
     fn test_search_free_invalid_search_handle() {
         let wallet = TestWallet::new_default(false);
-        
+
         let search_handle: i32 = -1;
 
         let err = api::free_search(wallet.handle, search_handle);

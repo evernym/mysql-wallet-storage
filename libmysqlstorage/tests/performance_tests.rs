@@ -9,7 +9,7 @@ pub mod test_utils;
 use test_utils::api_requests::api_requests;
 use test_utils::helper_functions::{get_random_record_value, get_hash_map_from_json_string,
                                    random_string};
-use test_utils::config::{Config, ConfigType};
+use test_utils::test_env::TestEnv;
 use std::collections::HashMap;
 
 extern crate mysql;
@@ -278,10 +278,10 @@ const RECORDS_PER_WALLET_CNT: u64 = 10;
     /// Deletes all from `wallets` table
     ///
     fn cleanup(){
-        let test_config: Config = Config::new(ConfigType::QA);
-        let cred_str = test_config.get_credentials();
+        let test_env: TestEnv = TestEnv::new();
+        let cred_str = test_env.get_credentials();
         let credentials: StorageCredentials = serde_json::from_str(cred_str.as_ref()).unwrap();
-        let config_str = test_config.get_config();
+        let config_str = test_env.get_config();
         let config: StorageConfig = serde_json::from_str(config_str.as_ref()).unwrap();
         let connection_string = format!("mysql://{}:{}@{}:{}/{}", credentials.user, credentials.pass, config.read_host, config.port, config.db_name);
         let mut connection = Conn::new(connection_string).unwrap();
