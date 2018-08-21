@@ -1,10 +1,4 @@
-#[allow(dead_code)]
-pub enum ConfigType {
-    DEV,
-    QA,
-    STG,
-    PROD
-}
+use std::env;
 
 pub struct Config {
     config: String,
@@ -13,81 +7,22 @@ pub struct Config {
 
 impl Config {
 
-    pub fn new(config_type: ConfigType) -> Config {
-        match config_type {
-            ConfigType::DEV => {
-                Config {
-                    config: json!(
-                        {
-                            "read_host": "localhost",
-                            "write_host": "localhost",
-                            "port": 3306,
-                            "db_name": "wallet"
-                        }
-                    ).to_string(),
-                    credentials: json!(
-                        {
-                            "user": "wallet",
-                            "pass": "wallet"
-                        }
-                    ).to_string()
+    pub fn new() -> Config {
+        Config {
+            config: json!(
+                {
+                    "read_host": env::var("DB_READ_HOST").unwrap_or("wallet".to_string()),
+                    "write_host": env::var("DB_WRITE_HOST").unwrap_or("wallet".to_string()),
+                    "port": env::var("DB_PORT").unwrap_or(3306.to_string()).parse::<u32>().unwrap(),
+                    "db_name": env::var("DB_NAME").unwrap_or("wallet".to_string())
                 }
-            },
-            ConfigType::QA => {
-                Config {
-                    config: json!(
-                        {
-                            "read_host": "localhost",
-                            "write_host": "localhost",
-                            "port": 3306,
-                            "db_name": "wallet"
-                        }
-                    ).to_string(),
-                    credentials: json!(
-                        {
-                            "user": "wallet",
-                            "pass": "wallet"
-                        }
-                    ).to_string()
+            ).to_string(),
+            credentials: json!(
+                {
+                    "user": env::var("DB_USER").unwrap_or("wallet".to_string()),
+                    "pass": env::var("DB_PASS").unwrap_or("wallet".to_string())
                 }
-            },
-            ConfigType::STG => {
-                Config {
-                    config: json!(
-                        {
-                            "read_host": "localhost",
-                            "write_host": "localhost",
-                            "port": 3306,
-                            "db_name": "wallet"
-                        }
-                    ).to_string(),
-                    credentials: json!(
-                        {
-                            "user": "wallet",
-                            "pass": "wallet"
-                        }
-                    ).to_string()
-                }
-            },
-            ConfigType:: PROD => {
-                Config {
-                    config: json!(
-                        {
-                            "read_host": "localhost",
-                            "write_host": "localhost",
-                            "port": 3306,
-                            "db_name": "wallet"
-
-                        }
-                    ).to_string(),
-                    credentials: json!(
-                        {
-                            "user": "wallet",
-                            "pass": "wallet"
-                        }
-                    ).to_string()
-                }
-            },
+            ).to_string()
         }
     }
 
