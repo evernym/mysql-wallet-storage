@@ -307,14 +307,23 @@ public class WalletLongevityTest extends BaseTest {
 
             JSONObject searchRecords;
             logger.trace("Searching wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
+            WalletSearch search = null;
             try {
-                WalletSearch search = WalletSearch.open(wallet, ITEM_TYPE, QUERY_EMPTY, SEARCH_OPTIONS_ALL).get();
+                search = WalletSearch.open(wallet, ITEM_TYPE, QUERY_EMPTY, SEARCH_OPTIONS_ALL).get();
                 logger.trace("Searched wallet with ID'" + walletID + "' of current status '" + walletsStatuses[walletID] + "'");
                 String searchRecordsJson = search.fetchNextRecords(wallet, 20).get();
                 searchRecords = new JSONObject(searchRecordsJson);
             } catch (Exception e) {
                 logger.error("Exception when searching wallet with ID '" + walletID + "', exception message is: " + e.getMessage());
                 return;
+            } finally {
+                if(search != null) {
+                    try {
+                        search.close();
+                    } catch (Exception e) {
+                        logger.error("Exception when closing search for wallet with ID '" + walletID + "', exception message is: " + e.getMessage());
+                    }
+                }
             }
 
             try {
