@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.hyperledger.indy.sdk.wallet.Wallet.createWallet;
 
@@ -82,11 +83,12 @@ public class PerfThreadRunnable implements Runnable{
         String recordId;
         String conf = "";
         String walletName = "";
+        CompletableFuture<Void> cf;
         switch (action) {
             case AddWallet:
                 walletName = "wallet_name_" + walletNum;
-                conf = this.config.replace("\"id\": \"\"", "\"id\": \"" + walletName + "\"");
-                createWallet(conf, creds).get();
+                conf = config.replace("\"id\": \"\"", "\"id\": \"" + walletName + "\"");
+                Wallet.createWallet(conf, creds).get();
                 break;
             case OpenAndCloseWallet:
                 walletName = "wallet_name_" + walletNum;
@@ -108,7 +110,7 @@ public class PerfThreadRunnable implements Runnable{
                         tagsList = Utils.getHashMapFromJsonString(customTagsPerRecordData);
                     }
                     String tags = Utils.getJsonStringFromHashMap(tagsList);
-                    WalletRecord.add(wallet, ITEM_TYPE, recordId, recordValue, tags);
+                    WalletRecord.add(wallet, ITEM_TYPE, recordId, recordValue, tags).get();
                 }
                 break;
             case GetRecord:
@@ -121,36 +123,38 @@ public class PerfThreadRunnable implements Runnable{
             case DeleteRecord:
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.delete(wallet, ITEM_TYPE, recordId);
+                    WalletRecord.delete(wallet, ITEM_TYPE, recordId).get();
                 }
                 break;
             case UpdatRecordValue:
                 String newRecordValue = Utils.generateRandomRecordValue();
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.updateValue(wallet, ITEM_TYPE, recordId, newRecordValue);
+                    WalletRecord.updateValue(wallet, ITEM_TYPE, recordId, newRecordValue).get();
                 }
                 break;
             case AddRecordTags:
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.addTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData);
+                    WalletRecord.addTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData).get();
                 }
                 break;
             case UpdateRecordTags:
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.updateTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData);
+                    WalletRecord.updateTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData).get();
                 }
                 break;
             case DeleteRecordTags:
                 for (int i = 1; i <= recordsPerWalletCnt; i++) {
                     recordId = "record_id_" + walletNum + "_" + i;
-                    WalletRecord.deleteTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData);
+                    WalletRecord.deleteTags(wallet, ITEM_TYPE, recordId, customTagsPerRecordData).get();
                 }
                 break;
             case SearchRecords:
-                WalletSearch.open(wallet, ITEM_TYPE, customTagsPerRecordData, SEARCH_OPTIONS_ALL).get();
+                WalletSearch search = WalletSearch.open(wallet, ITEM_TYPE, customTagsPerRecordData, SEARCH_OPTIONS_ALL).get();
+                String searchRecordsJson = search.fetchNextRecords(wallet, 0).get();
+                search.close();
                 break;
         }
     }

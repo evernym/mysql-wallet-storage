@@ -6,9 +6,12 @@ import org.testng.annotations.Test;
 
 public class DeleteWalletPerfTest extends BasePerfTest {
 
-    private static final int DB_THREADS_CNT = 10;
-    private static final int THREADS_CNT = 5;
-    private static final int TOTAL_WALLET_CNT = 10;
+    // DB_THREADS_CNT - number of threads used for db population
+    // should be less or equal to max db connections supported on DB server
+    // TOTAL_WALLET_CNT % DB_THREADS_CNT should be 0
+    private static final int DB_THREADS_CNT = 25;
+    private static final int THREADS_CNT = 1;
+    private static final int TOTAL_WALLET_CNT = 10000;
     private static final int RECORDS_PER_WALLET_CNT = 10;
     private static final String customTagsPerRecordData = "{\"name\": \"John\", \"surname\": \"Doe\"}";
     private static final int PERCENT_OF_CUSTOM_TAGS_PER_RECORD = 100;
@@ -17,11 +20,11 @@ public class DeleteWalletPerfTest extends BasePerfTest {
     @BeforeClass()
     public void prepareDB() throws Exception {
         //cleanup();
-        populateDatabase(DB_THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,"", PERCENT_OF_CUSTOM_TAGS_PER_RECORD);
+        populateDatabase(DB_THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,customTagsPerRecordData, PERCENT_OF_CUSTOM_TAGS_PER_RECORD);
     }
 
     @Test()
     public void deleteWalletPerfTest() throws InterruptedException {
-        sendRequests(THREADS_CNT, TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, customTagsPerRecordData, Action.DeleteWallet);
+        sendRequests(THREADS_CNT, TOTAL_WALLET_CNT, 0, "", Action.DeleteWallet);
     }
 }

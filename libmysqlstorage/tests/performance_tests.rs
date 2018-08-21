@@ -378,7 +378,7 @@ mod performance {
     fn test_search_record(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe", "country": "Serbia"}"#, 20);
-        send_requests( TOTAL_WALLET_CNT, 0,  r#"{"name": {"$in": ["John", "john"]}, "age": {"$in": ["Serbia", "serbia"]}}"#,&Action::SearchRecords);
+        send_requests( TOTAL_WALLET_CNT, 0,  r#"{"name": {"$in": ["John", "john"]}, "country": {"$in": ["Serbia", "serbia"]}}"#,&Action::SearchRecords);
     }
 
     #[test]

@@ -65,6 +65,7 @@ public class PopulateDatabaseRunnable implements Runnable{
                         System.out.println("AFTER ADD RECORD: " +rec);
                     }
                 }
+                wallet.closeWallet();
             } catch (Exception e) {
                 e.printStackTrace();
             }

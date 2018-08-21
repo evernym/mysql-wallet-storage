@@ -86,9 +86,9 @@ public class BasePerfTest extends BaseTest {
                 "Aprox TPS: \t" + (double)((totalWalletCnt * recordsPerWalletCnt) *1000) / totalExecutionTime.toMillis()
         );
     }
-
+/*
     @AfterMethod
     public void cleanup() throws SQLException {
         DBQueries.deleteAll();
-    }
+    }*/
 }
