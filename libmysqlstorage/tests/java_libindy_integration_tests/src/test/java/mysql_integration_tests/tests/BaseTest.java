@@ -23,7 +23,7 @@ public class BaseTest {
     Properties props = new Properties();
     protected static DBConnection dbConn;
 
-    protected static String WALLET_TYPE = "mysql";
+    protected static String WALLET_TYPE;
 
     protected static final String POOL = "Pool1";
     protected static final String ITEM_TYPE = "TestType";
@@ -78,11 +78,14 @@ public class BaseTest {
         // load properties
         props.load(new FileInputStream(defaultConfigPropertiesFile));
 
+        // wallet type to use
+        WALLET_TYPE = props.getProperty("wallet.type");
+
         // init config vars
-        CONFIG_READ_HOST        = props.getProperty("config.read_host");
-        CONFIG_WRITE_HOST       = props.getProperty("config.write_host");
-        CONFIG_PORT             = props.getProperty("config.port");
-        CONFIG_DB_NAME          = props.getProperty("config.db_name");
+        CONFIG_READ_HOST        = props.getProperty("config.mysql.read_host");
+        CONFIG_WRITE_HOST       = props.getProperty("config.mysql.write_host");
+        CONFIG_PORT             = props.getProperty("config.mysql.port");
+        CONFIG_DB_NAME          = props.getProperty("config.mysql.db_name");
 
         CREDENTIALS_KEY         = props.getProperty("credentials.key");
         CREDENTIALS_USERNAME    = props.getProperty("credentials.username");
@@ -119,7 +122,9 @@ public class BaseTest {
     }
 
     protected static String getDefaultConfig(String walletName) {
-        return getConfig(
+
+        if(WALLET_TYPE.toLowerCase().equals("mysql"))
+            return getMysqlWalletStorageConfig(
                 walletName,
                 WALLET_TYPE,
                 CONFIG_READ_HOST,
@@ -127,9 +132,11 @@ public class BaseTest {
                 CONFIG_PORT,
                 CONFIG_DB_NAME
                 );
+        else
+            return getDefaultWalletConfig(walletName);
     }
 
-    protected static String getConfig(String walletName, String walletType, String readHost, String writeHost, String port, String dbName) {
+    protected static String getMysqlWalletStorageConfig(String walletName, String walletType, String readHost, String writeHost, String port, String dbName) {
         return "{" +
                 "    \"id\": \"" + walletName + "\"," +
                 "    \"storage_type\": \"" + walletType + "\"," +
@@ -140,6 +147,12 @@ public class BaseTest {
                 "       \"db_name\": \"" + dbName + "\"" +
                 "   }" +
                 "}";
+    }
+
+    protected static String getDefaultWalletConfig(String walletName) {
+        return "{" +
+                "\"id\": \"" + walletName + "\"," +
+                "\"storage_type\": \"default\"}";
     }
 
     protected static String getDefaultCredentials() {
