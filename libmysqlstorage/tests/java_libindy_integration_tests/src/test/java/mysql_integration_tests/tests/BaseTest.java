@@ -1,14 +1,19 @@
 package mysql_integration_tests.tests;
 
 import mysql_integration_tests.main.MySQLPluggableStorage;
+import mysql_integration_tests.main.db.DBConnection;
+import mysql_integration_tests.main.db.DBQueries;
 import org.hyperledger.indy.sdk.IndyException;
 import org.hyperledger.indy.sdk.non_secrets.WalletRecord;
 import org.hyperledger.indy.sdk.wallet.Wallet;
+import org.testng.Assert;
+import org.testng.annotations.AfterSuite;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeSuite;
 
 import java.io.*;
 import java.nio.file.Paths;
+import java.sql.SQLException;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 
@@ -16,6 +21,7 @@ public class BaseTest {
 
     private final String defaultConfigPropertiesFile = "resources/test.properties";
     Properties props = new Properties();
+    protected static DBConnection dbConn;
 
     protected static String WALLET_TYPE;
 
@@ -67,7 +73,7 @@ public class BaseTest {
 
 
     @BeforeSuite(alwaysRun = true)
-    public void init() throws IOException {
+    public void init() throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException, SQLException {
 
         // load properties
         props.load(new FileInputStream(defaultConfigPropertiesFile));
@@ -84,6 +90,20 @@ public class BaseTest {
         CREDENTIALS_KEY         = props.getProperty("credentials.key");
         CREDENTIALS_USERNAME    = props.getProperty("credentials.username");
         CREDENTIALS_PASSWORD    = props.getProperty("credentials.password");
+
+        dbConn = new DBConnection("jdbc:mysql://"
+                + CONFIG_WRITE_HOST
+                + ":"
+                + CONFIG_PORT
+                + "/"
+                + CONFIG_DB_NAME
+                + "?useSSL=false",
+                CREDENTIALS_USERNAME,
+                CREDENTIALS_PASSWORD);
+
+        // Verify connection is working
+        dbConn.execute("SELECT 1");
+        DBQueries.setDBConnection(dbConn);
 
         // init mysql storage
         MySQLPluggableStorage.api.mysql_storage_init();
@@ -199,5 +219,10 @@ public class BaseTest {
                 }
             }
         }
+    }
+
+    @AfterSuite(alwaysRun = true)
+    public void cleanup () throws SQLException {
+        this.dbConn.close();
     }
 }
