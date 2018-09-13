@@ -13,8 +13,12 @@ env:
     CARGO_TARGET_DIR: "target"
     # optional
     ARTIFACTS: ""
-#  parameter-store:
+  parameter-store:
 #    CARGO_LOGIN_TOKEN: "cargoLoginToken"
+    DB_READ_HOST: "aurora_host"
+    DB_WRITE_HOST: "aurora_host"
+    DB_USER: "aurora_user"
+    DB_PASS: "aurora_pass"
 
 phases:
 
