@@ -4,7 +4,7 @@ extern crate serde_json;
 use mysqlstorage::api as api;
 use mysqlstorage::errors::error_code::ErrorCode;
 
-use test_utils::config::{ConfigType, Config};
+use test_utils::config::Config;
 
 use std::ffi::{CString};
 
@@ -17,7 +17,7 @@ pub mod api_requests {
     const RECORD_TYPE: &'static str = "test-type";
 
     lazy_static! {
-        static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
+        static ref TEST_CONFIG: Config = Config::new();
     }
 
 

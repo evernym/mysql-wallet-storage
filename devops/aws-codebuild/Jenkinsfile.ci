@@ -11,6 +11,9 @@ logger.setGlobalLevel('TRACE')
 pipelineWrapper({
     nodeWrapper {
 
+        // Use default AWS VPC config for CodeBuild
+        env.USE_VPC_CONFIG = true
+
         List osnames = [
             'xenial',
             //'centos7'

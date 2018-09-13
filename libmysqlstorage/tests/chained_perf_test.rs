@@ -5,7 +5,7 @@ use mysqlstorage::api as api;
 use mysqlstorage::errors::error_code::ErrorCode;
 
 mod test_utils;
-use test_utils::config::{ConfigType, Config};
+use test_utils::config::Config;
 
 // External dependencies
 extern crate libc;
@@ -76,7 +76,7 @@ mod chaned_perf_test {
     use super::*;
 
     lazy_static! {
-        static ref TEST_CONFIG: Config = Config::new(ConfigType::QA);
+        static ref TEST_CONFIG: Config = Config::new();
     }
 
     const THREAD_CNT: u64 = 1;
