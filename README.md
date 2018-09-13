@@ -33,7 +33,7 @@ libmysqlstorage/target/debug/libmysqlstorage.so
 
 ### Test Config
 
-Before starting tests you need to configure DB connection parameters. This is done in [test config](./libmysqlstorage/tests/test_utils/config.rs) file.
+Before starting tests you need to configure DB connection parameters. This is done in [test config](libmysqlstorage/tests/test_utils/test_env.rs) file.
 
 This file contains different sections ie. Config Types for different environments. Config type is read from a environment variable `WALLET_CONFIG_TYPE`, but if this variable is not set tests will run with the `DEV` Config Type.
 
