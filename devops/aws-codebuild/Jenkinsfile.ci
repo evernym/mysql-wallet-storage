@@ -11,7 +11,7 @@ logger.setGlobalLevel('TRACE')
 pipelineWrapper({
     nodeWrapper {
 
-        // Use default AWS VPC config for CodeBuild
+        // Use the default AWS VPC config data
         env.USE_VPC_CONFIG = true
 
         List osnames = [
