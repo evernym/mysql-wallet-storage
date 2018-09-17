@@ -291,12 +291,14 @@ const RECORDS_PER_WALLET_CNT: u64 = 10;
 mod performance {
     use super::*;
     #[test]
+    #[ignore]
     fn test_add_wallet(){
         cleanup();
         send_requests( TOTAL_WALLET_CNT,  0, "",  &Action::AddWallet);
     }
 
     #[test]
+    #[ignore]
     fn test_delete_wallet(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -304,6 +306,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_set_metadata(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -311,6 +314,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_get_metadata(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -318,6 +322,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_open_and_close_wallet(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -325,6 +330,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_add_record_with_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, 0,  "", 0);
@@ -332,6 +338,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_get_record(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -339,6 +346,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_record(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -346,6 +354,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_update_record_value(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -353,6 +362,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_add_record_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"tag1": "value1", "tag2": "value2", "tag3": "value3"}"#, 100);
@@ -360,6 +370,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_update_record_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -368,6 +379,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_record_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -375,6 +387,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_search_record(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe", "country": "Serbia"}"#, 20);
@@ -382,6 +395,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_search_all_records(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);

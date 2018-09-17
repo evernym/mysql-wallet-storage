@@ -518,6 +518,7 @@ mod chaned_perf_test {
     /// Defines all of the driver functions that need to be passed through the `bench()` function.
     ///
     #[test]
+    #[ignore]
     fn perf_runner() {
 
         println!("Starting perf runner...");

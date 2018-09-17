@@ -89,7 +89,7 @@ test_dry: $(SRC_DIR) rust_version
 
 test: $(SRC_DIR) rust_version
 	echo "Running tests"
-	cd $< && cargo clean && RUST_BACKTRACE=1 RUST_LOG=trace cargo test $(CARGO_FLAGS) --package mysqlstorage --test api high_casees
+	cd $< && cargo clean && RUST_BACKTRACE=1 RUST_LOG=trace cargo test $(CARGO_FLAGS)
 
 build $(LIBS): $(SRC_DIR) rust_version
 	echo "Compiling the project"

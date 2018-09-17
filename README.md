@@ -83,7 +83,7 @@ DB_NAME
 In order to run functional tests go to `libmysqlstorage` directory and run the following command:
 
 ```
-cargo test --package mysqlstorage --test api high_casees
+cargo test
 ```
 
 For more info take a look at [`libmysqlstorage/tests/api.rs`](./libmysqlstorage/tests/api.rs).
@@ -101,7 +101,7 @@ For more info take a look at [`libmysqlstorage/tests/performance_tests.rs`](./li
 In order to run these performance tests go to `libmysqlstorage` directory and run the following command:
 
 ```
-cargo test --package mysqlstorage --test performance_tests performance
+cargo test --package mysqlstorage --test performance_tests performance -- --ignored
 ```
 
 #### Baseline Performance Tests
@@ -113,7 +113,7 @@ For more info take a look at [`libmysqlstorage/tests/chained_perf_test.rs`](./li
 In order to run these performance tests go to `libmysqlstorage` directory and run the following command:
 
 ```
-cargo test --package aurorastorage --test chained_perf_test chaned_perf_test::perf_runner -- --exact
+cargo test --package mysqlstorage --test chained_perf_test chaned_perf_test::perf_runner -- --exact --ignored
 ```
 
 ### Integration Tests
