@@ -9,7 +9,7 @@ pub mod test_utils;
 use test_utils::api_requests::api_requests;
 use test_utils::helper_functions::{get_random_record_value, get_hash_map_from_json_string,
                                    random_string};
-use test_utils::config::{Config, ConfigType};
+use test_utils::test_env::TestEnv;
 use std::collections::HashMap;
 
 extern crate mysql;
@@ -278,10 +278,10 @@ const RECORDS_PER_WALLET_CNT: u64 = 10;
     /// Deletes all from `wallets` table
     ///
     fn cleanup(){
-        let test_config: Config = Config::new(ConfigType::QA);
-        let cred_str = test_config.get_credentials();
+        let test_env: TestEnv = TestEnv::new();
+        let cred_str = test_env.get_credentials();
         let credentials: StorageCredentials = serde_json::from_str(cred_str.as_ref()).unwrap();
-        let config_str = test_config.get_config();
+        let config_str = test_env.get_config();
         let config: StorageConfig = serde_json::from_str(config_str.as_ref()).unwrap();
         let connection_string = format!("mysql://{}:{}@{}:{}/{}", credentials.user, credentials.pass, config.read_host, config.port, config.db_name);
         let mut connection = Conn::new(connection_string).unwrap();
@@ -291,12 +291,14 @@ const RECORDS_PER_WALLET_CNT: u64 = 10;
 mod performance {
     use super::*;
     #[test]
+    #[ignore]
     fn test_add_wallet(){
         cleanup();
         send_requests( TOTAL_WALLET_CNT,  0, "",  &Action::AddWallet);
     }
 
     #[test]
+    #[ignore]
     fn test_delete_wallet(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -304,6 +306,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_set_metadata(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -311,6 +314,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_get_metadata(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -318,6 +322,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_open_and_close_wallet(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -325,6 +330,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_add_record_with_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, 0,  "", 0);
@@ -332,6 +338,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_get_record(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -339,6 +346,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_record(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -346,6 +354,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_update_record_value(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -353,6 +362,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_add_record_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"tag1": "value1", "tag2": "value2", "tag3": "value3"}"#, 100);
@@ -360,6 +370,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_update_record_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT,  r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -368,6 +379,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_delete_record_tags(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
@@ -375,6 +387,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_search_record(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe", "country": "Serbia"}"#, 20);
@@ -382,6 +395,7 @@ mod performance {
     }
 
     #[test]
+    #[ignore]
     fn test_search_all_records(){
         cleanup();
         populate_database(TOTAL_WALLET_CNT, RECORDS_PER_WALLET_CNT, r#"{"name": "John", "surname": "Doe"}"#, 100);
