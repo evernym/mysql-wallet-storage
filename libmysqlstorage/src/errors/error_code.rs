@@ -26,6 +26,8 @@ pub enum ErrorCode {
     /// </summary>
     WalletAlreadyExistsError = 203,
 
+    WalletNotFound = 204,
+
     /// <summary>
     /// Requested entity id isn't present in wallet.
     /// </summary>

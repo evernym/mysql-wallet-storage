@@ -191,7 +191,11 @@ impl<'a> MySQLStorage<'a> {
                             ), Err(ErrorCode::IOError)
         );
 
-        let wallet_id: u64 = check_option!(check_result!(check_option!(result.next(), Err(ErrorCode::InvalidState)), Err(ErrorCode::IOError)).get(0), Err(ErrorCode::InvalidState));
+        let wallet_id: u64 = check_option!(
+            check_result!(
+                check_option!(result.next(), Err(ErrorCode::WalletNotFound)),
+                Err(ErrorCode::IOError)).get(0),
+            Err(ErrorCode::InvalidState));
 
         trace!("Success Opening Storage with the name: {}", name);
 
