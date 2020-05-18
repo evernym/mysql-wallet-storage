@@ -2,3 +2,6 @@ libmysqlstorage/Cargo.lock
 libmysqlstorage/target
 *.idea
 *.swp
+migration/migration/__pycache__/
+*.py[cod]
+*$py.class
