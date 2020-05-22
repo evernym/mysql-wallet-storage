@@ -133,7 +133,6 @@ build-and-package:
     - cd target/debian
     - echo ${CI_COMMIT_REF_SLUG}
     - ./../../../devops/set_version.sh ${PACKAGE_VERSION} ${CI_PIPELINE_IID} ${CI_COMMIT_REF_SLUG}
-    - rm libmysqlstorage_${PACKAGE_VERSION}_amd64.deb
 
 publish:
   only:
