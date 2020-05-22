@@ -108,7 +108,7 @@ test:
   script:
     - cargo --version
     - rustc --version
-    - apt update && apt install mysql-client-core-5.7
+    - apt update && apt install -y mysql-client-core-5.7
     - mysql ${DB_NAME} < db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql
     - cd libmysqlstorage
     - cargo clean
