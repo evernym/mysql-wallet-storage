@@ -1,6 +1,6 @@
 [package]
 name = "mysqlstorage"
-version = "0.1.0"
+version = "0.1.10"
 authors = ["Darko Kulic <darko.kulic@evernym.com>", "Nemanja Patrnogic <npatrnogic@evernym.com>"]
 build = "build.rs"
 
@@ -18,3 +18,8 @@ mysql = "13.0"
 rand = "0.4.3"
 env_logger = "0.4.2"
 log = "0.3.7"
+
+[package.metadata.deb]
+name = "libmysqlstorage"
+maintainer = "Evernym"
+depends = "libindy"

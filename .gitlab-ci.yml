@@ -12,7 +12,7 @@ variables:
 
 # Helpers / Anchors
 .docker_micro:
-  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:docker-ci-pipeline
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
   tags:
     - docker-machine
     - micro
@@ -130,6 +130,22 @@ build:
     - cargo clean
     - cargo build ${CARGO_FLAGS}
     - cargo package --allow-dirty
+
+package:
+  only:
+    refs:
+      - master@dev/mysql-wallet-storage
+  extends: .docker_micro
+  stage: package
+  artifacts:
+    paths:
+      - libmysqlstorage/target
+  script:
+    - apt update && apt install -y ruby ruby-dev rubygems build-essential
+    - gem install --no-document fpm
+    - cd libmysqlstorage
+    - cargo install cargo-deb
+    - cargo deb
 
 #publish:
 #  only:
