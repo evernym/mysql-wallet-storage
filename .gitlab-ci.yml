@@ -109,7 +109,7 @@ test:
     - cargo --version
     - rustc --version
     - apt update && apt install -y mysql-client-core-5.7
-    - mysql -h ${DB_READ_HOST} -u ${DB_USER} -p ${DB_PASS} < db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql
+    - mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} < db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql
     - cd libmysqlstorage
     - cargo clean
     - RUST_BACKTRACE=1 RUST_LOG=trace cargo test ${CARGO_FLAGS}
