@@ -113,7 +113,7 @@ test:
     - echo "show tables;" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} wallet
     - cd libmysqlstorage
     - cargo clean
-    - DB_READ_HOST=${DB_READ_HOST} DB_WRITE_HOST=${DB_WRITE_HOST} DB_PORT=${DB_PORT} DB_USER=${DB_USER} DB_PASS=${DB_PASS} RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test
+    - DB_READ_HOST=${DB_READ_HOST} DB_WRITE_HOST=${DB_WRITE_HOST} DB_PORT=${DB_PORT} DB_USER=${DB_USER} DB_PASS=${DB_PASS} RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test ${CARGO_FLAGS}
   services:
     - mysql:latest
 
