@@ -12,7 +12,7 @@ variables:
 
 # Helpers / Anchors
 .docker_micro:
-  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:docker-ci-pipeline
   tags:
     - docker-machine
     - micro
