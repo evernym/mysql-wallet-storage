@@ -131,17 +131,21 @@ build-and-package:
     - cargo install cargo-deb
     - cargo deb
     - cd target/debian
-    - fpm -s deb --version ${PACKAGE_VERSION}~${CI_PIPELINE_IID} --old libmysqlstorage_${PACKAGE_VERSION}_amd64.deb
+    - echo ${CI_COMMIT_REF_SLUG}
+    - ./../../../devops/set_version.sh ${PACKAGE_VERSION} ${CI_PIPELINE_IID} ${CI_COMMIT_REF_SLUG}
+    - rm libmysqlstorage_${PACKAGE_VERSION}_amd64.deb
 
 publish:
   only:
     refs:
       - master@dev/mysql-wallet-storage
+      - ci-pipeline # this is temporary change for testing purposes
   extends: .docker_micro
   stage: publish
   artifacts:
     paths:
       - libmysqlstorage/target
   script:
-    - cd libmysqlstorage
-    - cargo publish --allow-dirty
+    - export KRAKEN_CREDENTIALS=$(echo ${KRAKEN_CREDENTIALS_B64} | base64 -d)
+    - devops/publish.sh "${KRAKEN_CREDENTIALS}" libmysqlstorage*.deb https://kraken.corp.evernym.com/repo/portal_dev/upload
+    - devops/publish.sh "${KRAKEN_CREDENTIALS}" libmysqlstorage*.deb https://kraken.corp.evernym.com/repo/agency_dev/upload
