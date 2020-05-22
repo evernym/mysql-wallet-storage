@@ -131,7 +131,7 @@ build:
     - cargo build ${CARGO_FLAGS}
     - cargo package --allow-dirty
 
-package:
+package-deb:
   only:
     refs:
       - master@dev/mysql-wallet-storage
