@@ -10,7 +10,7 @@ echo "Branch: "${BRANCH}
 
 VERSION=${PACKAGE_VERSION}
 
-if [[ BRANCH != "stable" ]]
+if [[ $BRANCH != "stable" ]]
 then
 	VERSION=${VERSION}~${SUFFIX}
 fi
@@ -19,7 +19,7 @@ echo "Version: "${VERSION}
 
 fpm -s deb -t deb --version ${VERSION} libmysqlstorage_${PACKAGE_VERSION}_amd64.deb
 
-if [[ BRANCH != "stable" ]]
+if [[ $BRANCH != "stable" ]]
 then
 	rm libmysqlstorage_${PACKAGE_VERSION}_amd64.deb
 fi
