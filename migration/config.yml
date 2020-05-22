@@ -1,0 +1,11 @@
+wallet:
+  name: w1
+  key: 1
+  export_key: 23
+  key_derivation_method: ARGON2I_MOD
+mysql:
+  host: 0.0.0.0
+  port: 3306
+  user: root
+  password: root
+  db_name: wallet
