@@ -142,6 +142,5 @@ publish:
     paths:
       - libmysqlstorage/target
   script:
-    - export KRAKEN_CREDENTIALS=$(echo ${KRAKEN_CREDENTIALS_B64} | base64 -d)
-    - devops/publish.sh "${KRAKEN_CREDENTIALS}" libmysqlstorage*.deb https://kraken.corp.evernym.com/repo/portal_dev/upload
-    - devops/publish.sh "${KRAKEN_CREDENTIALS}" libmysqlstorage*.deb https://kraken.corp.evernym.com/repo/agency_dev/upload
+    - devops/publish.sh "${KRK_USERNAME}:${KRK_PASSWORD}" libmysqlstorage*.deb https://kraken.corp.evernym.com/repo/portal_dev/upload
+    - devops/publish.sh "${KRK_USERNAME}:${KRK_PASSWORD}" libmysqlstorage*.deb https://kraken.corp.evernym.com/repo/agency_dev/upload
