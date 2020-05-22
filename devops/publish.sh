@@ -20,6 +20,6 @@ pwd
 ls -al
 echo 'end info'
 
-find "./output" -type f -name ${FILENAME} -exec curl -u $CREDENTIALS -X POST $URL -F 'file=@{}' \;
+find "./libmysqlstorage/target/debian" -type f -name ${FILENAME} -exec curl -u $CREDENTIALS -X POST $URL -F 'file=@{}' \;
 
 

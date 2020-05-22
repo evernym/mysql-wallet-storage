@@ -8,7 +8,7 @@ echo "Version: "${PACKAGE_VERSION}
 echo "Suffix: "${SUFFIX}
 echo "Branch: "${BRANCH}
 
-VERSION=PACKAGE_VERSION
+VERSION=${PACKAGE_VERSION}
 
 if [[ BRANCH != "stable" ]]
 then
