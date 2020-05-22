@@ -118,7 +118,7 @@ test:
     - name: mysql:latest
       alias: mysql
 
-package-and-pacakge:
+build-and-package:
   extends: .docker_micro
   stage: package
   artifacts:
