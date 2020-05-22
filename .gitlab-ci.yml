@@ -115,7 +115,7 @@ test:
     - cargo clean
     - RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test ${CARGO_FLAGS}
   services:
-    - name: mysql:latest
+    - name: mysql:5
       alias: mysql
 
 build-and-package:

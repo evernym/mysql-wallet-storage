@@ -122,9 +122,7 @@ impl<'a> MySQLStorage<'a> {
         let config: StorageConfig = check_result!(serde_json::from_str(config), ErrorCode::InvalidStructure);
         let credentials: StorageCredentials = check_result!(serde_json::from_str(credentials), ErrorCode::InvalidStructure);
 
-        trace!("parsed config");
         let write_pool = check_option!(CONNECTIONS.get(false, &config, &credentials), ErrorCode::IOError);
-        trace!("got pool");
 
         let result = write_pool.prep_exec(
                         "INSERT INTO wallets(name, metadata) VALUES (:name, :metadata)",
