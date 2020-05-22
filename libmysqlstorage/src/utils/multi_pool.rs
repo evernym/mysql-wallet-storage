@@ -54,6 +54,8 @@ impl MultiPool {
 
             let pool = Pool::new_manual(1, 100, opts);
             if pool.is_err() {
+                let err = pool.unwrap_err();
+                error!("Error while connecting to the pool: {:?}", err);
                 return None
             }
             let pool = Arc::new(pool.unwrap());
