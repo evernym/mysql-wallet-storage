@@ -138,7 +138,7 @@ publish:
   only:
     refs:
       - master@dev/mysql-wallet-storage
-      - ci-pipeline # this is temporary change for testing purposes
+      - stable@dev/mysql-wallet-storage
   extends: .docker_micro
   stage: publish
   artifacts:
