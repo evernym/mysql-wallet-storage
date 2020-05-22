@@ -1,8 +1,10 @@
 [package]
 name = "mysqlstorage"
-version = "0.1.0"
+version = "0.1.10"
 authors = ["Darko Kulic <darko.kulic@evernym.com>", "Nemanja Patrnogic <npatrnogic@evernym.com>"]
 build = "build.rs"
+description = "MySQL Storage Wallet Plug-In for IndySDK"
+license = "Apache License 2.0"
 
 [lib]
 name = "mysqlstorage"
@@ -15,6 +17,11 @@ serde_derive = "1.0"
 libc = "0.2.21"
 lazy_static = "0.2"
 mysql = "13.0"
-rand = "*"
+rand = "0.4.3"
 env_logger = "0.4.2"
 log = "0.3.7"
+
+[package.metadata.deb]
+name = "libmysqlstorage"
+maintainer = "Evernym"
+depends = "libindy"

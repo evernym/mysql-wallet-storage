@@ -335,7 +335,7 @@ mod high_casees {
         let mut handle: i32 = -1;
 
         let err = api::open_storage(wallet.name.as_ptr(), wallet.config.as_ptr(), wallet.credentials.as_ptr(), &mut handle);
-        assert_eq!(err, ErrorCode::InvalidState);
+        assert_eq!(err, ErrorCode::WalletNotFound);
     }
 
     #[test]

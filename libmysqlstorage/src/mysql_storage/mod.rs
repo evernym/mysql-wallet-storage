@@ -131,6 +131,7 @@ impl<'a> MySQLStorage<'a> {
                             metadata
                          }
          );
+        trace!("executed");
 
         match result {
                 Err(Error::MySqlError(err)) => {
