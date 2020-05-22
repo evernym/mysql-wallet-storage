@@ -115,27 +115,10 @@ test:
     - cargo clean
     - DB_READ_HOST=${DB_READ_HOST} DB_WRITE_HOST=${DB_WRITE_HOST} DB_PORT=${DB_PORT} DB_USER=${DB_USER} DB_PASS=${DB_PASS} RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test ${CARGO_FLAGS}
   services:
-    - mysql:latest
+    - name: mysql:latest
+      alias: mysql
 
-build:
-  extends: .docker_micro
-  stage: build
-  artifacts:
-    paths:
-      - libmysqlstorage/target
-  script:
-    - cargo --version
-    - rustc --version
-    - ./tag_version.sh ${CI_PROJECT_DIR}/libmysqlstorage/Cargo.toml
-    - cd libmysqlstorage
-    - cargo clean
-    - cargo build ${CARGO_FLAGS}
-    - cargo package --allow-dirty
-
-package-deb:
-  only:
-    refs:
-      - master@dev/mysql-wallet-storage
+package-and-pacakge:
   extends: .docker_micro
   stage: package
   artifacts:
@@ -148,15 +131,15 @@ package-deb:
     - cargo install cargo-deb
     - cargo deb
 
-#publish:
-#  only:
-#    refs:
-#      - master@dev/mysql-wallet-storage
-#  extends: .docker_micro
-#  stage: publish
-#  artifacts:
-#    paths:
-#      - libmysqlstorage/target
-#  script:
-#    - cd libmysqlstorage
-#    - cargo publish --allow-dirty
+publish:
+  only:
+    refs:
+      - master@dev/mysql-wallet-storage
+  extends: .docker_micro
+  stage: publish
+  artifacts:
+    paths:
+      - libmysqlstorage/target
+  script:
+    - cd libmysqlstorage
+    - cargo publish --allow-dirty
