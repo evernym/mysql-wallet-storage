@@ -3,6 +3,8 @@ name = "mysqlstorage"
 version = "0.1.10"
 authors = ["Darko Kulic <darko.kulic@evernym.com>", "Nemanja Patrnogic <npatrnogic@evernym.com>"]
 build = "build.rs"
+description = "MySQL Storage Wallet Plug-In for IndySDK"
+license = "Apache License 2.0"
 
 [lib]
 name = "mysqlstorage"
@@ -23,5 +25,3 @@ log = "0.3.7"
 name = "libmysqlstorage"
 maintainer = "Evernym"
 depends = "libindy"
-description = "MySQL Storage Wallet Plug-In for IndySDK"
-license = "Apache License 2.0"
