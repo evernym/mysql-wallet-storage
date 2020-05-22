@@ -11,6 +11,12 @@ RUN apt-get update \
        curl \
        gnupg2 \
        git \
+       mysql-client-core-5.7 \
+       ruby \
+       ruby-dev \
+       rubygems \
+       build-essential \
+    && gem install --no-document fpm \
     && curl https://sh.rustup.rs -sSf \
      | sh -s -- -y --no-modify-path --default-toolchain $RUST_VERSION \
     && mkdir -p /usr/local/share/ca-certificates \

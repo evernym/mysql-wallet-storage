@@ -108,7 +108,6 @@ test:
   script:
     - cargo --version
     - rustc --version
-    - apt update && apt install -y mysql-client-core-5.7
     - mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} < db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql
     - echo "show tables;" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} wallet
     - cd libmysqlstorage
@@ -125,8 +124,6 @@ build-and-package:
     paths:
       - libmysqlstorage/target
   script:
-    - apt update && apt install -y ruby ruby-dev rubygems build-essential
-    - gem install --no-document fpm
     - cd libmysqlstorage
     - cargo install cargo-deb
     - cargo deb
