@@ -1171,7 +1171,7 @@ mod high_casees {
         let wallet = TestWallet::new_default(false);
         let record = TestRecord::new_default(false);
 
-        let large_type = CString::new(random_string(100)).unwrap();
+        let large_type = CString::new(random_string(150)).unwrap();
 
         let err = api::add_record(wallet.handle, large_type.as_ptr(), record.id.as_ptr(), record.value.as_ptr(), record.value.len(), record.tags_json.as_ptr());
         assert_eq!(err, ErrorCode::IOError);
