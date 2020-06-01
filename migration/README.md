@@ -1,10 +1,11 @@
 ## Migration Tool Guide
 
 ### Requirements
-Python 3
-MySQL
-libindy
-libmysqlstorage
+
+* Python 3
+* MySQL -- a server should be already running
+* libindy
+* libmysqlstorage
 
 ### How to config
 
@@ -14,7 +15,7 @@ wallet:
   name: w1 // wallet name
   key: 1 // wallet key
   export_key: 23 // export key, any value you want
-  key_derivation_method: ARGON2I_MOD // derivation method you have set by default
+  key_derivation_method: ARGON2I_MOD // derivation method you have set
 mysql:
   host: 0.0.0.0 // mysql host
   port: 3306 // mysql port
