@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 ARG RUST_VERSION
 ENV RUST_VERSION=${RUST_VERSION:-1.26.0}
@@ -57,7 +57,7 @@ Tw6APXtEnjfD2H8HOpOX/7ef4gWK0O1Q7A==\\n\
     && echo "deb https://repo.corp.evernym.com/deb evernym-ubuntu main" > /etc/apt/sources.list.d/repo.corp.evernym.com.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        libindy \
+        libindy=1.15.0-bionic \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PATH /root/.cargo/bin:$PATH
