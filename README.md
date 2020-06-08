@@ -20,17 +20,11 @@ At this moment only 64-bit Ubuntu LTS 16.04 (Xenial) is supported.
     <tr>
       <th> i386 </th>
       <th> amd64 </th>
-    </tr>
     <tr>
-      <td rowspan="2">Ubuntu</td>
-      <td> 16.04 LTS (Xenial Xerus) </td>
-      <td> &#10006; </td>
-      <td> &#10004; </td>
-    </tr>
-    <tr>
+      <td >Ubuntu</td>
       <td> 18.04 LTS (Bionic Beaver) </td>
       <td> &#10006; </td>
-      <td> &#10006; </td>
+      <td> &#10004; </td>
     </tr>
   </tbody>
 </table>
@@ -124,9 +118,48 @@ More information about these tests can be found in the integration tests [README
 
 ## How to Use
 
-In order to use MySQL storage plugin you need to call `mysql_storage_init` function from your code.
+### Libindy
 
-This will register the plug-in to `libindy` and allow you to redirect your requests to MySQL Storage by using `"mysql"` wallet type.
+In order to use MySQL storage plugin you need to call `mysql_storage_init` function from your application code. This will register the plug-in to `libindy` and allow you to redirect your requests to MySQL Storage.
+
+When you will be your requests to libindy you will need to pass some extra values in call's configs and credentials:
+```
+config: {
+    storage_type: "mysql",
+    storage_config: {
+        db_name: "<database name>",
+        port: "<mysql db port>",
+        write_host: "<mysql db write hostname>",
+        read_host: "<mysql db read hostname>", // in most usecases this is the same host
+    }
+}
+credentials: {
+    storage_credentials: {
+        user: "<db username>",
+        pass: "<db user password>"
+    }
+}
+```
+
+You need to pass it to every wallet call to libindy that asks for config and/or credentials 
+
+### LibVCX
+
+If you are using LibVCX you need to set these config values:
+
+```
+"wallet_type": "mysql"
+"storage_config": "{
+    db_name: "<database name>",
+    port: "<mysql db port>",
+    write_host: "<mysql db write hostname>",
+    read_host: "<mysql db read hostname>", // in most usecases this is the same host
+}"
+"storage_credentials": "{
+    user: "<db username>",
+    pass: "<db user password>"
+}"
+```
 
 ## How CI/CD pipelines work
 
