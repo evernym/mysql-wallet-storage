@@ -108,12 +108,12 @@ def report_config_changes(config):
         "write_host": config["mysql"]["host"],
         "read_host": config["mysql"]["host"],
     })
-    print("\"storage_config\": \"{}\",".format(cfg))
+    print("\"storage_config\": {},".format(json.dumps(cfg)))
     creds = json.dumps({
         "user": config["mysql"]["user"],
         "pass": config["mysql"]["password"],
     })
-    print("\"storage_credentials\": \"{}\"".format(creds))
+    print("\"storage_credentials\": {}".format(json.dumps(creds)))
 
 
 def migrate():
