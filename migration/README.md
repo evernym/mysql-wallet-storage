@@ -29,5 +29,5 @@ mysql:
 From this directory:
 ```
 pip install -r requirements.txt
-pip -m migration
+python -m migration
 ```
