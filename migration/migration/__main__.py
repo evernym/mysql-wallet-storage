@@ -78,7 +78,7 @@ def create_database(config):
     CREATE TABLE IF NOT EXISTS `items` (
         `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
         `wallet_id` BIGINT(20) NOT NULL,
-        `type` VARCHAR(64) NOT NULL,
+        `type` VARCHAR(128) NOT NULL,
         `name` VARCHAR(1024) NOT NULL,
         `value` LONGBLOB NOT NULL,
         `tags` JSON NOT NULL,
