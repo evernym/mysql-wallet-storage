@@ -43,7 +43,7 @@ It has been used with:
 
 ### LibVCX
 
-If you are using LibVCX you need to set these config values in `vcx_init`. You can then access the wallet as normal.
+If you are using LibVCX you need to set these config values in `vcx_init`.
 
 ```
 "wallet_type": "mysql"
@@ -59,9 +59,11 @@ If you are using LibVCX you need to set these config values in `vcx_init`. You c
 }"
 ```
 
+You then need to call the `mysql_storage_init` function from your application code to register the plugin to libindy. You can then access the wallet as normal.
+
 ### LibIndy
 
-To use liblndy directly, you need to call the `mysql_storage_init` function from your application code to register the plugin to libindy.
+To use libIndy directly, you need to call the `mysql_storage_init` function from your application code to register the plugin to libindy.
 
 Then, when you call libindy wallet functions such as `create_wallet` or `open_wallet`, you pass in the wallet configuration and database credentials as parameters:
 
@@ -85,11 +87,7 @@ credentials: {
 
 ### Migrating from SQLite to MySQL
 
-There is a migration script available for moving from the SQLite wallet storage to MySQL. To use the script:
-* Setup a MySQL server with an empty database.
-* Install the libmysqlstorage package.
-* Setup the configuration file `config.yml`
-* Setup a Python 3 environment.
+There is a migration script available for moving from the SQLite wallet storage to MySQL. See the [migration](./migration/) subdirectory.
 
 
 ## How to Build
