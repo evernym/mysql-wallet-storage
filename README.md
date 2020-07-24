@@ -36,7 +36,7 @@ It has been used with:
 
 ## How to Use
 
-1. Install the Debian package,
+1. Install the Debian package provided by Evernym support,
 2. Setup an empty database with credentials that can be used by the application,
 3. Use the database tools to setup the schema using [this SQL script](./db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql).
 4. Then follow the instructions for the method you use to interact with the wallet.
