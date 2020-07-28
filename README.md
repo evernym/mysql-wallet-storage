@@ -2,13 +2,11 @@
 
 ## About
 
-Indy SDK provides only one wallet implementation (sqlite based), but it allows developers to plug different storage backends.
+By default, the Indy SDK stores wallet data in an embedded SQLite database. It also provides an API for plugging in various types of wallet storage backends.
 
-This project is an implementation of such a plug-in for MySQL Storage Backend. By using it you can switch to any MySQL compliant database for your Indy SDK use cases.
+This project provides an Indy wallet storage plugin that allows the use of a MySQL compatible database. 
 
 ## Supported platforms
-
-At this moment only 64-bit Ubuntu LTS 16.04 (Xenial) is supported.
 
 <table>
   <tbody>
@@ -20,31 +18,90 @@ At this moment only 64-bit Ubuntu LTS 16.04 (Xenial) is supported.
     <tr>
       <th> i386 </th>
       <th> amd64 </th>
-    </tr>
     <tr>
-      <td rowspan="2">Ubuntu</td>
-      <td> 16.04 LTS (Xenial Xerus) </td>
-      <td> &#10006; </td>
-      <td> &#10004; </td>
-    </tr>
-    <tr>
+      <td >Ubuntu</td>
       <td> 18.04 LTS (Bionic Beaver) </td>
       <td> &#10006; </td>
-      <td> &#10006; </td>
+      <td> &#10004; </td>
     </tr>
   </tbody>
 </table>
 
-## Dependencies
+It has been used with:
+* MySQL 5.7, MySQL 8.0
+* MariaDB
+* AWS RDS
+* Azure Database for MySQL
 
- - Git
- - C compiler -- gcc, clang...
- - Rust and Cargo -- https://rustup.rs/
- - `libindy` library on your `LD_LIBRARY_PATH` -- https://github.com/hyperledger/indy-sdk#installing-the-sdk
+
+## How to Use
+
+1. Install the Debian package provided by Evernym support,
+2. Setup an empty database with credentials that can be used by the application,
+3. Use the database tools to setup the schema using [this SQL script](./db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql).
+4. Then follow the instructions for the method you use to interact with the wallet.
+
+### LibVCX
+
+If you are using LibVCX you need to set these config values in `vcx_init`.
+
+```
+"wallet_type": "mysql"
+"storage_config": "{
+    db_name: "<database name>",
+    port: "<mysql db port>",
+    write_host: "<mysql db write hostname>",
+    read_host: "<mysql db read hostname>", // in most usecases this is the same host
+}"
+"storage_credentials": "{
+    user: "<db username>",
+    pass: "<db user password>"
+}"
+```
+
+You then need to call the `mysql_storage_init` function from your application code to register the plugin to libindy. You can then access the wallet as normal.
+
+### LibIndy
+
+To use libIndy directly, you need to call the `mysql_storage_init` function from your application code to register the plugin to libindy.
+
+Then, when you call libindy wallet functions such as `create_wallet` or `open_wallet`, you pass in the wallet configuration and database credentials as parameters:
+
+```
+config: {
+    storage_type: "mysql",
+    storage_config: {
+        db_name: "<database name>",
+        port: "<mysql db port>",
+        write_host: "<mysql db write hostname>",
+        read_host: "<mysql db read hostname>", // usually the same as the write_host
+    }
+}
+credentials: {
+    storage_credentials: {
+        user: "<db username>",
+        pass: "<db user password>"
+    }
+}
+```
+
+### Migrating from SQLite to MySQL
+
+There is a migration script available for moving from the SQLite wallet storage to MySQL. See the [migration](./migration/) subdirectory.
+
 
 ## How to Build
 
-After cloning the repo go to `libmysqlstorage` directory and run the following command:
+1. Install dependencies
+ - Git
+ - C compiler -- gcc, clang...
+ - Rust and Cargo -- https://rustup.rs/
+ - `libindy` library on your `LD_LIBRARY_PATH`
+   - https://github.com/hyperledger/indy-sdk#installing-the-sdk
+
+2. Clone the code repository
+
+3. From the `libmysqlstorage` directory, run the following command:
 
 ```
 cargo build
@@ -64,8 +121,7 @@ libmysqlstorage/target/debug/libmysqlstorage.so
 
 Before starting tests you need to configure DB connection parameters.
 
-This is done by setting approriate ENV variables in your execution environment, and is controlled by the code located 
-in the [test_env](libmysqlstorage/tests/test_utils/test_env.rs) file.
+This is done by setting the appropriate ENV variables in your execution environment, and is controlled by the code located in the [test_env](./libmysqlstorage/tests/test_utils/test_env.rs) file.
 
 Variables that need to be set are:
 
@@ -122,11 +178,6 @@ As this library depends on `libindy` we created Integration tests using Indy SDK
 
 More information about these tests can be found in the integration tests [README.md](./libmysqlstorage/tests/java_libindy_integration_tests/README.md)
 
-## How to Use
-
-In order to use MySQL storage plugin you need to call `mysql_storage_init` function from your code.
-
-This will register the plug-in to `libindy` and allow you to redirect your requests to MySQL Storage by using `"mysql"` wallet type.
 
 ## How CI/CD pipelines work
 

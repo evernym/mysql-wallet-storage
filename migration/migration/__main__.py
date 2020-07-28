@@ -78,7 +78,7 @@ def create_database(config):
     CREATE TABLE IF NOT EXISTS `items` (
         `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
         `wallet_id` BIGINT(20) NOT NULL,
-        `type` VARCHAR(64) NOT NULL,
+        `type` VARCHAR(128) NOT NULL,
         `name` VARCHAR(1024) NOT NULL,
         `value` LONGBLOB NOT NULL,
         `tags` JSON NOT NULL,
@@ -108,12 +108,12 @@ def report_config_changes(config):
         "write_host": config["mysql"]["host"],
         "read_host": config["mysql"]["host"],
     })
-    print("\"storage_config\": \"{}\",".format(cfg))
+    print("\"storage_config\": {},".format(json.dumps(cfg)))
     creds = json.dumps({
         "user": config["mysql"]["user"],
         "pass": config["mysql"]["password"],
     })
-    print("\"storage_credentials\": \"{}\"".format(creds))
+    print("\"storage_credentials\": {}".format(json.dumps(creds)))
 
 
 def migrate():
