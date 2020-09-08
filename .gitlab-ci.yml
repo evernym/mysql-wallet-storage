@@ -93,7 +93,7 @@ test-dry:
     - RUST_BACKTRACE=1 cargo test ${CARGO_FLAGS} --no-run
 
 #compile and run tests
-test:
+.test:
   extends: .docker_micro
   stage: test
   variables:
@@ -113,9 +113,17 @@ test:
     - cd libmysqlstorage
     - cargo clean
     - RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test ${CARGO_FLAGS}
+
+test-mysql-5.7:
+  extends: .test
   services:
     - name: mysql:5
       alias: mysql
+
+test-mysql-8:
+  extends: .test
+  services:
+    - name: mysql:8
 
 build-and-package:
   extends: .docker_micro
