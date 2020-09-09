@@ -48,8 +48,9 @@ impl MultiPool {
                    .ip_or_hostname(Some(host_addr))
                    .db_name(Some(config.db_name))
                    .tcp_port(config.port)
-                   .ssl_opts(mysql::SslOpts::default())
                    .additional_capabilities(CapabilityFlags::CLIENT_FOUND_ROWS);
+
+            _get_builder_ssl(&mut builder);
 
             let opts: Opts = builder.into();
 
@@ -67,4 +68,15 @@ impl MultiPool {
 
         c
     }
+}
+
+//we do not to force ssl in tests
+//docker mysql works with self-signed certificates
+//we will add support for them later
+#[cfg(feature="test")]
+fn _get_builder_ssl(_: &OptsBuilder) {}
+
+#[cfg(not(feature="test"))]
+fn _get_builder_ssl(builder: &mut OptsBuilder) {
+    builder.ssl_opts(mysql::SslOpts::default());
 }
