@@ -15,6 +15,7 @@ RUN apt-get update \
        ruby \
        ruby-dev \
        rubygems \
+       libssl1.1 \
        build-essential \
     && gem install --no-document fpm \
     && curl https://sh.rustup.rs -sSf \
