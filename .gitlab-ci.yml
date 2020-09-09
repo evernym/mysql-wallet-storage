@@ -14,7 +14,7 @@ variables:
 .docker_micro:
   tags:
     - docker-machine
-    - micro
+    - large
 
 .kaniko_build:
   tags:
