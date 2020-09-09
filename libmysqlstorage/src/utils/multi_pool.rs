@@ -48,6 +48,7 @@ impl MultiPool {
                    .ip_or_hostname(Some(host_addr))
                    .db_name(Some(config.db_name))
                    .tcp_port(config.port)
+                   .ssl_opts(mysql::SslOpts::default())
                    .additional_capabilities(CapabilityFlags::CLIENT_FOUND_ROWS);
 
             let opts: Opts = builder.into();
