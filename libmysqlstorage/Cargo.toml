@@ -21,6 +21,10 @@ rand = "0.4.3"
 env_logger = "0.4.2"
 log = "0.3.7"
 
+[features]
+default = []
+test = []
+
 [package.metadata.deb]
 name = "libmysqlstorage"
 maintainer = "Evernym"
