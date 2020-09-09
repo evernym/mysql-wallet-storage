@@ -15,7 +15,7 @@ RUN apt-get update \
        ruby \
        ruby-dev \
        rubygems \
-       libssl1.1 \
+       libssl-dev \
        pkg-config \
        build-essential \
     && gem install --no-document fpm \
