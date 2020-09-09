@@ -123,7 +123,8 @@ test-dry-from-branch:
     - rustc --version
     - mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} < db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql
     - echo "show tables;" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} wallet
-    - echo "create user 'test' identified by 'test' require none" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS}
+    - echo "create user 'test' identified with mysql_native_password by 'test' require none" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS}
+    - echo "grant all on wallet.* to 'test'" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS}
     - cd libmysqlstorage
     - cargo clean
     - DB_USER=test DB_PASS=test RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test --features=test ${CARGO_FLAGS}
