@@ -1,6 +1,6 @@
 [package]
 name = "mysqlstorage"
-version = "0.1.11"
+version = "0.1.12"
 authors = ["Darko Kulic <darko.kulic@evernym.com>", "Nemanja Patrnogic <npatrnogic@evernym.com>"]
 build = "build.rs"
 description = "MySQL Storage Wallet Plug-In for IndySDK"
