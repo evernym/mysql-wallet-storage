@@ -8,14 +8,13 @@ stages:
 variables:
   CARGO_FLAGS: "--release"
   RUST_VERSION: 1.43.0
-  PACKAGE_VERSION: 0.1.11
+  PACKAGE_VERSION: 0.1.12
 
 # Helpers / Anchors
 .docker_micro:
-  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
   tags:
     - docker-machine
-    - micro
+    - large
 
 .kaniko_build:
   tags:
@@ -82,7 +81,7 @@ mysql-wallet-storage-buildtools:
       - mysql-wallet-storage-buildtools.dockerfile
 
 #dry-mode: compile but don't actually run tests.
-test-dry:
+.test-dry:
   extends: .docker_micro
   stage: test
   script:
@@ -92,8 +91,22 @@ test-dry:
     - cargo clean
     - RUST_BACKTRACE=1 cargo test ${CARGO_FLAGS} --no-run
 
+test-dry-from-latest:
+  extends: .test-dry
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
+  except:
+    refs:
+      - /^docker-.*/
+
+test-dry-from-branch:
+  extends: .test-dry
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:${CI_COMMIT_REF_SLUG}
+  only:
+    refs:
+      - /^docker-.*/
+
 #compile and run tests
-test:
+.test:
   extends: .docker_micro
   stage: test
   variables:
@@ -110,14 +123,52 @@ test:
     - rustc --version
     - mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} < db_scripts/schema/change_scripts/wallet_schema_creation.2018-05-07.sql
     - echo "show tables;" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS} wallet
+    - echo "create user 'test' identified with mysql_native_password by 'test' require none" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS}
+    - echo "grant all on wallet.* to 'test'" | mysql -h ${DB_READ_HOST} -u ${DB_USER} -p${DB_PASS}
     - cd libmysqlstorage
     - cargo clean
-    - RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test ${CARGO_FLAGS}
+    - DB_USER=test DB_PASS=test RUST_TEST_THREADS=1 RUST_BACKTRACE=1 RUST_LOG=trace cargo test --features=test ${CARGO_FLAGS}
+
+.test-mysql-5.7:
+  extends: .test
   services:
     - name: mysql:5
       alias: mysql
 
-build-and-package:
+test-mysql-5.7-from-latest:
+  extends: .test-mysql-5.7
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
+  except:
+    refs:
+      - /^docker-.*/
+
+test-mysql-5.7-from-branch:
+  extends: .test-mysql-5.7
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:${CI_COMMIT_REF_SLUG}
+  only:
+    refs:
+      - /^docker-.*/
+
+.test-mysql-8:
+  extends: .test
+  services:
+    - name: mysql:8
+
+test-mysql-8-from-latest:
+  extends: .test-mysql-8
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
+  except:
+    refs:
+      - /^docker-.*/
+
+test-mysql-8-from-branch:
+  extends: .test-mysql-8
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:${CI_COMMIT_REF_SLUG}
+  only:
+    refs:
+      - /^docker-.*/
+
+.build-and-package:
   extends: .docker_micro
   stage: package
   artifacts:
@@ -131,7 +182,22 @@ build-and-package:
     - echo ${CI_COMMIT_REF_SLUG}
     - ./../../../devops/finalize_package.sh ${PACKAGE_VERSION} ${CI_PIPELINE_IID} ${CI_COMMIT_REF_SLUG}
 
+build-and-package-from-latest:
+  extends: .build-and-package
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
+  except:
+    refs:
+      - /^docker-.*/
+
+build-and-package-from-branch:
+  extends: .build-and-package
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:${CI_COMMIT_REF_SLUG}
+  only:
+    refs:
+      - /^docker-.*/
+
 publish:
+  image: ${CI_REGISTRY_IMAGE}/mysql-wallet-storage-buildtools:latest
   only:
     refs:
       - master@dev/mysql-wallet-storage
