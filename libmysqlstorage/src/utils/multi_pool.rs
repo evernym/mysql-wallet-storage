@@ -8,8 +8,12 @@ pub struct StorageConfig <'a> {
     pub read_host: &'a str,
     pub write_host: &'a str,
     pub port: u16,
-    pub db_name: &'a str
+    pub db_name: &'a str,
+    #[serde(default="default_use_ssl")]
+    pub use_ssl: bool
 }
+
+fn default_use_ssl() -> bool { false }
 
 #[derive(Deserialize)]
 pub struct StorageCredentials <'a> {
@@ -50,7 +54,9 @@ impl MultiPool {
                    .tcp_port(config.port)
                    .additional_capabilities(CapabilityFlags::CLIENT_FOUND_ROWS);
 
-            _get_builder_ssl(&mut builder);
+            if (config.use_ssl) {
+                builder.ssl_opts(mysql::SslOpts::default());
+            }
 
             let opts: Opts = builder.into();
 
@@ -68,15 +74,4 @@ impl MultiPool {
 
         c
     }
-}
-
-//we do not to force ssl in tests
-//docker mysql works with self-signed certificates
-//we will add support for them later
-#[cfg(feature="test")]
-fn _get_builder_ssl(_: &OptsBuilder) {}
-
-#[cfg(not(feature="test"))]
-fn _get_builder_ssl(builder: &mut OptsBuilder) {
-    builder.ssl_opts(mysql::SslOpts::default());
 }
