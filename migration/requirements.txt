@@ -1,6 +1,6 @@
 base58==2.0.0
 mysql-connector-python==8.0.20
-protobuf==3.15.0
+protobuf==3.18.3
 python3-indy==1.15.0
 PyYAML==5.4
 six==1.14.0
